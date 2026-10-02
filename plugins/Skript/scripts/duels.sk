@@ -15,6 +15,37 @@ command /setduel:
         set {aizensmp.duel.arena} to location of player
         send "%{@prefix}% &aDuel arena set at your current location." to player
 
+command /duel:
+    trigger:
+        if {aizensmp.duel.arena} is not set:
+            send "%{@prefix}% &cThe duel arena has not been set yet." to player
+            stop
+        if {aizensmp.duel.%uuid of player%} is set:
+            send "%{@prefix}% &cYou are already in a duel." to player
+            stop
+        set {_target} to random player
+        if {_target} is player:
+            delete {_target}
+        if {_target} is not set:
+            loop all players:
+                if loop-player is not player:
+                    if {aizensmp.duel.%uuid of loop-player%} is not set:
+                        set {_target} to loop-player
+                        stop
+        if {_target} is not set:
+            send "%{@prefix}% &cNo available random opponent was found." to player
+            stop
+        if {aizensmp.duel.%uuid of {_target}%} is set:
+            send "%{@prefix}% &cThe selected player is already in a duel." to player
+            stop
+        set {aizensmp.duel.%uuid of player%} to {_target}
+        set {aizensmp.duel.%uuid of {_target}%} to player
+        teleport player to {aizensmp.duel.arena}
+        teleport {_target} to {aizensmp.duel.arena}
+        send "%{@prefix}% &aRandom duel started against &e%{_target}%&a!" to player
+        send "%{@prefix}% &aRandom duel started against &e%player%&a!" to {_target}
+        stop
+
 command /duel <player>:
     trigger:
         if arg-1 is player:
