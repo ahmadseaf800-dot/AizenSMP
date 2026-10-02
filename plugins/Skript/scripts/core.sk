@@ -1,0 +1,27 @@
+# =========================================================
+# AizenSMP - Core System
+# =========================================================
+
+options:
+    prefix: &6[&eAizenSMP&6] &r
+
+command /setspawn:
+    permission: aizensmp.admin
+    permission message: &cYou don't have permission.
+    trigger:
+        set {aizensmp.spawn} to location of player
+        send "%{@prefix}% &aSpawn has been set." to player
+
+command /spawn:
+    trigger:
+        if {aizensmp.spawn} is not set:
+            send "%{@prefix}% &cSpawn has not been set yet." to player
+            stop
+        teleport player to {aizensmp.spawn}
+        send "%{@prefix}% &aTeleported to spawn." to player
+
+on join:
+    send "%{@prefix}% &fWelcome to &eAizenSMP&f!" to player
+
+on first join:
+    send "%{@prefix}% &6Welcome to AizenSMP! &fEnjoy your adventure." to player
