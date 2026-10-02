@@ -1,36 +1,31 @@
 # =========================================================
 # AizenSMP - Shards System
 # Currency: Shards
-# Main command: /shard
-# Shop: /shard shop
+# /shard shop sells ONLY spawners.
 # =========================================================
 
 options:
     prefix: &6[&eAizenSMP&6] &r
-    shard-name: &bShards
     shard-symbol: &b✦
-
-# -------------------------
-# Main Shard Command
-# -------------------------
 
 command /shard [<text>] [<number>]:
     trigger:
         if arg-1 is not set:
+            if {aizensmp.shards.%uuid of player%} is not set:
+                set {aizensmp.shards.%uuid of player%} to 0
             send "%{@prefix}% &fYour balance: &b%{aizensmp.shards.%uuid of player%}% ✦" to player
-            send "&7Use &b/shard shop &7to open the Shard Shop." to player
+            send "&7Use &b/shard shop &7to open the Spawner Shop." to player
             stop
 
         if arg-1 is "shop":
-            open chest inventory with 3 rows named "&8✦ &bShard Shop &8✦" to player
+            open chest inventory with 3 rows named "&8✦ &bSpawner Shard Shop &8✦" to player
             wait 1 tick
 
-            # Shop items
-            set slot 10 of player's current inventory to 8 diamond named "&b8 Diamonds &7- &e10 ✦"
-            set slot 12 of player's current inventory to 16 gold ingots named "&616 Gold Ingots &7- &e6 ✦"
-            set slot 14 of player's current inventory to 1 golden apple named "&6Golden Apple &7- &e12 ✦"
-            set slot 16 of player's current inventory to 1 ender pearl named "&5Ender Pearl &7- &e3 ✦"
-            set slot 22 of player's current inventory to 1 netherite scrap named "&8Netherite Scrap &7- &e20 ✦"
+            set slot 10 of player's current inventory to spawner named "&aZombie Spawner &7- &e25 ✦"
+            set slot 12 of player's current inventory to spawner named "&cSkeleton Spawner &7- &e35 ✦"
+            set slot 14 of player's current inventory to spawner named "&6Blaze Spawner &7- &e50 ✦"
+            set slot 16 of player's current inventory to spawner named "&5Enderman Spawner &7- &e75 ✦"
+            set slot 22 of player's current inventory to spawner named "&bIron Golem Spawner &7- &e100 ✦"
             stop
 
         if arg-1 is "give":
@@ -47,47 +42,44 @@ command /shard [<text>] [<number>]:
 
         send "%{@prefix}% &cUnknown shard command." to player
 
-# -------------------------
-# Shop Clicks
-# -------------------------
-
 on inventory click:
-    if name of event-inventory is "&8✦ &bShard Shop &8✦":
+    if name of event-inventory is "&8✦ &bSpawner Shard Shop &8✦":
         cancel event
 
         if clicked slot is 10:
-            set {_price} to 10
-            set {_item} to 8 diamonds
+            set {_price} to 25
+            set {_type} to zombie
+            set {_name} to "Zombie"
         else if clicked slot is 12:
-            set {_price} to 6
-            set {_item} to 16 gold ingots
+            set {_price} to 35
+            set {_type} to skeleton
+            set {_name} to "Skeleton"
         else if clicked slot is 14:
-            set {_price} to 12
-            set {_item} to 1 golden apple
+            set {_price} to 50
+            set {_type} to blaze
+            set {_name} to "Blaze"
         else if clicked slot is 16:
-            set {_price} to 3
-            set {_item} to 1 ender pearl
+            set {_price} to 75
+            set {_type} to enderman
+            set {_name} to "Enderman"
         else if clicked slot is 22:
-            set {_price} to 20
-            set {_item} to 1 netherite scrap
+            set {_price} to 100
+            set {_type} to iron golem
+            set {_name} to "Iron Golem"
         else:
             stop
 
         if {aizensmp.shards.%uuid of player%} < {_price}:
-            send "%{@prefix}% &cYou need &b%{_price}% ✦ &cto buy this." to player
+            send "%{@prefix}% &cYou need &b%{_price}% ✦ &cto buy this spawner." to player
             stop
 
-        if player's inventory has no space for {_item}:
+        if player's inventory has no space for 1 spawner:
             send "%{@prefix}% &cYour inventory is full." to player
             stop
 
         remove {_price} from {aizensmp.shards.%uuid of player%}
-        give {_item} to player
-        send "%{@prefix}% &aPurchase complete! &7Cost: &b%{_price}% ✦" to player
-
-# -------------------------
-# Death Protection / Reset
-# -------------------------
+        give 1 spawner to player
+        send "%{@prefix}% &aPurchased a &e%{_name}% Spawner &afor &b%{_price}% ✦&a." to player
 
 on first join:
     if {aizensmp.shards.%uuid of player%} is not set:
