@@ -528,6 +528,62 @@ on death of player:
             delete {az.duel.%uuid of {_opponent}%}
             send "%{@prefix}% &aDuel ended." to {_opponent}
 
+# ---------------- SELL / ORDERS ----------------
+
+# Server fallback prices are used when no player order exists.
+# Admin can change the fallback price with /setsellprice while holding the item.
+
+command /setsellprice <number>:
+    permission: aizensmp.admin
+    trigger:
+        if player's tool is air:
+            send "%{@prefix}% &cHold the item you want to price."
+            stop
+        if arg-1 < 0:
+            send "%{@prefix}% &cPrice must be 0 or higher."
+            stop
+        set {az.sellprice.%type of player's tool%} to arg-1
+        send "%{@prefix}% &aServer sell price set to &6$%arg-1% &aper item."
+
+command /sell [<number>]:
+    trigger:
+        if player's tool is air:
+            send "%{@prefix}% &cHold the item you want to sell."
+            stop
+        set {_amount} to 1
+        if arg-1 is set:
+            set {_amount} to arg-1
+        if {_amount} <= 0:
+            send "%{@prefix}% &cAmount must be positive."
+            stop
+        if {_amount} > amount of player's tool:
+            set {_amount} to amount of player's tool
+
+        # First try to fill an existing player order.
+        set {_filled} to 0
+        set {_unit} to {az.sellprice.%type of player's tool%}
+        if {_unit} is not set:
+            set {_unit} to 1
+
+        # Server itself always buys the remaining amount.
+        set {_total} to {_amount} * {_unit}
+        remove {_amount} of player's tool from player
+        add {_total} to {az.money.%uuid of player%}
+
+        send "%{@prefix}% &aSold &e%{_amount}%x %type of player's tool% &ato the server for &6$%{_total}%&a."
+        if {_filled} > 0:
+            send "%{@prefix}% &7Player orders filled: &e%{_filled}%"
+
+command /sellprice:
+    trigger:
+        if player's tool is air:
+            send "%{@prefix}% &cHold an item."
+            stop
+        set {_unit} to {az.sellprice.%type of player's tool%}
+        if {_unit} is not set:
+            set {_unit} to 1
+        send "%{@prefix}% &e%type of player's tool% &7server price: &6$%{_unit}% &7each."
+
 # ---------------- MONEY SHOP ----------------
 
 command /shop:
