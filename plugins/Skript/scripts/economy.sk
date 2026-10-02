@@ -15,9 +15,13 @@ command /balance:
 
 command /pay <player> <number>:
     trigger:
-        if {aizensmp.settings.pay.%uuid of arg-1%} is false:
+        if {aizensmp.settings.pay.%uuid of arg-1%} is "none":
             send "%{@prefix}% &cThat player has disabled payments." to player
             stop
+        if {aizensmp.settings.pay.%uuid of arg-1%} is "friends":
+            if {aizensmp.friend.%uuid of arg-1%.%uuid of player%} is not true:
+                send "%{@prefix}% &cOnly that player's friends can make a payment." to player
+                stop
         if arg-1 is player:
             send "%{@prefix}% &cYou cannot pay yourself." to player
             stop
