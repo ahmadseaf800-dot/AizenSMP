@@ -861,151 +861,260 @@ command /sellprice:
             set {_unit} to 1
         send "{@prefix} &e%type of player's tool% &7server price: &6$%{_unit}% &7each."
 
-# ---------------- OLD-STYLE /SHOP ----------------
+# ---------------- DONUT-STYLE OLD SHOP ----------------
+
+function azShopBuy(p: player, item: item, price: number, amount: number, label: text):
+    if {az.money.%uuid of {_p}%} < {_price}:
+        send "{@prefix} &cNot enough money. Price: &6$%{_price}%" to {_p}
+        stop
+    remove {_price} from {az.money.%uuid of {_p}%}
+    give {_amount} of {_item} to {_p}
+    send "{@prefix} &aBought &e%{_label}% &afor &6$%{_price}%&a." to {_p}
 
 command /shop:
     trigger:
-        open chest inventory with 3 rows named "&8✦ &6Aizen Shop &8✦" to player
+        open chest inventory with 3 rows named "&8✦ &6DONUT SHOP &8✦" to player
         wait 1 tick
-        set slot 10 of player's current inventory to ender chest named "&5&lEND SHOP" with lore "&7Shulkers, End materials and Ender Pearls"
-        set slot 12 of player's current inventory to netherrack named "&c&lNETHER SHOP" with lore "&7Quartz, Blaze Rods and Nether blocks"
-        set slot 14 of player's current inventory to cooked beef named "&6&lFOOD SHOP" with lore "&7Fast food for survival and PvP"
-        set slot 16 of player's current inventory to prismarine shard named "&b&lSHARD SHOP" with lore "&7Spend Shards on rare items and Spawners"
-        set slot 22 of player's current inventory to barrier named "&cClose"
+        set slot 10 of player's current inventory to ender chest named "&5&lEND SHOP" with lore "&7Old-style End category"
+        set slot 12 of player's current inventory to netherrack named "&c&lNETHER SHOP" with lore "&7Old-style Nether category"
+        set slot 14 of player's current inventory to diamond sword named "&4&lGEAR & COMBAT" with lore "&7Combat and survival gear"
+        set slot 16 of player's current inventory to cooked beef named "&6&lFOOD SHOP" with lore "&7Food and farming items"
+        set slot 22 of player's current inventory to prismarine shard named "&b&lSHARD SHOP" with lore "&7Buy keys and spawners with Shards"
+        set slot 26 of player's current inventory to barrier named "&cClose"
 
 command /endshop:
     trigger:
-        open chest inventory with 3 rows named "&8✦ &5End Shop &8✦" to player
+        open chest inventory with 3 rows named "&8✦ &5END SHOP &8✦" to player
         wait 1 tick
-        set slot 10 of player's current inventory to shulker box named "&dShulker Box &7[$25000]"
-        set slot 12 of player's current inventory to ender pearl named "&b16 Ender Pearls &7[$1500]"
-        set slot 14 of player's current inventory to ender eye named "&a8 Eyes of Ender &7[$4000]"
-        set slot 16 of player's current inventory to end stone named "&f64 End Stone &7[$1200]"
+        set slot 10 of player's current inventory to ender chest named "&5Ender Chest &7[$2,500]"
+        set slot 11 of player's current inventory to shulker box named "&dShulker Box &7[$800]"
+        set slot 12 of player's current inventory to arrow named "&bArrow of Slow Falling (1m) &7[$500]"
+        set slot 13 of player's current inventory to end crystal named "&dEnd Crystal &7[$350]"
+        set slot 14 of player's current inventory to shulker shell named "&dShulker Shell &7[$350]"
+        set slot 15 of player's current inventory to dragon breath named "&5Dragon Breath &7[$1,000]"
+        set slot 16 of player's current inventory to end stone named "&fEnd Stone &7[$128]"
+        set slot 17 of player's current inventory to chorus fruit named "&dChorus Fruit &7[$108]"
+        set slot 18 of player's current inventory to end rod named "&fEnd Rod &7[$100]"
+        set slot 19 of player's current inventory to ender pearl named "&bEnder Pearl &7[$75]"
+        set slot 20 of player's current inventory to popped chorus fruit named "&dPopped Chorus Fruit &7[$24]"
         set slot 22 of player's current inventory to barrier named "&cBack"
 
 command /netherShop:
     trigger:
-        open chest inventory with 3 rows named "&8✦ &cNether Shop &8✦" to player
+        open chest inventory with 3 rows named "&8✦ &cNETHER SHOP &8✦" to player
         wait 1 tick
-        set slot 10 of player's current inventory to quartz named "&f32 Quartz &7[$1200]"
-        set slot 12 of player's current inventory to blaze rod named "&e16 Blaze Rods &7[$3000]"
-        set slot 14 of player's current inventory to netherrack named "&c64 Netherrack &7[$400]"
-        set slot 16 of player's current inventory to soul sand named "&864 Soul Sand &7[$800]"
+        set slot 10 of player's current inventory to ghast tear named "&fGhast Tear &7[$350]"
+        set slot 11 of player's current inventory to crying obsidian named "&5Crying Obsidian &7[$150]"
+        set slot 12 of player's current inventory to blaze rod named "&6Blaze Rod &7[$150]"
+        set slot 13 of player's current inventory to nether wart named "&cNether Wart &7[$96]"
+        set slot 14 of player's current inventory to magma cream named "&6Magma Cream &7[$96]"
+        set slot 15 of player's current inventory to soul sand named "&8Soul Sand &7[$50]"
+        set slot 16 of player's current inventory to magma block named "&6Magma Block &7[$35]"
+        set slot 17 of player's current inventory to quartz named "&fNether Quartz &7[$30]"
+        set slot 18 of player's current inventory to glowstone dust named "&eGlowstone Dust &7[$15]"
+        set slot 22 of player's current inventory to barrier named "&cBack"
+
+command /gearshop:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &4GEAR & COMBAT &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to totem of undying named "&eTotem of Undying &7[$1,500]"
+        set slot 11 of player's current inventory to respawn anchor named "&5Respawn Anchor &7[$1,000]"
+        set slot 12 of player's current inventory to end crystal named "&dEnd Crystal &7[$350]"
+        set slot 13 of player's current inventory to golden apple named "&6Golden Apple &7[$250]"
+        set slot 14 of player's current inventory to golden carrot named "&6Golden Carrot &7[$120]"
+        set slot 15 of player's current inventory to obsidian named "&8Obsidian &7[$100]"
+        set slot 16 of player's current inventory to glowstone named "&eGlowstone &7[$100]"
+        set slot 17 of player's current inventory to experience bottle named "&aBottle o' Enchanting &7[$100]"
+        set slot 22 of player's current inventory to barrier named "&cBack"
+
+command /foodshop:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &6FOOD SHOP &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to potato named "&ePotato &7[$96]"
+        set slot 11 of player's current inventory to carrot named "&6Carrot &7[$96]"
+        set slot 12 of player's current inventory to sweet berries named "&dSweet Berries &7[$50]"
+        set slot 13 of player's current inventory to cooked chicken named "&eCooked Chicken &7[$48]"
+        set slot 14 of player's current inventory to melon slice named "&aMelon Slice &7[$36]"
+        set slot 15 of player's current inventory to cooked beef named "&6Steak &7[$35]"
+        set slot 16 of player's current inventory to apple named "&cApple &7[$25]"
+        set slot 22 of player's current inventory to barrier named "&cBack"
+
+command /shardshop:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &bSHARD SHOP &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to tripwire hook named "&cCrimson Key &7[2,500 Shards]"
+        set slot 12 of player's current inventory to tripwire hook named "&6Prime Key &7[2,500 Shards]"
+        set slot 14 of player's current inventory to spawner named "&5All Spawners (Pig → Golem) &7[1,500 Shards]"
+        set slot 16 of player's current inventory to tripwire hook named "&fCommon Key &7[200 Shards]"
         set slot 22 of player's current inventory to barrier named "&cBack"
 
 on inventory click:
-    if name of event-inventory is "&8✦ &6Aizen Shop &8✦":
+    if name of event-inventory is "&8✦ &6DONUT SHOP &8✦":
         cancel event
-        if clicked slot is 22:
-            close player's inventory
-        else if clicked slot is 10:
+        if clicked slot is 10:
             close player's inventory
             make player execute command "/endshop"
         else if clicked slot is 12:
             close player's inventory
             make player execute command "/netherShop"
         else if clicked slot is 14:
-            open chest inventory with 3 rows named "&8✦ &6Food Shop &8✦" to player
-            wait 1 tick
-            set slot 10 of player's current inventory to cooked beef named "&e32 Steak &7[$500]"
-            set slot 12 of player's current inventory to cooked chicken named "&e32 Chicken &7[$450]"
-            set slot 14 of player's current inventory to golden carrot named "&632 Golden Carrots &7[$1800]"
-            set slot 16 of player's current inventory to bread named "&f64 Bread &7[$400]"
-            set slot 22 of player's current inventory to barrier named "&cBack"
+            close player's inventory
+            make player execute command "/gearshop"
         else if clicked slot is 16:
             close player's inventory
+            make player execute command "/foodshop"
+        else if clicked slot is 22:
+            close player's inventory
             make player execute command "/shardshop"
+        else if clicked slot is 26:
+            close player's inventory
         stop
 
 on inventory click:
-    if name of event-inventory is "&8✦ &5End Shop &8✦":
+    if name of event-inventory is "&8✦ &5END SHOP &8✦":
         cancel event
         if clicked slot is 22:
             close player's inventory
             make player execute command "/shop"
             stop
-        set {_price} to 0
-        set {_item} to air
         if clicked slot is 10:
-            set {_price} to 25000
-            set {_item} to shulker box
+            azShopBuy(player, ender chest, 2500, 1, "Ender Chest")
+        else if clicked slot is 11:
+            azShopBuy(player, shulker box, 800, 1, "Shulker Box")
         else if clicked slot is 12:
-            set {_price} to 1500
-            set {_item} to 16 ender pearls
+            azShopBuy(player, arrow, 500, 1, "Arrow of Slow Falling (1m)")
+        else if clicked slot is 13:
+            azShopBuy(player, end crystal, 350, 1, "End Crystal")
         else if clicked slot is 14:
-            set {_price} to 4000
-            set {_item} to 8 ender eyes
+            azShopBuy(player, shulker shell, 350, 1, "Shulker Shell")
+        else if clicked slot is 15:
+            azShopBuy(player, dragon breath, 1000, 1, "Dragon Breath")
         else if clicked slot is 16:
-            set {_price} to 1200
-            set {_item} to 64 end stone
-        else:
-            stop
-        if {az.money.%uuid of player%} < {_price}:
-            send "{@prefix} &cNot enough money."
-            stop
-        remove {_price} from {az.money.%uuid of player%}
-        give {_item} to player
-        send "{@prefix} &aPurchase complete."
+            azShopBuy(player, end stone, 128, 1, "End Stone")
+        else if clicked slot is 17:
+            azShopBuy(player, chorus fruit, 108, 1, "Chorus Fruit")
+        else if clicked slot is 18:
+            azShopBuy(player, end rod, 100, 1, "End Rod")
+        else if clicked slot is 19:
+            azShopBuy(player, ender pearl, 75, 1, "Ender Pearl")
+        else if clicked slot is 20:
+            azShopBuy(player, popped chorus fruit, 24, 1, "Popped Chorus Fruit")
+        stop
 
 on inventory click:
-    if name of event-inventory is "&8✦ &cNether Shop &8✦":
+    if name of event-inventory is "&8✦ &cNETHER SHOP &8✦":
         cancel event
         if clicked slot is 22:
             close player's inventory
             make player execute command "/shop"
             stop
-        set {_price} to 0
-        set {_item} to air
         if clicked slot is 10:
-            set {_price} to 1200
-            set {_item} to 32 quartz
+            azShopBuy(player, ghast tear, 350, 1, "Ghast Tear")
+        else if clicked slot is 11:
+            azShopBuy(player, crying obsidian, 150, 1, "Crying Obsidian")
         else if clicked slot is 12:
-            set {_price} to 3000
-            set {_item} to 16 blaze rods
+            azShopBuy(player, blaze rod, 150, 1, "Blaze Rod")
+        else if clicked slot is 13:
+            azShopBuy(player, nether wart, 96, 1, "Nether Wart")
         else if clicked slot is 14:
-            set {_price} to 400
-            set {_item} to 64 netherrack
+            azShopBuy(player, magma cream, 96, 1, "Magma Cream")
+        else if clicked slot is 15:
+            azShopBuy(player, soul sand, 50, 1, "Soul Sand")
         else if clicked slot is 16:
-            set {_price} to 800
-            set {_item} to 64 soul sand
-        else:
-            stop
-        if {az.money.%uuid of player%} < {_price}:
-            send "{@prefix} &cNot enough money."
-            stop
-        remove {_price} from {az.money.%uuid of player%}
-        give {_item} to player
-        send "{@prefix} &aPurchase complete."
+            azShopBuy(player, magma block, 35, 1, "Magma Block")
+        else if clicked slot is 17:
+            azShopBuy(player, quartz, 30, 1, "Nether Quartz")
+        else if clicked slot is 18:
+            azShopBuy(player, glowstone dust, 15, 1, "Glowstone Dust")
+        stop
 
 on inventory click:
-    if name of event-inventory is "&8✦ &6Food Shop &8✦":
+    if name of event-inventory is "&8✦ &4GEAR & COMBAT &8✦":
         cancel event
         if clicked slot is 22:
             close player's inventory
             make player execute command "/shop"
             stop
-        set {_price} to 0
-        set {_item} to air
         if clicked slot is 10:
-            set {_price} to 500
-            set {_item} to 32 cooked beef
+            azShopBuy(player, totem of undying, 1500, 1, "Totem of Undying")
+        else if clicked slot is 11:
+            azShopBuy(player, respawn anchor, 1000, 1, "Respawn Anchor")
         else if clicked slot is 12:
-            set {_price} to 450
-            set {_item} to 32 cooked chicken
+            azShopBuy(player, end crystal, 350, 1, "End Crystal")
+        else if clicked slot is 13:
+            azShopBuy(player, golden apple, 250, 1, "Golden Apple")
         else if clicked slot is 14:
-            set {_price} to 1800
-            set {_item} to 32 golden carrots
+            azShopBuy(player, golden carrot, 120, 1, "Golden Carrot")
+        else if clicked slot is 15:
+            azShopBuy(player, obsidian, 100, 1, "Obsidian")
         else if clicked slot is 16:
-            set {_price} to 400
-            set {_item} to 64 bread
-        else:
+            azShopBuy(player, glowstone, 100, 1, "Glowstone")
+        else if clicked slot is 17:
+            azShopBuy(player, experience bottle, 100, 1, "Bottle o' Enchanting")
+        stop
+
+on inventory click:
+    if name of event-inventory is "&8✦ &6FOOD SHOP &8✦":
+        cancel event
+        if clicked slot is 22:
+            close player's inventory
+            make player execute command "/shop"
             stop
-        if {az.money.%uuid of player%} < {_price}:
-            send "{@prefix} &cNot enough money."
+        if clicked slot is 10:
+            azShopBuy(player, potato, 96, 1, "Potato")
+        else if clicked slot is 11:
+            azShopBuy(player, carrot, 96, 1, "Carrot")
+        else if clicked slot is 12:
+            azShopBuy(player, sweet berries, 50, 1, "Sweet Berries")
+        else if clicked slot is 13:
+            azShopBuy(player, cooked chicken, 48, 1, "Cooked Chicken")
+        else if clicked slot is 14:
+            azShopBuy(player, melon slice, 36, 1, "Melon Slice")
+        else if clicked slot is 15:
+            azShopBuy(player, cooked beef, 35, 1, "Steak")
+        else if clicked slot is 16:
+            azShopBuy(player, apple, 25, 1, "Apple")
+        stop
+
+on inventory click:
+    if name of event-inventory is "&8✦ &bSHARD SHOP &8✦":
+        cancel event
+        if clicked slot is 22:
+            close player's inventory
+            make player execute command "/shop"
             stop
-        remove {_price} from {az.money.%uuid of player%}
-        give {_item} to player
-        send "{@prefix} &aPurchase complete."
+        if clicked slot is 10:
+            if {az.shards.%uuid of player%} < 2500:
+                send "{@prefix} &cNot enough Shards."
+                stop
+            remove 2500 from {az.shards.%uuid of player%}
+            give 1 tripwire hook named "&cCrimson Key" to player
+            send "{@prefix} &aPurchased &cCrimson Key &afor &b2,500 Shards."
+        else if clicked slot is 12:
+            if {az.shards.%uuid of player%} < 2500:
+                send "{@prefix} &cNot enough Shards."
+                stop
+            remove 2500 from {az.shards.%uuid of player%}
+            give 1 tripwire hook named "&6Prime Key" to player
+            send "{@prefix} &aPurchased &6Prime Key &afor &b2,500 Shards."
+        else if clicked slot is 14:
+            if {az.shards.%uuid of player%} < 1500:
+                send "{@prefix} &cNot enough Shards."
+                stop
+            remove 1500 from {az.shards.%uuid of player%}
+            give 1 spawner named "&5Spawner" to player
+            send "{@prefix} &aPurchased a Spawner for &b1,500 Shards."
+        else if clicked slot is 16:
+            if {az.shards.%uuid of player%} < 200:
+                send "{@prefix} &cNot enough Shards."
+                stop
+            remove 200 from {az.shards.%uuid of player%}
+            give 1 tripwire hook named "&fCommon Key" to player
+            send "{@prefix} &aPurchased &fCommon Key &afor &b200 Shards."
+        stop
 
 # ---------------- OLD /SELL ----------------
 
