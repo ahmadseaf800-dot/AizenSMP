@@ -94,6 +94,32 @@ jobs:
             cp -r plugins/Skript/scripts/. server/plugins/Skript/scripts/
           fi
 
+      - name: Start playit.gg tunnel
+        if: ${{ env.PLAYIT_SECRET != '' }}
+        env:
+          PLAYIT_SECRET: ${{ secrets.PLAYIT_SECRET }}
+        shell: bash
+        run: |
+          set -e
+          curl -L --fail -o playit-agent "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
+          chmod +x playit-agent
+          nohup ./playit-agent --secret "$PLAYIT_SECRET" > playit.log 2>&1 &
+          echo $! > playit.pid
+
+          echo "Waiting for playit.gg tunnel..."
+          for i in {1..30}; do
+            sleep 2
+            if grep -Eqi 'minecraft|tcp|address|tunnel|connect' playit.log; then
+              echo "========== AizenSMP PLAYIT.GG =========="
+              grep -Ei 'minecraft|tcp|address|tunnel|connect' playit.log | tail -n 20 || true
+              echo "========================================"
+              break
+            fi
+          done
+
+          echo "playit.gg log:"
+          cat playit.log || true
+
       - name: Start AizenSMP and save on shutdown
         shell: bash
         working-directory: server
