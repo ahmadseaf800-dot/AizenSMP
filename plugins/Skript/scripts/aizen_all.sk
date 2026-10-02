@@ -710,6 +710,7 @@ function azOpenAH(p: player, q: text, sort: text):
                 set {_p} to {az.ah.price.%{_pickId}%}
                 set lore of {_display} to "&7Seller: &f%{_seller}%", "&7Price: &6$%{_p}%", "&eClick to buy"
                 set slot {_slot} of {_p}'s current inventory to {_display}
+                set {az.ah.gui.%uuid of {_p}%.%{_slot}%} to {_pickId}
                 add 1 to {_slot}
                 add 1 to {_count}
             if {_count} >= 45:
