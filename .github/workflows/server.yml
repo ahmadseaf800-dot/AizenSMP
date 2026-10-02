@@ -4,7 +4,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  actions: read
 
 jobs:
   server:
@@ -27,6 +28,28 @@ jobs:
           mkdir -p server/plugins
           curl -L --fail -o server/server.jar "https://api.purpurmc.org/v2/purpur/1.21.11/latest/download"
           echo "eula=true" > server/eula.txt
+
+      - name: Restore persistent world and player data
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -e
+          ARTIFACT_ID=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=aizensmp-persistent-data&per_page=1" --jq '.artifacts[0].id // empty')
+
+          if [ -n "$ARTIFACT_ID" ]; then
+            echo "Restoring AizenSMP persistent data from artifact $ARTIFACT_ID"
+            mkdir -p restore
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip" > restore/persistent.zip
+            unzip -q restore/persistent.zip -d restore/artifact
+            if [ -f restore/artifact/persistent-data.tar.zst ]; then
+              tar --zstd -xf restore/artifact/persistent-data.tar.zst -C server
+            else
+              echo "No persistent-data archive found; starting with a fresh world."
+            fi
+          else
+            echo "No previous persistent data found; starting with a fresh world."
+          fi
 
       - name: Install Skript
         shell: bash
@@ -71,8 +94,28 @@ jobs:
             cp -r plugins/Skript/scripts/. server/plugins/Skript/scripts/
           fi
 
-      - name: Start AizenSMP
+      - name: Start AizenSMP and save on shutdown
         shell: bash
         working-directory: server
         run: |
+          set -e
+
+          cleanup() {
+            echo "Preparing persistent AizenSMP data..."
+            rm -f persistent-data.tar.zst
+            tar --zstd -cf persistent-data.tar.zst               world               world_nether               world_the_end               plugins/Skript               2>/dev/null || true
+          }
+
+          trap cleanup EXIT INT TERM
+
           java -Xms1G -Xmx6G -jar server.jar --nogui
+
+      - name: Upload persistent world and player data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aizensmp-persistent-data
+          path: server/persistent-data.tar.zst
+          retention-days: 90
+          compression-level: 0
+          overwrite: true
