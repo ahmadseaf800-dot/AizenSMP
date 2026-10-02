@@ -1421,6 +1421,36 @@ every 2 seconds:
         set score "&bShards: %{az.shards.%uuid of loop-player%}%" in sidebar of loop-player to 2
         set score "&7Team: %{az.team.%uuid of loop-player%}%" in sidebar of loop-player to 1
 
+# ---------------- PLAYTIME ----------------
+
+on join:
+    if {az.playtime.%uuid of player%} is not set:
+        set {az.playtime.%uuid of player%} to 0
+    if {az.session.%uuid of player%} is not set:
+        set {az.session.%uuid of player%} to 0
+
+every 1 minute:
+    loop all players:
+        add 1 to {az.playtime.%uuid of loop-player%}
+        add 1 to {az.session.%uuid of loop-player%}
+
+command /playtime [<player>]:
+    trigger:
+        set {_p} to player
+        if arg-1 is set:
+            set {_p} to arg-1
+        set {_minutes} to {az.playtime.%uuid of {_p}%}
+        if {_minutes} is not set:
+            set {_minutes} to 0
+        set {_hours} to floor({_minutes} / 60)
+        set {_mins} to {_minutes} - ({_hours} * 60)
+        send "&8&m--------------------------------"
+        send "&6&lPLAYTIME"
+        send "&7Player: &f%{_p}%"
+        send "&7Playtime: &e%{_hours}%h %{_mins}%m"
+        send "&7Total minutes: &f%{_minutes}%"
+        send "&8&m--------------------------------"
+
 # ---------------- HELP ----------------
 
 command /help:
