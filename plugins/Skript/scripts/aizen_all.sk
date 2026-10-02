@@ -221,14 +221,73 @@ every 1 minute:
         set line 3 of block at {az.richsign} to "&7Top players"
         set line 4 of block at {az.richsign} to "&6AizenSMP"
 
-# ---------------- RTP / RTPQ ----------------
+# ---------------- REGIONAL RTP / RTPQ COMBAT ----------------
 
-function azRTP(p: player, w: world):
+function azRegionCenter(name: text) :: location:
+    set {_n} to lowercase {_name}
+    if {_n} is "asia":
+        return {az.region.asia.center}
+    if {_n} is "europe":
+        return {az.region.europe.center}
+    if {_n} is "africa":
+        return {az.region.africa.center}
+    if {_n} is "northamerica":
+        return {az.region.northamerica.center}
+    if {_n} is "southamerica":
+        return {az.region.southamerica.center}
+    if {_n} is "oceania":
+        return {az.region.oceania.center}
+    return none
+
+function azRegionRadius(name: text) :: number:
+    set {_n} to lowercase {_name}
+    if {_n} is "asia":
+        return {az.region.asia.radius}
+    if {_n} is "europe":
+        return {az.region.europe.radius}
+    if {_n} is "africa":
+        return {az.region.africa.radius}
+    if {_n} is "northamerica":
+        return {az.region.northamerica.radius}
+    if {_n} is "southamerica":
+        return {az.region.southamerica.radius}
+    if {_n} is "oceania":
+        return {az.region.oceania.radius}
+    return 0
+
+function azRegionLabel(name: text) :: text:
+    set {_n} to lowercase {_name}
+    if {_n} is "asia":
+        return "Asia"
+    if {_n} is "europe":
+        return "Europe"
+    if {_n} is "africa":
+        return "Africa"
+    if {_n} is "northamerica":
+        return "North America"
+    if {_n} is "southamerica":
+        return "South America"
+    if {_n} is "oceania":
+        return "Oceania"
+    return {_name}
+
+function azRegionRTP(p: player, region: text):
+    set {_center} to azRegionCenter({_region})
+    if {_center} is not set:
+        send "{@prefix} &cThis combat region has not been configured yet." to {_p}
+        stop
+    set {_radius} to azRegionRadius({_region})
+    if {_radius} <= 0:
+        send "{@prefix} &cThis combat region has no valid size." to {_p}
+        stop
+    set {_w} to world of {_center}
     set {_found} to false
-    loop 50 times:
+    loop 80 times:
         if {_found} is false:
-            set {_x} to random integer between -{@rtp-range} and {@rtp-range}
-            set {_z} to random integer between -{@rtp-range} and {@rtp-range}
+            set {_cx} to x-coordinate of {_center}
+            set {_cz} to z-coordinate of {_center}
+            set {_x} to random integer between ({_cx} - {_radius}) and ({_cx} + {_radius})
+            set {_z} to random integer between ({_cz} - {_radius}) and ({_cz} + {_radius})
             set {_loc} to location at {_x}, 0, {_z} in {_w}
             set {_top} to highest block at {_loc}
             set {_feet} to location of {_top}
@@ -240,35 +299,50 @@ function azRTP(p: player, w: world):
                                 teleport {_p} to {_feet}
                                 set {_found} to true
     if {_found} is false:
-        send "{@prefix} &cNo safe RTP location found." to {_p}
+        send "{@prefix} &cNo safe combat location was found in &e%azRegionLabel({_region})&c." to {_p}
     else:
-        send "{@prefix} &aRTP complete." to {_p}
+        set {az.region.%uuid of {_p}%} to lowercase {_region}
+        send "{@prefix} &aTeleported to the real &e%azRegionLabel({_region}) &acombat region." to {_p}
+        send "{@prefix} &7PvP is active here. Find players and fight." to {_p}
+
+command /setregion <text> [<number>]:
+    permission: aizensmp.admin
+    trigger:
+        set {_region} to lowercase arg-1
+        if {_region} is not "asia":
+            if {_region} is not "europe":
+                if {_region} is not "africa":
+                    if {_region} is not "northamerica":
+                        if {_region} is not "southamerica":
+                            if {_region} is not "oceania":
+                                send "{@prefix} &cRegions: asia, europe, africa, northamerica, southamerica, oceania."
+                                stop
+        set {_radius} to arg-2
+        if {_radius} is not set:
+            set {_radius} to 3000
+        if {_radius} < 250:
+            send "{@prefix} &cRadius must be at least 250 blocks."
+            stop
+        set {az.region.%{_region}%.center} to location of player
+        set {az.region.%{_region}%.radius} to {_radius}
+        send "{@prefix} &a%azRegionLabel({_region})% combat region set here with a &e%{_radius}% &ablock radius."
+        send "{@prefix} &7Players using /rtp can now be teleported here to fight."
+
+command /region:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &cAizen Combat Regions &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to compass named "&b&lASIA" with lore "&7Real PvP combat region", "&eClick to enter"
+        set slot 11 of player's current inventory to map named "&a&lEUROPE" with lore "&7Real PvP combat region", "&eClick to enter"
+        set slot 12 of player's current inventory to savanna sapling named "&6&lAFRICA" with lore "&7Real PvP combat region", "&eClick to enter"
+        set slot 14 of player's current inventory to blue wool named "&9&lNORTH AMERICA" with lore "&7Real PvP combat region", "&eClick to enter"
+        set slot 15 of player's current inventory to red wool named "&c&lSOUTH AMERICA" with lore "&7Real PvP combat region", "&eClick to enter"
+        set slot 16 of player's current inventory to mangrove propagule named "&d&lOCEANIA" with lore "&7Real PvP combat region", "&eClick to enter"
+        set slot 22 of player's current inventory to barrier named "&cClose"
 
 command /rtp:
     trigger:
-        open chest inventory with 3 rows named "&8✦ &bAizenSMP RTP &8✦" to player
-        wait 1 tick
-        set slot 10 of player's current inventory to grass block named "&aOverworld"
-        set slot 13 of player's current inventory to netherrack named "&cNether"
-        set slot 16 of player's current inventory to end stone named "&dThe End"
-        set slot 22 of player's current inventory to barrier named "&cClose"
-
-on inventory click:
-    if name of event-inventory is "&8✦ &bAizenSMP RTP &8✦":
-        cancel event
-        if clicked slot is 22:
-            close player's inventory
-        else if clicked slot is 10:
-            close player's inventory
-            azRTP(player, world of player)
-        else if clicked slot is 13:
-            if world named "world_nether" is set:
-                close player's inventory
-                azRTP(player, world named "world_nether")
-        else if clicked slot is 16:
-            if world named "world_the_end" is set:
-                close player's inventory
-                azRTP(player, world named "world_the_end")
+        make player execute command "/region"
 
 command /rtpq:
     trigger:
@@ -281,14 +355,83 @@ command /rtpq:
         if {_target} is not set:
             send "{@prefix} &cNo other player is online."
             stop
-        set {_w} to world of player
-        set {_x} to random integer between -{@rtp-range} and {@rtp-range}
-        set {_z} to random integer between -{@rtp-range} and {@rtp-range}
-        set {_loc} to highest block at location at {_x}, 0, {_z} in {_w}
-        teleport player to {_loc}
-        teleport {_target} to {_loc}
-        send "{@prefix} &aRTPQ matched you with &e%{_target}%&a." to player
-        send "{@prefix} &aRTPQ matched you with &e%player%&a." to {_target}
+        set {_region} to {az.region.%uuid of player%}
+        if {_region} is not set:
+            set {_region} to "asia"
+            set {az.region.%uuid of player%} to "asia"
+            send "{@prefix} &eNo region preference was set, so &bAsia &ewas selected." to player
+        set {_center} to azRegionCenter({_region})
+        if {_center} is not set:
+            send "{@prefix} &cYour selected combat region is not configured by the admin."
+            stop
+        set {_radius} to azRegionRadius({_region})
+        set {_w} to world of {_center}
+        set {_found} to false
+        loop 80 times:
+            if {_found} is false:
+                set {_cx} to x-coordinate of {_center}
+                set {_cz} to z-coordinate of {_center}
+                set {_x} to random integer between ({_cx} - {_radius}) and ({_cx} + {_radius})
+                set {_z} to random integer between ({_cz} - {_radius}) and ({_cz} + {_radius})
+                set {_loc} to location at {_x}, 0, {_z} in {_w}
+                set {_top} to highest block at {_loc}
+                set {_feet} to location of {_top}
+                if block below {_feet} is not water:
+                    if block below {_feet} is not lava:
+                        if block at {_feet} is air:
+                            if block above {_feet} is air:
+                                if y-coordinate of {_feet} > 5:
+                                    teleport player to {_feet}
+                                    teleport {_target} to {_feet}
+                                    set {az.region.%uuid of player%} to {_region}
+                                    set {az.region.%uuid of {_target}%} to {_region}
+                                    set {_found} to true
+        if {_found} is false:
+            send "{@prefix} &cNo safe fight location found in &e%azRegionLabel({_region})&c."
+            stop
+        send "{@prefix} &c&lCOMBAT! &fYou and &e%{_target}% &fare now fighting in &6%azRegionLabel({_region})&f." to player
+        send "{@prefix} &c&lCOMBAT! &fYou and &e%player% &fare now fighting in &6%azRegionLabel({_region})&f." to {_target}
+
+on inventory click:
+    if name of event-inventory is "&8✦ &cAizen Combat Regions &8✦":
+        cancel event
+        if clicked slot is 22:
+            close player's inventory
+        else if clicked slot is 10:
+            close player's inventory
+            set {az.region.%uuid of player%} to "asia"
+            azRegionRTP(player, "asia")
+        else if clicked slot is 11:
+            close player's inventory
+            set {az.region.%uuid of player%} to "europe"
+            azRegionRTP(player, "europe")
+        else if clicked slot is 12:
+            close player's inventory
+            set {az.region.%uuid of player%} to "africa"
+            azRegionRTP(player, "africa")
+        else if clicked slot is 14:
+            close player's inventory
+            set {az.region.%uuid of player%} to "northamerica"
+            azRegionRTP(player, "northamerica")
+        else if clicked slot is 15:
+            close player's inventory
+            set {az.region.%uuid of player%} to "southamerica"
+            azRegionRTP(player, "southamerica")
+        else if clicked slot is 16:
+            close player's inventory
+            set {az.region.%uuid of player%} to "oceania"
+            azRegionRTP(player, "oceania")
+
+# PvP is allowed inside these configured combat areas.
+# Spawn and AFK protection remain the only protected zones.
+on damage:
+    if victim is a player:
+        if attacker is a player:
+            set {_rv} to {az.region.%uuid of victim%}
+            set {_ra} to {az.region.%uuid of attacker%}
+            if {_rv} is set and {_ra} is set:
+                if {_rv} is {_ra}:
+                    stop
 
 # ---------------- BOUNTY / KILL STREAK ----------------
 
@@ -1098,850 +1241,3 @@ on inventory click:
                 send "{@prefix} &cNot enough Shards."
                 stop
             remove 2500 from {az.shards.%uuid of player%}
-            give 1 tripwire hook named "&6Prime Key" to player
-            send "{@prefix} &aPurchased &6Prime Key &afor &b2,500 Shards."
-        else if clicked slot is 14:
-            if {az.shards.%uuid of player%} < 1500:
-                send "{@prefix} &cNot enough Shards."
-                stop
-            remove 1500 from {az.shards.%uuid of player%}
-            give 1 spawner named "&5Spawner" to player
-            send "{@prefix} &aPurchased a Spawner for &b1,500 Shards."
-        else if clicked slot is 16:
-            if {az.shards.%uuid of player%} < 200:
-                send "{@prefix} &cNot enough Shards."
-                stop
-            remove 200 from {az.shards.%uuid of player%}
-            give 1 tripwire hook named "&fCommon Key" to player
-            send "{@prefix} &aPurchased &fCommon Key &afor &b200 Shards."
-        stop
-
-# ---------------- OLD /SELL ----------------
-
-function azSellUnit(i: item) :: number:
-    if {_i} is kelp:
-        return 8
-    if {_i} is dried kelp:
-        return 12
-    if {_i} is beef:
-        return 18
-    if {_i} is leather:
-        return 25
-    if {_i} is cooked beef:
-        return 22
-    if {_i} is iron ingot:
-        return 80
-    if {_i} is gold ingot:
-        return 120
-    if {_i} is sand:
-        return 10
-    if {_i} is gravel:
-        return 8
-    if {_i} is cobblestone:
-        return 3
-    if {_i} is stone:
-        return 5
-    if {_i} is wheat:
-        return 10
-    if {_i} is carrot:
-        return 8
-    if {_i} is potato:
-        return 8
-    if {_i} is rotten flesh:
-        return 5
-    if {_i} is bone:
-        return 15
-    if {_i} is string:
-        return 18
-    if {_i} is gunpowder:
-        return 30
-    if {_i} is spider eye:
-        return 12
-    if {_i} is ender pearl:
-        return 80
-    return 0
-
-command /sell:
-    trigger:
-        set {_total} to 0
-        set {_sold} to 0
-        loop 36 times:
-            set {_slot} to loop-number - 1
-            set {_it} to item in slot {_slot} of player's inventory
-            if {_it} is not air:
-                set {_unit} to azSellUnit({_it})
-                if {_unit} > 0:
-                    set {_amount} to amount of {_it}
-                    add ({_unit} * {_amount}) to {_total}
-                    add {_amount} to {_sold}
-                    set slot {_slot} of player's inventory to air
-        if {_total} <= 0:
-            send "{@prefix} &cThere are no sellable items in your inventory."
-            stop
-        add {_total} to {az.money.%uuid of player%}
-        send "{@prefix} &aSold &e%{_sold}% &aitems for &6$%{_total}%&a."
-
-# AH basket is now separate from /sell.
-command /sellbasket:
-    trigger:
-        open chest inventory with 6 rows named "&8✦ &6AH Sell Basket &8✦" to player
-        wait 1 tick
-        loop 54 times:
-            set {_slot} to loop-number - 1
-            if {az.sellbasket.%uuid of player%.%{_slot}%} is set:
-                set slot {_slot} of player's current inventory to {az.sellbasket.%uuid of player%.%{_slot}%}
-        set slot 49 of player's current inventory to barrier named "&cClose"
-        set slot 50 of player's current inventory to paper named "&eHow to sell" with lore "&7Put items here | &7Close the menu | &7Then use &e/ah sell <price>"
-
-on inventory close:
-    if name of event-inventory is "&8✦ &6AH Sell Basket &8✦":
-        loop 54 times:
-            set {_slot} to loop-number - 1
-            if {_slot} is 49:
-                next loop
-            if {_slot} is 50:
-                next loop
-            set {_it} to item in slot {_slot} of event-inventory
-            if {_it} is air:
-                delete {az.sellbasket.%uuid of player%.%{_slot}%}
-            else:
-                set {az.sellbasket.%uuid of player%.%{_slot}%} to {_it}
-
-# ---------------- SHARDS ----------------
-
-command /shard:
-    aliases: /shards
-    trigger:
-        send "{@prefix} &bYour shards: &f%{az.shards.%uuid of player%}% ✦"
-        send "{@prefix} &7Use &e/shardshop &7to spend them."
-
-command /shardshop:
-    trigger:
-        open chest inventory with 3 rows named "&8✦ &bShard Shop &8✦" to player
-        wait 1 tick
-        set slot 10 of player's current inventory to ender pearl named "&b8 Crystals &7[1✦]"
-        set slot 12 of player's current inventory to enchanted golden apple named "&6Enchanted Apple &7[16✦]"
-        set slot 14 of player's current inventory to netherite chestplate named "&8Netherite Chestplate &7[2✦]"
-        set slot 16 of player's current inventory to wind charge named "&fWind Charge x64 &7[1✦]"
-        set slot 22 of player's current inventory to barrier named "&cClose"
-
-on inventory click:
-    if name of event-inventory is "&8✦ &bShard Shop &8✦":
-        cancel event
-        if clicked slot is 22:
-            close player's inventory
-        else:
-            set {_price} to 0
-            if clicked slot is 10:
-                set {_price} to 1
-                set {_item} to 8 ender crystals
-            else if clicked slot is 12:
-                set {_price} to 16
-                set {_item} to 1 enchanted golden apple
-            else if clicked slot is 14:
-                set {_price} to 2
-                set {_item} to 1 netherite chestplate
-            else if clicked slot is 16:
-                set {_price} to 1
-                set {_item} to 64 wind charges
-            else:
-                stop
-            if {az.shards.%uuid of player%} < {_price}:
-                send "{@prefix} &cNot enough shards."
-                stop
-            remove {_price} from {az.shards.%uuid of player%}
-            give {_item} to player
-            send "{@prefix} &aPurchase complete."
-
-on death of player:
-    if attacker is a player:
-        add 10 to {az.shards.%uuid of attacker%}
-        send "{@prefix} &aKill reward: &b+10 ✦" to attacker
-
-every 1 minute:
-    loop all players:
-        if {az.afk} is set:
-            if distance between loop-player and {az.afk} <= 3:
-                add 1 to {az.shards.%uuid of loop-player%}
-                send "{@prefix} &aAFK reward: &b+1 ✦" to loop-player
-
-command /give-shard <player> <number>:
-    permission: aizensmp.admin
-    trigger:
-        add arg-2 to {az.shards.%uuid of arg-1%}
-        send "{@prefix} &aGave &b%arg-2% ✦ &ato &e%arg-1%&a."
-
-# ---------------- SPANWERS ----------------
-
-command /spawnershop:
-    trigger:
-        open chest inventory with 3 rows named "&8✦ &eSpawner Shop &8✦" to player
-        wait 1 tick
-        set slot 10 of player's current inventory to zombie spawn egg named "&eZombie Spawner &7[500✦]"
-        set slot 12 of player's current inventory to skeleton spawn egg named "&eSkeleton Spawner &7[1000✦]"
-        set slot 14 of player's current inventory to blaze spawn egg named "&eBlaze Spawner &7[2000✦]"
-        set slot 16 of player's current inventory to enderman spawn egg named "&eEnderman Spawner &7[3500✦]"
-        set slot 22 of player's current inventory to barrier named "&cClose"
-
-function azSpawner(t: text) :: item:
-    set {_i} to spawner
-    if {_t} is "Zombie":
-        set name of {_i} to "&eZombie Spawner &7[1]"
-    else if {_t} is "Skeleton":
-        set name of {_i} to "&eSkeleton Spawner &7[1]"
-    else if {_t} is "Blaze":
-        set name of {_i} to "&eBlaze Spawner &7[1]"
-    else if {_t} is "Enderman":
-        set name of {_i} to "&eEnderman Spawner &7[1]"
-    return {_i}
-
-on inventory click:
-    if name of event-inventory is "&8✦ &eSpawner Shop &8✦":
-        cancel event
-        if clicked slot is 22:
-            close player's inventory
-            stop
-        set {_price} to 0
-        set {_type} to ""
-        if clicked slot is 10:
-            set {_price} to 500
-            set {_type} to "Zombie"
-        else if clicked slot is 12:
-            set {_price} to 1000
-            set {_type} to "Skeleton"
-        else if clicked slot is 14:
-            set {_price} to 2000
-            set {_type} to "Blaze"
-        else if clicked slot is 16:
-            set {_price} to 3500
-            set {_type} to "Enderman"
-        else:
-            stop
-        if {az.shards.%uuid of player%} < {_price}:
-            send "{@prefix} &cNot enough shards."
-            stop
-        remove {_price} from {az.shards.%uuid of player%}
-        give azSpawner({_type}) to player
-        send "{@prefix} &aSpawner purchased."
-
-# ---------------- DONUT-STYLE SPAWN + NPC BOTS ----------------
-# Inspired by modern SMP hubs: central platform, roads, tower and command NPCs.
-# This does not copy a proprietary map. Run /buildspawn at the desired location.
-
-command /buildspawn:
-    permission: aizensmp.admin
-    trigger:
-        set {az.spawn} to location of player
-        set {_w} to world of player
-        set {_cx} to floor(x-coordinate of player)
-        set {_cy} to floor(y-coordinate of player)
-        set {_cz} to floor(z-coordinate of player)
-
-        # Main 41x41 spawn platform
-        loop numbers from -20 to 20:
-            set {_x} to loop-number
-            loop numbers from -20 to 20:
-                set {_z} to loop-number-2
-                set {_d} to sqrt(({_x} * {_x}) + ({_z} * {_z}))
-                if {_d} <= 20:
-                    set block at location ({_cx} + {_x}), {_cy} - 1, ({_cz} + {_z}) in {_w} to polished andesite
-                    if {_d} <= 17:
-                        set block at location ({_cx} + {_x}), {_cy} - 2, ({_cz} + {_z}) in {_w} to stone
-
-        # Four main roads
-        loop numbers from -20 to 20:
-            set {_n} to loop-number
-            loop numbers from -2 to 2:
-                set {_r} to loop-number-2
-                set block at location ({_cx} + {_n}), {_cy}, ({_cz} + {_r}) in {_w} to smooth stone
-                set block at location ({_cx} + {_r}), {_cy}, ({_cz} + {_n}) in {_w} to smooth stone
-
-        # Central square
-        loop numbers from -5 to 5:
-            set {_x} to loop-number
-            loop numbers from -5 to 5:
-                set {_z} to loop-number-2
-                set block at location ({_cx} + {_x}), {_cy}, ({_cz} + {_z}) in {_w} to quartz block
-
-        # Central beacon monument
-        set block at location {_cx}, {_cy} + 1, {_cz} in {_w} to beacon
-        set block at location {_cx} + 1, {_cy}, {_cz} in {_w} to emerald block
-        set block at location {_cx} - 1, {_cy}, {_cz} in {_w} to emerald block
-        set block at location {_cx}, {_cy}, {_cz} + 1 in {_w} to emerald block
-        set block at location {_cx}, {_cy}, {_cz} - 1 in {_w} to emerald block
-        set block at location {_cx}, {_cy} + 1, {_cz} + 1 in {_w} to gold block
-        set block at location {_cx} + 1, {_cy} + 1, {_cz} in {_w} to gold block
-        set block at location {_cx} - 1, {_cy} + 1, {_cz} in {_w} to gold block
-        set block at location {_cx}, {_cy} + 1, {_cz} - 1 in {_w} to gold block
-
-        # Four decorative towers
-        loop numbers from -1 to 1:
-            set {_n} to loop-number
-            loop 6 times:
-                set {_y} to loop-number-2
-                set block at location {_cx} + 15 + {_n}, {_cy} + {_y}, {_cz} + 15 in {_w} to stone bricks
-                set block at location {_cx} - 15 + {_n}, {_cy} + {_y}, {_cz} - 15 in {_w} to stone bricks
-                set block at location {_cx} + 15, {_cy} + {_y}, {_cz} - 15 + {_n} in {_w} to stone bricks
-                set block at location {_cx} - 15, {_cy} + {_y}, {_cz} + 15 + {_n} in {_w} to stone bricks
-
-        # Command NPC bots around the central square
-        spawn a villager at location ({_cx} + 7), {_cy} + 1, {_cz} in {_w}
-        set {_e} to last spawned entity
-        set name of {_e} to "&b&lRTP"
-        set {az.bot.rtp.%uuid of {_e}%} to true
-        set AI of {_e} to false
-
-        spawn a villager at location ({_cx} - 7), {_cy} + 1, {_cz} in {_w}
-        set {_e} to last spawned entity
-        set name of {_e} to "&6&lAUCTION HOUSE"
-        set {az.bot.ah.%uuid of {_e}%} to true
-        set AI of {_e} to false
-
-        spawn a villager at location {_cx}, {_cy} + 1, ({_cz} + 7) in {_w}
-        set {_e} to last spawned entity
-        set name of {_e} to "&e&lSHOP"
-        set {az.bot.shop.%uuid of {_e}%} to true
-        set AI of {_e} to false
-
-        spawn a villager at location {_cx}, {_cy} + 1, ({_cz} - 7) in {_w}
-        set {_e} to last spawned entity
-        set name of {_e} to "&c&lDUELS"
-        set {az.bot.duel.%uuid of {_e}%} to true
-        set AI of {_e} to false
-
-        send "{@prefix} &aSpawn built and command bots created."
-        send "{@prefix} &7RTP &8• &6AH &8• &eSHOP &8• &cDUELS"
-
-# Extra bots can be placed anywhere by admins.
-command /setahbot:
-    permission: aizensmp.admin
-    trigger:
-        spawn a villager at location of player
-        set {_e} to last spawned entity
-        set name of {_e} to "&6&lAUCTION HOUSE"
-        set {az.bot.ah.%uuid of {_e}%} to true
-        set AI of {_e} to false
-        send "{@prefix} &aAH bot created."
-
-command /setsettingsbot:
-    permission: aizensmp.admin
-    trigger:
-        spawn a villager at location of player
-        set {_e} to last spawned entity
-        set name of {_e} to "&b&lSETTINGS"
-        set {az.bot.settings.%uuid of {_e}%} to true
-        set AI of {_e} to false
-        send "{@prefix} &aSettings bot created."
-
-command /setfriendsbot:
-    permission: aizensmp.admin
-    trigger:
-        spawn a villager at location of player
-        set {_e} to last spawned entity
-        set name of {_e} to "&d&lFRIENDS"
-        set {az.bot.friends.%uuid of {_e}%} to true
-        set AI of {_e} to false
-        send "{@prefix} &aFriends bot created."
-
-on right click on entity:
-    if {az.bot.ah.%uuid of clicked entity%} is set:
-        cancel event
-        make player execute command "/ah"
-    else if {az.bot.settings.%uuid of clicked entity%} is set:
-        cancel event
-        make player execute command "/settings"
-    else if {az.bot.friends.%uuid of clicked entity%} is set:
-        cancel event
-        make player execute command "/friend list"
-
-# ---------------- CRATES + KEYS ----------------
-
-# Admin creates crate locations by looking at a block.
-command /setcrate <text>:
-    permission: aizensmp.admin
-    trigger:
-        if player's targeted block is air:
-            send "{@prefix} &cLook at the crate block first."
-            stop
-        set {az.crate.%arg-1%} to location of player's targeted block
-        set {az.crate.name.%arg-1%} to arg-1
-        send "{@prefix} &aCrate &e%arg-1% &aset."
-
-command /cratekey <player> <text> <number>:
-    permission: aizensmp.admin
-    trigger:
-        if arg-3 <= 0:
-            send "{@prefix} &cAmount must be positive."
-            stop
-        give arg-3 of tripwire hook named "&6%arg-2% Key" with lore "&7Use this key on the &e%arg-2% &7crate." to arg-1
-        send "{@prefix} &aGave &e%arg-3%x &6%arg-2% Key &ato &e%arg-1%&a."
-
-command /key <text>:
-    permission: aizensmp.admin
-    trigger:
-        give 1 tripwire hook named "&6%arg-1% Key" with lore "&7Use on the &e%arg-1% &7crate." to player
-        send "{@prefix} &aKey received."
-
-command /crates:
-    trigger:
-        send "&8&m--------------------------------"
-        send "&6&lAIZEN CRATES"
-        send "&e• &fStarter Crate &7- common rewards"
-        send "&b• &fRare Crate &7- better rewards"
-        send "&d• &fLegendary Crate &7- rare rewards"
-        send "&8&m--------------------------------"
-
-# Default reward tables.
-function azGiveCrateReward(p: player, crate: text):
-    set {_r} to random integer between 1 and 100
-    if {_r} <= 45:
-        give random integer between 4 and 16 of diamond to {_p}
-        send "{@prefix} &aCrate reward: &bDiamonds!" to {_p}
-    else if {_r} <= 70:
-        give random integer between 1 and 3 of golden apple to {_p}
-        send "{@prefix} &6Crate reward: Golden Apples!" to {_p}
-    else if {_r} <= 85:
-        give random integer between 1 and 2 of netherite ingot to {_p}
-        send "{@prefix} &8Crate reward: Netherite!" to {_p}
-    else if {_r} <= 95:
-        give random integer between 1 and 8 of ender pearl to {_p}
-        send "{@prefix} &dCrate reward: Ender Pearls!" to {_p}
-    else:
-        give 1 of enchanted golden apple to {_p}
-        send "{@prefix} &e&lJACKPOT! &fEnchanted Golden Apple!" to {_p}
-
-on right click on block:
-    loop {az.crate::*}:
-        if location of event-block is loop-value:
-            cancel event
-            set {_crate} to loop-index
-            set {_key} to tripwire hook named "&6%{_crate}% Key"
-            if player has {_key}:
-                remove 1 of {_key} from player
-                azGiveCrateReward(player, {_crate})
-                send "{@prefix} &a%{_crate}% crate opened!" to player
-            else:
-                send "{@prefix} &cYou need a &6%{_crate}% Key&c."
-            stop
-
-# ---------------- HOURLY KIT KEYS ----------------
-
-function azKitItem(t: text, n: number) :: item:
-    if {_t} is "Starter":
-        if {_n} is 1:
-            return diamond helmet
-        if {_n} is 2:
-            return diamond chestplate
-        if {_n} is 3:
-            return diamond leggings
-        if {_n} is 4:
-            return diamond boots
-        if {_n} is 5:
-            return diamond sword
-        if {_n} is 6:
-            return diamond axe
-        if {_n} is 7:
-            return diamond pickaxe
-        if {_n} is 8:
-            return diamond shovel
-    if {_t} is "Rare":
-        if {_n} is 1:
-            return diamond helmet
-        if {_n} is 2:
-            return diamond chestplate
-        if {_n} is 3:
-            return diamond leggings
-        if {_n} is 4:
-            return diamond boots
-        if {_n} is 5:
-            return diamond sword
-        if {_n} is 6:
-            return diamond axe
-        if {_n} is 7:
-            return diamond pickaxe
-        if {_n} is 8:
-            return diamond shovel
-    if {_t} is "Epic":
-        if {_n} is 1:
-            return diamond helmet
-        if {_n} is 2:
-            return diamond chestplate
-        if {_n} is 3:
-            return diamond leggings
-        if {_n} is 4:
-            return diamond boots
-        if {_n} is 5:
-            return diamond sword
-        if {_n} is 6:
-            return diamond axe
-        if {_n} is 7:
-            return diamond pickaxe
-        if {_n} is 8:
-            return diamond shovel
-    return stone
-
-function azGiveKitKey(p: player, kit: text):
-    give 1 tripwire hook named "&6%{_kit}% Kit Key" with lore "&7Right-click &f/kitkey &7to choose one item." to {_p}
-
-command /kitkey:
-    trigger:
-        set {_found} to false
-        loop all items in player's inventory:
-            if name of loop-item contains "Kit Key":
-                set {_found} to true
-                set {_key} to loop-item
-                stop loop
-        if {_found} is false:
-            send "{@prefix} &cYou don't have a Kit Key."
-            stop
-        set {_kit} to "Starter"
-        if name of {_key} contains "Rare":
-            set {_kit} to "Rare"
-        else if name of {_key} contains "Epic":
-            set {_kit} to "Epic"
-        remove 1 of {_key} from player
-        open chest inventory with 3 rows named "&8✦ &6%{_kit}% Kit Key &8✦" to player
-        wait 1 tick
-        set slot 10 of player's current inventory to diamond helmet named "&bDiamond Helmet &7(Protection I)"
-        set slot 11 of player's current inventory to diamond chestplate named "&bDiamond Chestplate &7(Protection I)"
-        set slot 12 of player's current inventory to diamond leggings named "&bDiamond Leggings &7(Protection I)"
-        set slot 13 of player's current inventory to diamond boots named "&bDiamond Boots &7(Protection I)"
-        set slot 14 of player's current inventory to diamond sword named "&bDiamond Sword &7(Sharpness I)"
-        set slot 15 of player's current inventory to diamond axe named "&bDiamond Axe &7(Sharpness I)"
-        set slot 16 of player's current inventory to diamond pickaxe named "&bDiamond Pickaxe &7(Efficiency II)"
-        set slot 17 of player's current inventory to diamond shovel named "&bDiamond Shovel &7(Efficiency II)"
-
-on inventory click:
-    if name of event-inventory contains "Kit Key":
-        cancel event
-        if clicked slot is between 10 and 17:
-            set {_chosen} to clicked slot
-            remove 9 from {_chosen}
-            set {_kitItem} to azKitItem("Starter", {_chosen})
-            if {_chosen} <= 4:
-                enchant {_kitItem} with protection 1
-            else if {_chosen} is 5:
-                enchant {_kitItem} with sharpness 1
-            else if {_chosen} is 6:
-                enchant {_kitItem} with sharpness 1
-            else:
-                enchant {_kitItem} with efficiency 2
-            give {_kitItem} to player
-            close player's inventory
-            send "{@prefix} &aYou selected your kit item."
-        stop
-
-every 1 hour:
-    loop all players:
-        azGiveKitKey(loop-player, "Starter")
-        send "{@prefix} &6Hourly reward: &e1 Starter Kit Key&6!" to loop-player
-
-# ---------------- EXTRA KEY TYPES ----------------
-
-command /givekitkey <player> <text> <number>:
-    permission: aizensmp.admin
-    trigger:
-        set {_kitType} to arg-2
-        if {_kitType} is not "Starter":
-            if {_kitType} is not "Rare":
-                if {_kitType} is not "Epic":
-                    send "{@prefix} &cKey types: Starter, Rare, Epic."
-                    stop
-        loop arg-3 times:
-            azGiveKitKey(arg-1, arg-2)
-        send "{@prefix} &aGave &e%arg-3%x &6%arg-2% Kit Key&a."
-
-# ---------------- TEAMS ----------------
-
-command /teamcreate <text>:
-    trigger:
-        if {az.team.%uuid of player%} is set:
-            send "{@prefix} &cYou are already in a team."
-            stop
-        if {az.team.owner.%arg-1%} is set:
-            send "{@prefix} &cThat team already exists."
-            stop
-        set {az.team.owner.%arg-1%} to uuid of player
-        set {az.team.%uuid of player%} to arg-1
-        add uuid of player to {az.team.members.%arg-1%::*}
-        send "{@prefix} &aTeam &e%arg-1% &acreated."
-
-command /teaminvite <player>:
-    trigger:
-        if {az.team.%uuid of player%} is not set:
-            send "{@prefix} &cCreate/join a team first."
-            stop
-        set {_team} to {az.team.%uuid of player%}
-        if {az.team.owner.%{_team}%} is not uuid of player:
-            send "{@prefix} &cOnly the team owner can invite."
-            stop
-        set {az.team.invite.%uuid of arg-1%} to {_team}
-        send "{@prefix} &aInvitation sent to &e%arg-1%&a."
-        send "{@prefix} &eYou were invited to team &6%{_team}%&e. Use &f/teamaccept&e." to arg-1
-
-command /teamaccept:
-    trigger:
-        if {az.team.invite.%uuid of player%} is not set:
-            send "{@prefix} &cYou have no pending team invite."
-            stop
-        if {az.team.%uuid of player%} is set:
-            send "{@prefix} &cYou are already in a team."
-            stop
-        set {_team} to {az.team.invite.%uuid of player%}
-        set {az.team.%uuid of player%} to {_team}
-        add uuid of player to {az.team.members.%{_team}%::*}
-        delete {az.team.invite.%uuid of player%}
-        send "{@prefix} &aJoined team &e%{_team}%&a."
-
-command /teamleave:
-    trigger:
-        if {az.team.%uuid of player%} is not set:
-            send "{@prefix} &cYou are not in a team."
-            stop
-        set {_team} to {az.team.%uuid of player%}
-        if {az.team.owner.%{_team}%} is uuid of player:
-            loop {az.team.members.%{_team}%::*}:
-                delete {az.team.%loop-value%}
-            delete {az.team.members.%{_team}%::*}
-            delete {az.team.owner.%{_team}%}
-            send "{@prefix} &cTeam disbanded."
-        else:
-            remove uuid of player from {az.team.members.%{_team}%::*}
-            delete {az.team.%uuid of player%}
-            send "{@prefix} &aYou left team &e%{_team}%&a."
-
-command /teaminfo:
-    trigger:
-        if {az.team.%uuid of player%} is not set:
-            send "{@prefix} &cYou are not in a team."
-            stop
-        set {_team} to {az.team.%uuid of player%}
-        send "&8&m--------------------------------"
-        send "&6&lTEAM &e%{_team}%"
-        send "&7Members: &f%size of {az.team.members.%{_team}%::*}%"
-        send "&7Owner UUID: &f%{az.team.owner.%{_team}%}%"
-        send "&8&m--------------------------------"
-
-# ---------------- RANKS / OWNER ----------------
-
-# Owner identity: AizenX99
-on join:
-    if name of player is "AizenX99":
-        set {az.rank.%uuid of player%} to "OWNER"
-        if player is not op:
-            execute console command "op %player%"
-        send "&6&lAizenSMP &8» &eWelcome Owner &6AizenX99&e!" to player
-
-command /rank [<player>] [<text>]:
-    permission: aizensmp.admin
-    trigger:
-        if arg-1 is not set:
-            send "&7Your rank: &6%{az.rank.%uuid of player%}%"
-            stop
-        if arg-2 is not set:
-            send "{@prefix} &cUsage: /rank <player> <rank>"
-            stop
-        set {az.rank.%uuid of arg-1%} to arg-2
-        send "{@prefix} &aRank of &f%arg-1% &aset to &6%arg-2%&a."
-
-# ---------------- INFINITE NIGHT VISION ----------------
-
-command /nv:
-    trigger:
-        execute console command "effect give %player% minecraft:night_vision infinite 0 true"
-        send "{@prefix} &aInfinite Night Vision enabled." to player
-
-# ---------------- PLAYER STATS + RIGHT SIDEBAR ----------------
-
-on death of player:
-    add 1 to {az.deaths.%uuid of victim%}
-    if attacker is a player:
-        add 1 to {az.kills.%uuid of attacker%}
-
-command /stats:
-    trigger:
-        send "&8&m--------------------------------"
-        send "&6&lAIZEN STATS"
-        send "&7Player: &f%player%"
-        send "&7Kills: &a%{az.kills.%uuid of player%}%"
-        send "&7Deaths: &c%{az.deaths.%uuid of player%}%"
-        send "&7K/D: &e%{az.kills.%uuid of player%}% / %{az.deaths.%uuid of player%}%"
-        send "&7Money: &6$%{az.money.%uuid of player%}%"
-        send "&7Shards: &b%{az.shards.%uuid of player%}%"
-        send "&7Team: &f%{az.team.%uuid of player%}%"
-        send "&8&m--------------------------------"
-
-# Vanilla-style sidebar on the RIGHT side of the screen.
-# The board is refreshed per player so every player sees their own values.
-every 2 seconds:
-    loop all players:
-        set {_p} to loop-player
-        set title of {_p}'s scoreboard to "&6&lAIZEN SMP"
-        set line 1 of {_p}'s scoreboard to "&7&m----------------"
-        set line 2 of {_p}'s scoreboard to "&f%{_p}% &8[&6%{az.rank.%uuid of {_p}%}%&8]"
-        set line 3 of {_p}'s scoreboard to "&6$ &f%{az.money.%uuid of {_p}%}%"
-        set line 4 of {_p}'s scoreboard to "&b✦ &f%{az.shards.%uuid of {_p}%}%"
-        set line 5 of {_p}'s scoreboard to "&aKills &f%{az.kills.%uuid of {_p}%}%"
-        set line 6 of {_p}'s scoreboard to "&cDeaths &f%{az.deaths.%uuid of {_p}%}%"
-        set line 7 of {_p}'s scoreboard to "&ePlaytime &f%{az.playtime.%uuid of {_p}%}%m"
-        set line 8 of {_p}'s scoreboard to "&7&m----------------"
-
-# ---------------- PLAYTIME ----------------
-
-on join:
-    if {az.playtime.%uuid of player%} is not set:
-        set {az.playtime.%uuid of player%} to 0
-    if {az.session.%uuid of player%} is not set:
-        set {az.session.%uuid of player%} to 0
-
-every 1 minute:
-    loop all players:
-        add 1 to {az.playtime.%uuid of loop-player%}
-        add 1 to {az.session.%uuid of loop-player%}
-
-command /playtime [<player>]:
-    trigger:
-        set {_p} to player
-        if arg-1 is set:
-            set {_p} to arg-1
-        set {_minutes} to {az.playtime.%uuid of {_p}%}
-        if {_minutes} is not set:
-            set {_minutes} to 0
-        set {_hours} to floor({_minutes} / 60)
-        set {_mins} to {_minutes} - ({_hours} * 60)
-        send "&8&m--------------------------------"
-        send "&6&lPLAYTIME"
-        send "&7Player: &f%{_p}%"
-        send "&7Playtime: &e%{_hours}%h %{_mins}%m"
-        send "&7Total minutes: &f%{_minutes}%"
-        send "&8&m--------------------------------"
-
-# ---------------- PLAYER ORDERS ----------------
-# /orders <item> <amount> <price> creates a simple buy order.
-# /orders lists open orders. /orders buy <id> fulfills an order.
-
-command /orders [<text>] [<number>] [<number>]:
-    trigger:
-        if arg-1 is not set:
-            send "&8&m--------------------------------"
-            send "&6&lPLAYER ORDERS"
-            send "&7Create: &e/orders <item> <amount> <price>"
-            send "&7Fulfill: &e/orders buy <id>"
-            send "&7Cancel your order: &e/orders cancel <id>"
-            set {_shown} to 0
-            loop {az.order.item::*}:
-                set {_id} to loop-index parsed as integer
-                set {_qty} to {az.order.qty.%{_id}%}
-                set {_price} to {az.order.price.%{_id}%}
-                set {_buyer} to {az.order.buyer.%{_id}%}
-                send "&e#%{_id}% &f%{az.order.item.%{_id}%}% &7x%{_qty}% &6$%{_price}% &7by &f%{_buyer}%"
-                add 1 to {_shown}
-            if {_shown} is 0:
-                send "&7No open orders."
-            send "&8&m--------------------------------"
-            stop
-        if arg-1 is "buy":
-            if arg-2 is not set:
-                send "{@prefix} &cUsage: /orders buy <id>"
-                stop
-            set {_id} to arg-2
-            if {az.order.item.%{_id}%} is not set:
-                send "{@prefix} &cOrder not found."
-                stop
-            set {_qty} to {az.order.qty.%{_id}%}
-            set {_price} to {az.order.price.%{_id}%}
-            set {_itemText} to {az.order.item.%{_id}%}
-            if {az.money.%uuid of player%} < {_price}:
-                send "{@prefix} &cYou need &6$%{_price}%&c."
-                stop
-            set {_sellerItem} to air
-            loop 36 times:
-                set {_slot} to loop-number - 1
-                set {_it} to item in slot {_slot} of player's inventory
-                if "%type of {_it}%" is {_itemText}:
-                    if amount of {_it} >= {_qty}:
-                        set {_sellerItem} to {_it}
-                        set {_sellerSlot} to {_slot}
-                        stop loop
-            if {_sellerItem} is air:
-                send "{@prefix} &cYou do not have the required quantity."
-                stop
-            remove {_qty} from item in slot {_sellerSlot} of player's inventory
-            set {_buyerUUID} to {az.order.buyeruuid.%{_id}%}
-            remove {_price} from {az.money.%uuid of player%}
-            add {_price} to {az.money.%{_buyerUUID}%}
-            set {_buyerName} to {az.order.buyer.%{_id}%}
-            set {_buyerPlayer} to player named {_buyerName}
-            if {_buyerPlayer} is online:
-                send "{@prefix} &aYour order &e#%{_id}% &awas fulfilled by &f%player%&a." to {_buyerPlayer}
-            delete {az.order.item.%{_id}%}
-            delete {az.order.qty.%{_id}%}
-            delete {az.order.price.%{_id}%}
-            delete {az.order.buyer.%{_id}%}
-            delete {az.order.buyeruuid.%{_id}%}
-            send "{@prefix} &aOrder fulfilled for &6$%{_price}%&a."
-            stop
-        if arg-1 is "cancel":
-            if arg-2 is not set:
-                send "{@prefix} &cUsage: /orders cancel <id>"
-                stop
-            set {_id} to arg-2
-            if {az.order.buyeruuid.%{_id}%} is not uuid of player:
-                send "{@prefix} &cOnly the order creator can cancel it."
-                stop
-            delete {az.order.item.%{_id}%}
-            delete {az.order.qty.%{_id}%}
-            delete {az.order.price.%{_id}%}
-            delete {az.order.buyer.%{_id}%}
-            delete {az.order.buyeruuid.%{_id}%}
-            send "{@prefix} &aOrder cancelled."
-            stop
-        if arg-2 is not set or arg-3 is not set:
-            send "{@prefix} &cUsage: /orders <item> <amount> <price>"
-            stop
-        if arg-2 <= 0 or arg-3 <= 0:
-            send "{@prefix} &cAmount and price must be positive."
-            stop
-        set {az.order.next} to {az.order.next} + 1
-        set {_id} to {az.order.next}
-        set {az.order.item.%{_id}%} to arg-1
-        set {az.order.qty.%{_id}%} to arg-2
-        set {az.order.price.%{_id}%} to arg-3
-        set {az.order.buyer.%{_id}%} to name of player
-        set {az.order.buyeruuid.%{_id}%} to uuid of player
-        remove arg-3 from {az.money.%uuid of player%}
-        send "{@prefix} &aOrder &e#%{_id}% &acreated for &f%arg-1% &7x%arg-2% &aat &6$%arg-3%&a."
-
-# ---------------- HELP ----------------
-
-command /help:
-    trigger:
-        send "&8&m--------------------------------"
-        send "&6&lAizenSMP"
-        send "&e/spawn &7- Spawn"
-        send "&e/rtp &7- Random teleport"
-        send "&e/rtpq &7- Random player teleport"
-        send "&e/bal &7- Economy"
-        send "&e/pay &7- Pay player"
-        send "&e/bounty &7- Bounty"
-        send "&e/friend &7- Friends"
-        send "&e/tpa &7- Teleport requests"
-        send "&e/duel &7- Duels"
-        send "&e/shop &7- Old-style category shop"
-        send "&e/endshop &7- End resources"
-        send "&e/netherShop &7- Nether resources"
-        send "&e/sell &7- Sell all sellable inventory items"
-        send "&e/sellbasket &7- AH sell basket"
-        send "&e/shardshop &7- Shard shop"
-        send "&e/spawnershop &7- Spawners"
-        send "&e/ah &7- Auction House"
-        send "&e/orders &7- Player orders"
-        send "&e/settings &7- Privacy/settings"
-        send "&8&m--------------------------------"
-
-# ---------------- DATA CLEANUP ----------------
-
-on quit:
-    delete {az.tpa.%uuid of player%}
-    delete {az.tpahere.%uuid of player%}
-    delete {az.duel.request.%uuid of player%}
