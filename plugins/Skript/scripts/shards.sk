@@ -25,7 +25,7 @@ command /shard [<text>] [<number>]:
             set slot 10 of player's current inventory to spawner named "&aZombie Spawner &7- &e500 ✦"
             set slot 12 of player's current inventory to spawner named "&cSkeleton Spawner &7- &e2,000 ✦"
             set slot 14 of player's current inventory to spawner named "&6Blaze Spawner &7- &e3,000 ✦"
-            set slot 16 of player's current inventory to spawner named "&5Enderman Spawner &7- &e5,000 ✦"
+            set slot 16 of player's current inventory to spawner named "&5Enderman Spawner &7- &e3,500 ✦"
             set slot 22 of player's current inventory to spawner named "&bIron Golem Spawner &7- &e10,000 ✦"
             stop
 
@@ -57,7 +57,7 @@ on inventory click:
             set {_price} to 3000
             set {_name} to "Blaze"
         else if clicked slot is 16:
-            set {_price} to 5000
+            set {_price} to 3500
             set {_name} to "Enderman"
         else if clicked slot is 22:
             set {_price} to 10000
