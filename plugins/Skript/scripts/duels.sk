@@ -1,0 +1,104 @@
+# =========================================================
+# AizenSMP - Duels
+# Players enter with their CURRENT inventory.
+# No kit is given and no items are added.
+# =========================================================
+
+options:
+    prefix: &6[&eAizenSMP&6] &r
+    request-time: 60 seconds
+
+command /setduel:
+    permission: aizensmp.admin
+    permission message: &cYou don't have permission.
+    trigger:
+        set {aizensmp.duel.arena} to location of player
+        send "%{@prefix}% &aDuel arena set at your current location." to player
+
+command /duel <player>:
+    trigger:
+        if arg-1 is player:
+            send "%{@prefix}% &cYou cannot duel yourself." to player
+            stop
+        if arg-1 is not online:
+            send "%{@prefix}% &cThat player is not online." to player
+            stop
+        if {aizensmp.duel.arena} is not set:
+            send "%{@prefix}% &cThe duel arena has not been set yet." to player
+            stop
+        if {aizensmp.duel.%uuid of player%} is set:
+            send "%{@prefix}% &cYou are already in a duel." to player
+            stop
+        if {aizensmp.duel.%uuid of arg-1%} is set:
+            send "%{@prefix}% &cThat player is already in a duel." to player
+            stop
+
+        set {aizensmp.duel.request.%uuid of arg-1%} to player
+        send "%{@prefix}% &aDuel request sent to &e%arg-1%&a." to player
+        send "%{@prefix}% &e%player% &fwants to duel you." to arg-1
+        send "&a/duelaccept &7to accept &8| &c/dueldeny &7to deny" to arg-1
+
+        wait {@request-time}
+        if {aizensmp.duel.request.%uuid of arg-1%} is player:
+            delete {aizensmp.duel.request.%uuid of arg-1%}
+
+command /duelaccept:
+    trigger:
+        if {aizensmp.duel.request.%uuid of player%} is not set:
+            send "%{@prefix}% &cYou have no pending duel request." to player
+            stop
+
+        set {_challenger} to {aizensmp.duel.request.%uuid of player%}
+        delete {aizensmp.duel.request.%uuid of player%}
+
+        if {_challenger} is not online:
+            send "%{@prefix}% &cThe challenger is no longer online." to player
+            stop
+        if {aizensmp.duel.%uuid of player%} is set:
+            send "%{@prefix}% &cYou are already in a duel." to player
+            stop
+        if {aizensmp.duel.%uuid of {_challenger}%} is set:
+            send "%{@prefix}% &cThe challenger is already in a duel." to player
+            stop
+
+        set {aizensmp.duel.%uuid of player%} to {_challenger}
+        set {aizensmp.duel.%uuid of {_challenger}%} to player
+
+        teleport player to {aizensmp.duel.arena}
+        teleport {_challenger} to {aizensmp.duel.arena}
+
+        send "%{@prefix}% &aDuel started! &fYou keep the items you currently have." to player
+        send "%{@prefix}% &aDuel started! &fYou keep the items you currently have." to {_challenger}
+
+command /dueldeny:
+    trigger:
+        if {aizensmp.duel.request.%uuid of player%} is not set:
+            send "%{@prefix}% &cYou have no pending duel request." to player
+            stop
+        set {_challenger} to {aizensmp.duel.request.%uuid of player%}
+        delete {aizensmp.duel.request.%uuid of player%}
+        send "%{@prefix}% &cDuel request denied." to player
+        if {_challenger} is online:
+            send "%{@prefix}% &cYour duel request was denied." to {_challenger}
+
+on death:
+    if {aizensmp.duel.%uuid of victim%} is set:
+        set {_opponent} to {aizensmp.duel.%uuid of victim%}
+        delete {aizensmp.duel.%uuid of victim%}
+        if {_opponent} is online:
+            delete {aizensmp.duel.%uuid of {_opponent}%}
+            send "%{@prefix}% &aYou won the duel against &e%victim%&a!" to {_opponent}
+            send "%{@prefix}% &cYou lost the duel." to victim
+
+on quit:
+    if {aizensmp.duel.%uuid of player%} is set:
+        set {_opponent} to {aizensmp.duel.%uuid of player%}
+        delete {aizensmp.duel.%uuid of player%}
+        if {_opponent} is online:
+            delete {aizensmp.duel.%uuid of {_opponent}%}
+            send "%{@prefix}% &aYou won the duel because your opponent left." to {_opponent}
+
+# NOTE:
+# Future high-player matchmaking is intentionally NOT enabled yet.
+# When player counts become high, a separate gear-tier matchmaking
+# system can pair similarly equipped players.
