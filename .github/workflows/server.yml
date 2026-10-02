@@ -139,7 +139,7 @@ jobs:
           echo "Approve the agent in your Playit account."
           echo "=================================="
 
-          ./playit-agent --help
+          echo "Starting Playit setup. Approve the claim URL shown below in your Playit account."          ./playit-agent --socket-path "$PLAYIT_SOCKET" setup 2>&1 | tee playit-setup.log          echo ""          echo "========== PLAYIT OUTPUT =========="          cat playit-setup.log || true          cat playit-daemon.log || true          echo "==================================="          echo "If tunnels are configured in your Playit account, their public addresses should appear above."          echo "Java target: 127.0.0.1:25565 (TCP)"          echo "Bedrock target: 127.0.0.1:19132 (UDP)"
       - name: Start AizenSMP and save on shutdown
         shell: bash
         working-directory: server
