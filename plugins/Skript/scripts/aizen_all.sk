@@ -73,6 +73,8 @@ on join:
         set {az.settings.pay.%uuid of player%} to "all"
     if {az.settings.duel.%uuid of player%} is not set:
         set {az.settings.duel.%uuid of player%} to "all"
+    if {az.rank.%uuid of player%} is not set:
+        set {az.rank.%uuid of player%} to "Default"
     set {az.name.%uuid of player%} to name of player
     send "{@prefix} &fWelcome to &eAizenSMP&f!" to player
 
@@ -1580,6 +1582,35 @@ command /teaminfo:
         send "&7Owner UUID: &f%{az.team.owner.%{_team}%}%"
         send "&8&m--------------------------------"
 
+# ---------------- RANKS / OWNER ----------------
+
+# Owner identity: AizenX99
+on join:
+    if name of player is "AizenX99":
+        set {az.rank.%uuid of player%} to "OWNER"
+        if player is not op:
+            execute console command "op %player%"
+        send "&6&lAizenSMP &8» &eWelcome Owner &6AizenX99&e!" to player
+
+command /rank [<player>] [<text>]:
+    permission: aizensmp.admin
+    trigger:
+        if arg-1 is not set:
+            send "&7Your rank: &6%{az.rank.%uuid of player%}%"
+            stop
+        if arg-2 is not set:
+            send "{@prefix} &cUsage: /rank <player> <rank>"
+            stop
+        set {az.rank.%uuid of arg-1%} to arg-2
+        send "{@prefix} &aRank of &f%arg-1% &aset to &6%arg-2%&a."
+
+# ---------------- INFINITE NIGHT VISION ----------------
+
+command /nv:
+    trigger:
+        execute console command "effect give %player% minecraft:night_vision infinite 0 true"
+        send "{@prefix} &aInfinite Night Vision enabled." to player
+
 # ---------------- PLAYER STATS + RIGHT SIDEBAR ----------------
 
 on death of player:
@@ -1607,7 +1638,7 @@ every 2 seconds:
         set {_p} to loop-player
         set title of {_p}'s scoreboard to "&6&lAIZEN SMP"
         set line 1 of {_p}'s scoreboard to "&7&m----------------"
-        set line 2 of {_p}'s scoreboard to "&f%{_p}%"
+        set line 2 of {_p}'s scoreboard to "&f%{_p}% &8[&6%{az.rank.%uuid of {_p}%}%&8]"
         set line 3 of {_p}'s scoreboard to "&6$ &f%{az.money.%uuid of {_p}%}%"
         set line 4 of {_p}'s scoreboard to "&b✦ &f%{az.shards.%uuid of {_p}%}%"
         set line 5 of {_p}'s scoreboard to "&aKills &f%{az.kills.%uuid of {_p}%}%"
