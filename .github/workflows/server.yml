@@ -110,7 +110,7 @@ jobs:
           enable-query=false
           EOF
 
-      - name: Setup playit.gg agent
+      - name: Start playit.gg agent (non-interactive)
         shell: bash
         run: |
           set -e
@@ -118,21 +118,22 @@ jobs:
           PLAYIT_SOCKET="$HOME/.config/playit_gg/playit.sock"
           PLAYIT_SECRET="$HOME/.config/playit_gg/playit.toml"
 
-          # Playit uses a daemon (playitd) and a CLI (playit).
           curl -L --fail -o playitd "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
-          curl -L --fail -o playit "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-cli-linux-amd64"
-          chmod +x playitd playit
+          chmod +x playitd
 
-          echo "========== PLAYIT SETUP =========="
-          echo "Socket: $PLAYIT_SOCKET"
+          if [ ! -f "$PLAYIT_SECRET" ]; then
+            echo "ERROR: Playit agent secret was not restored."
+            echo "The first Playit claim/setup must be completed once and persisted in the artifact."
+            exit 1
+          fi
 
-          # Run the daemon with a user-writable socket, never /run/playit.
+          rm -f "$PLAYIT_SOCKET"
           nohup ./playitd --socket-path "$PLAYIT_SOCKET" --secret-path "$PLAYIT_SECRET" > playitd.log 2>&1 &
           PLAYITD_PID=$!
           echo "$PLAYITD_PID" > playitd.pid
 
           echo "Waiting for Playit daemon..."
-          for i in {1..20}; do
+          for i in {1..30}; do
             if [ -S "$PLAYIT_SOCKET" ]; then
               echo "Playit daemon is ready."
               break
@@ -146,28 +147,21 @@ jobs:
           done
 
           if [ ! -S "$PLAYIT_SOCKET" ]; then
-            echo "Playit daemon did not create its socket."
+            echo "ERROR: Playit daemon did not create its socket."
             cat playitd.log || true
             exit 1
           fi
 
-          if [ -f "$PLAYIT_SECRET" ]; then
-            echo "Existing Playit secret found."
-          else
-            echo "No Playit secret found. Starting claim/setup flow..."
+          if ! kill -0 "$PLAYITD_PID" 2>/dev/null; then
+            echo "ERROR: Playit daemon stopped after startup."
+            cat playitd.log || true
+            exit 1
           fi
 
-          # Connect the CLI to the exact daemon socket above.
-          ./playit --socket-path "$PLAYIT_SOCKET" setup 2>&1 | tee playit-setup.log
-
-          echo ""
-          echo "========== PLAYIT OUTPUT =========="
-          cat playit-setup.log 2>/dev/null || true
-          cat playitd.log 2>/dev/null || true
-          echo "==================================="
+          echo "Playit agent is running in background."
           echo "Java target: 127.0.0.1:25565 (TCP)"
           echo "Bedrock target: 127.0.0.1:19132 (UDP)"
-          echo "Playit setup/agent step completed."
+          echo "No interactive setup command is used."
 
       - name: Start AizenSMP and save on shutdown
         shell: bash
