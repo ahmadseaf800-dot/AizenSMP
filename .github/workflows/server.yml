@@ -116,39 +116,54 @@ jobs:
           set -e
           mkdir -p "$HOME/.config/playit_gg"
           PLAYIT_SOCKET="$HOME/.config/playit_gg/playit.sock"
+          PLAYIT_SECRET="$HOME/.config/playit_gg/playit.toml"
 
+          # Playit uses a daemon (playitd) and a CLI (playit).
+          curl -L --fail -o playitd "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
           curl -L --fail -o playit "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-cli-linux-amd64"
-          chmod +x playit
+          chmod +x playitd playit
 
           echo "========== PLAYIT SETUP =========="
-          echo "Checking for a previously claimed Playit agent..."
-          echo "================================="
+          echo "Socket: $PLAYIT_SOCKET"
 
-          if [ -f "$HOME/.config/playit_gg/playit.toml" ]; then
-            echo "Existing Playit secret found; starting the Playit service."
-          else
-            echo "No Playit secret found; starting the Playit service first."
-          fi
+          # Run the daemon with a user-writable socket, never /run/playit.
+          nohup ./playitd --socket-path "$PLAYIT_SOCKET" --secret-path "$PLAYIT_SECRET" > playitd.log 2>&1 &
+          PLAYITD_PID=$!
+          echo "$PLAYITD_PID" > playitd.pid
 
-          echo "Starting Playit service with: playit start"
-          nohup ./playit start > playit-service.log 2>&1 &
-          PLAYIT_PID=$!
-          echo "$PLAYIT_PID" > playit.pid
-
-          for i in {1..10}; do
+          echo "Waiting for Playit daemon..."
+          for i in {1..20}; do
             if [ -S "$PLAYIT_SOCKET" ]; then
+              echo "Playit daemon is ready."
               break
+            fi
+            if ! kill -0 "$PLAYITD_PID" 2>/dev/null; then
+              echo "Playit daemon exited unexpectedly."
+              cat playitd.log || true
+              exit 1
             fi
             sleep 1
           done
 
-          echo "Running Playit setup through the CLI service..."
-          ./playit setup 2>&1 | tee playit-setup.log
+          if [ ! -S "$PLAYIT_SOCKET" ]; then
+            echo "Playit daemon did not create its socket."
+            cat playitd.log || true
+            exit 1
+          fi
+
+          if [ -f "$PLAYIT_SECRET" ]; then
+            echo "Existing Playit secret found."
+          else
+            echo "No Playit secret found. Starting claim/setup flow..."
+          fi
+
+          # Connect the CLI to the exact daemon socket above.
+          ./playit --socket-path "$PLAYIT_SOCKET" setup 2>&1 | tee playit-setup.log
 
           echo ""
           echo "========== PLAYIT OUTPUT =========="
           cat playit-setup.log 2>/dev/null || true
-          cat playit-service.log 2>/dev/null || true
+          cat playitd.log 2>/dev/null || true
           echo "==================================="
           echo "Java target: 127.0.0.1:25565 (TCP)"
           echo "Bedrock target: 127.0.0.1:19132 (UDP)"
