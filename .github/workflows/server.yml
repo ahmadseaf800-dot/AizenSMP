@@ -105,53 +105,41 @@ jobs:
           enable-query=false
           EOF
 
-      - name: Start playit.gg agent and show claim link
+      - name: Claim and start playit.gg agent
         shell: bash
         run: |
           set -e
           curl -L --fail -o playit-agent "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
           chmod +x playit-agent
+
           mkdir -p "$HOME/.config/playit_gg"
           PLAYIT_SOCKET="$HOME/.config/playit_gg/playit.sock"
           rm -f "$PLAYIT_SOCKET"
 
-          echo "========== PLAYIT AGENT =========="
-          echo "Starting Playit with socket-path."
+          echo "========== PLAYIT SETUP =========="
+          echo "Starting Playit daemon..."
           echo "Socket: $PLAYIT_SOCKET"
-          echo "Waiting for Playit to print the Claim URL..."
           echo "=================================="
 
-          nohup ./playit-agent --socket-path "$PLAYIT_SOCKET" > playit.log 2>&1 &
-          PLAYIT_PID=$!
-          echo "$PLAYIT_PID" > playit.pid
+          nohup ./playit-agent --socket-path "$PLAYIT_SOCKET" > playit-daemon.log 2>&1 &
+          PLAYIT_DAEMON_PID=$!
+          echo "$PLAYIT_DAEMON_PID" > playit.pid
+          sleep 2
 
-          CLAIM_URL=""
-          for i in {1..60}; do
-            sleep 2
-            if [ -f playit.log ]; then
-              echo "--- Playit status $i/60 ---"
-              tail -n 20 playit.log || true
-              CLAIM_URL=$(grep -Eo 'https?://[^[:space:]]+' playit.log | grep -Ei 'playit|claim' | head -n 1 | sed 's/[),]$//' || true)
-              if [ -n "$CLAIM_URL" ]; then
-                echo "=============================================="
-                echo "PLAYIT CLAIM URL FOUND"
-                echo "$CLAIM_URL"
-                echo "=============================================="
-                break
-              fi
-            fi
-            if ! kill -0 "$PLAYIT_PID" 2>/dev/null; then
-              echo "Playit agent process stopped."
-              break
-            fi
-          done
-
-          if [ -z "$CLAIM_URL" ]; then
-            echo "NO CLAIM URL WAS DETECTED IN THE FIRST 120 SECONDS"
-            echo "FULL PLAYIT LOG:"
-            cat playit.log || true
+          if ! kill -0 "$PLAYIT_DAEMON_PID" 2>/dev/null; then
+            echo "Playit daemon failed to start."
+            cat playit-daemon.log || true
+            exit 1
           fi
 
+          echo ""
+          echo "========== PLAYIT CLAIM =========="
+          echo "The command below generates the official Playit claim URL."
+          echo "Open the printed https://playit.gg/claim/... link on your phone."
+          echo "Approve the agent in your Playit account."
+          echo "=================================="
+
+          ./playit-agent --stdout --socket-path "$PLAYIT_SOCKET" setup
       - name: Start AizenSMP and save on shutdown
         shell: bash
         working-directory: server
