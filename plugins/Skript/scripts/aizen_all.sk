@@ -1126,6 +1126,76 @@ on right click on entity:
         cancel event
         make player execute command "/friend list"
 
+# ---------------- CRATES + KEYS ----------------
+
+# Admin creates crate locations by looking at a block.
+command /setcrate <text>:
+    permission: aizensmp.admin
+    trigger:
+        if player's targeted block is air:
+            send "%{@prefix}% &cLook at the crate block first."
+            stop
+        set {az.crate.%arg-1%} to location of player's targeted block
+        set {az.crate.name.%arg-1%} to arg-1
+        send "%{@prefix}% &aCrate &e%arg-1% &aset."
+
+command /cratekey <player> <text> <number>:
+    permission: aizensmp.admin
+    trigger:
+        if arg-3 <= 0:
+            send "%{@prefix}% &cAmount must be positive."
+            stop
+        give arg-3 of tripwire hook named "&6%arg-2% Key" with lore "&7Use this key on the &e%arg-2% &7crate." to arg-1
+        send "%{@prefix}% &aGave &e%arg-3%x &6%arg-2% Key &ato &e%arg-1%&a."
+
+command /key <text>:
+    permission: aizensmp.admin
+    trigger:
+        give 1 tripwire hook named "&6%arg-1% Key" with lore "&7Use on the &e%arg-1% &7crate." to player
+        send "%{@prefix}% &aKey received."
+
+command /crates:
+    trigger:
+        send "&8&m--------------------------------"
+        send "&6&lAIZEN CRATES"
+        send "&e• &fStarter Crate &7- common rewards"
+        send "&b• &fRare Crate &7- better rewards"
+        send "&d• &fLegendary Crate &7- rare rewards"
+        send "&8&m--------------------------------"
+
+# Default reward tables.
+function azGiveCrateReward(p: player, crate: text):
+    set {_r} to random integer between 1 and 100
+    if {_r} <= 45:
+        give random integer between 4 and 16 of diamond to {_p}
+        send "%{@prefix}% &aCrate reward: &bDiamonds!" to {_p}
+    else if {_r} <= 70:
+        give random integer between 1 and 3 of golden apple to {_p}
+        send "%{@prefix}% &6Crate reward: Golden Apples!" to {_p}
+    else if {_r} <= 85:
+        give random integer between 1 and 2 of netherite ingot to {_p}
+        send "%{@prefix}% &8Crate reward: Netherite!" to {_p}
+    else if {_r} <= 95:
+        give random integer between 1 and 8 of ender pearl to {_p}
+        send "%{@prefix}% &dCrate reward: Ender Pearls!" to {_p}
+    else:
+        give 1 of enchanted golden apple to {_p}
+        send "%{@prefix}% &e&lJACKPOT! &fEnchanted Golden Apple!" to {_p}
+
+on right click on block:
+    loop {az.crate::*}:
+        if location of event-block is loop-value:
+            cancel event
+            set {_crate} to loop-index
+            set {_key} to tripwire hook named "&6%{_crate}% Key"
+            if player has {_key}:
+                remove 1 of {_key} from player
+                azGiveCrateReward(player, {_crate})
+                send "%{@prefix}% &a%{_crate}% crate opened!" to player
+            else:
+                send "%{@prefix}% &cYou need a &6%{_crate}% Key&c."
+            stop
+
 # ---------------- HELP ----------------
 
 command /help:
