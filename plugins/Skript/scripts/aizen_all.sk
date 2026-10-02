@@ -1196,6 +1196,231 @@ on right click on block:
                 send "%{@prefix}% &cYou need a &6%{_crate}% Key&c."
             stop
 
+# ---------------- HOURLY KIT KEYS ----------------
+
+function azKitItem(t: text, n: number) :: item:
+    if {_t} is "Starter":
+        if {_n} is 1:
+            return diamond helmet
+        if {_n} is 2:
+            return diamond chestplate
+        if {_n} is 3:
+            return diamond leggings
+        if {_n} is 4:
+            return diamond boots
+        if {_n} is 5:
+            return diamond sword
+        if {_n} is 6:
+            return diamond axe
+        if {_n} is 7:
+            return diamond pickaxe
+        if {_n} is 8:
+            return diamond shovel
+    if {_t} is "Rare":
+        if {_n} is 1:
+            return diamond helmet
+        if {_n} is 2:
+            return diamond chestplate
+        if {_n} is 3:
+            return diamond leggings
+        if {_n} is 4:
+            return diamond boots
+        if {_n} is 5:
+            return diamond sword
+        if {_n} is 6:
+            return diamond axe
+        if {_n} is 7:
+            return diamond pickaxe
+        if {_n} is 8:
+            return diamond shovel
+    if {_t} is "Epic":
+        if {_n} is 1:
+            return diamond helmet
+        if {_n} is 2:
+            return diamond chestplate
+        if {_n} is 3:
+            return diamond leggings
+        if {_n} is 4:
+            return diamond boots
+        if {_n} is 5:
+            return diamond sword
+        if {_n} is 6:
+            return diamond axe
+        if {_n} is 7:
+            return diamond pickaxe
+        if {_n} is 8:
+            return diamond shovel
+    return stone
+
+function azGiveKitKey(p: player, kit: text):
+    give 1 tripwire hook named "&6%{_kit}% Kit Key" with lore "&7Right-click &f/kitkey &7to choose one item." to {_p}
+
+command /kitkey:
+    trigger:
+        set {_found} to false
+        loop all items in player's inventory:
+            if name of loop-item contains "Kit Key":
+                set {_found} to true
+                set {_key} to loop-item
+                stop loop
+        if {_found} is false:
+            send "%{@prefix}% &cYou don't have a Kit Key."
+            stop
+        set {_kit} to "Starter"
+        if name of {_key} contains "Rare":
+            set {_kit} to "Rare"
+        else if name of {_key} contains "Epic":
+            set {_kit} to "Epic"
+        remove 1 of {_key} from player
+        open chest inventory with 3 rows named "&8✦ &6%{_kit}% Kit Key &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to diamond helmet named "&bDiamond Helmet &7(Protection I)"
+        set slot 11 of player's current inventory to diamond chestplate named "&bDiamond Chestplate &7(Protection I)"
+        set slot 12 of player's current inventory to diamond leggings named "&bDiamond Leggings &7(Protection I)"
+        set slot 13 of player's current inventory to diamond boots named "&bDiamond Boots &7(Protection I)"
+        set slot 14 of player's current inventory to diamond sword named "&bDiamond Sword &7(Sharpness I)"
+        set slot 15 of player's current inventory to diamond axe named "&bDiamond Axe &7(Sharpness I)"
+        set slot 16 of player's current inventory to diamond pickaxe named "&bDiamond Pickaxe &7(Efficiency II)"
+        set slot 17 of player's current inventory to diamond shovel named "&bDiamond Shovel &7(Efficiency II)"
+
+on inventory click:
+    if name of event-inventory contains "Kit Key":
+        cancel event
+        if clicked slot is between 10 and 17:
+            set {_chosen} to clicked slot - 9
+            set {_kitItem} to azKitItem("Starter", {_chosen})
+            if {_chosen} <= 4:
+                enchant {_kitItem} with protection 1
+            else if {_chosen} is 5:
+                enchant {_kitItem} with sharpness 1
+            else if {_chosen} is 6:
+                enchant {_kitItem} with sharpness 1
+            else:
+                enchant {_kitItem} with efficiency 2
+            give {_kitItem} to player
+            close player's inventory
+            send "%{@prefix}% &aYou selected your kit item."
+        stop
+
+every 1 hour:
+    loop all players:
+        azGiveKitKey(loop-player, "Starter")
+        send "%{@prefix}% &6Hourly reward: &e1 Starter Kit Key&6!" to loop-player
+
+# ---------------- EXTRA KEY TYPES ----------------
+
+command /givekitkey <player> <text> <number>:
+    permission: aizensmp.admin
+    trigger:
+        if arg-2 is not "Starter" and arg-2 is not "Rare" and arg-2 is not "Epic":
+            send "%{@prefix}% &cKey types: Starter, Rare, Epic."
+            stop
+        loop arg-3 times:
+            azGiveKitKey(arg-1, arg-2)
+        send "%{@prefix}% &aGave &e%arg-3%x &6%arg-2% Kit Key&a."
+
+# ---------------- TEAMS ----------------
+
+command /teamcreate <text>:
+    trigger:
+        if {az.team.%uuid of player%} is set:
+            send "%{@prefix}% &cYou are already in a team."
+            stop
+        if {az.team.owner.%arg-1%} is set:
+            send "%{@prefix}% &cThat team already exists."
+            stop
+        set {az.team.owner.%arg-1%} to uuid of player
+        set {az.team.%uuid of player%} to arg-1
+        add uuid of player to {az.team.members.%arg-1%::*}
+        send "%{@prefix}% &aTeam &e%arg-1% &acreated."
+
+command /teaminvite <player>:
+    trigger:
+        if {az.team.%uuid of player%} is not set:
+            send "%{@prefix}% &cCreate/join a team first."
+            stop
+        set {_team} to {az.team.%uuid of player%}
+        if {az.team.owner.%{_team}%} is not uuid of player:
+            send "%{@prefix}% &cOnly the team owner can invite."
+            stop
+        set {az.team.invite.%uuid of arg-1%} to {_team}
+        send "%{@prefix}% &aInvitation sent to &e%arg-1%&a."
+        send "%{@prefix}% &eYou were invited to team &6%{_team}%&e. Use &f/teamaccept&e." to arg-1
+
+command /teamaccept:
+    trigger:
+        if {az.team.invite.%uuid of player%} is not set:
+            send "%{@prefix}% &cYou have no pending team invite."
+            stop
+        if {az.team.%uuid of player%} is set:
+            send "%{@prefix}% &cYou are already in a team."
+            stop
+        set {_team} to {az.team.invite.%uuid of player%}
+        set {az.team.%uuid of player%} to {_team}
+        add uuid of player to {az.team.members.%{_team}%::*}
+        delete {az.team.invite.%uuid of player%}
+        send "%{@prefix}% &aJoined team &e%{_team}%&a."
+
+command /teamleave:
+    trigger:
+        if {az.team.%uuid of player%} is not set:
+            send "%{@prefix}% &cYou are not in a team."
+            stop
+        set {_team} to {az.team.%uuid of player%}
+        if {az.team.owner.%{_team}%} is uuid of player:
+            loop {az.team.members.%{_team}%::*}:
+                delete {az.team.%loop-value%}
+            delete {az.team.members.%{_team}%::*}
+            delete {az.team.owner.%{_team}%}
+            send "%{@prefix}% &cTeam disbanded."
+        else:
+            remove uuid of player from {az.team.members.%{_team}%::*}
+            delete {az.team.%uuid of player%}
+            send "%{@prefix}% &aYou left team &e%{_team}%&a."
+
+command /teaminfo:
+    trigger:
+        if {az.team.%uuid of player%} is not set:
+            send "%{@prefix}% &cYou are not in a team."
+            stop
+        set {_team} to {az.team.%uuid of player%}
+        send "&8&m--------------------------------"
+        send "&6&lTEAM &e%{_team}%"
+        send "&7Members: &f%size of {az.team.members.%{_team}%::*}%"
+        send "&7Owner UUID: &f%{az.team.owner.%{_team}%}%"
+        send "&8&m--------------------------------"
+
+# ---------------- PLAYER STATS + SIDEBAR ----------------
+
+on death of player:
+    add 1 to {az.deaths.%uuid of victim%}
+    if attacker is a player:
+        add 1 to {az.kills.%uuid of attacker%}
+
+command /stats:
+    trigger:
+        send "&8&m--------------------------------"
+        send "&6&lAIZEN STATS"
+        send "&7Player: &f%player%"
+        send "&7Kills: &a%{az.kills.%uuid of player%}%"
+        send "&7Deaths: &c%{az.deaths.%uuid of player%}%"
+        send "&7K/D: &e%{az.kills.%uuid of player%}% / %{az.deaths.%uuid of player%}%"
+        send "&7Money: &6$%{az.money.%uuid of player%}%"
+        send "&7Shards: &b%{az.shards.%uuid of player%}%"
+        send "&7Team: &f%{az.team.%uuid of player%}%"
+        send "&8&m--------------------------------"
+
+every 2 seconds:
+    loop all players:
+        set title of sidebar of loop-player to "&6&lAIZEN SMP"
+        set score "&7" in sidebar of loop-player to 7
+        set score "&f%loop-player%" in sidebar of loop-player to 6
+        set score "&6$%{az.money.%uuid of loop-player%}%" in sidebar of loop-player to 5
+        set score "&aKills: %{az.kills.%uuid of loop-player%}%" in sidebar of loop-player to 4
+        set score "&cDeaths: %{az.deaths.%uuid of loop-player%}%" in sidebar of loop-player to 3
+        set score "&bShards: %{az.shards.%uuid of loop-player%}%" in sidebar of loop-player to 2
+        set score "&7Team: %{az.team.%uuid of loop-player%}%" in sidebar of loop-player to 1
+
 # ---------------- HELP ----------------
 
 command /help:
