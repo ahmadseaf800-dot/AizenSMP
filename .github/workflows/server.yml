@@ -57,7 +57,6 @@ jobs:
           set -e
           SKRIPT_URL=$(curl -fsSL https://api.github.com/repos/SkriptLang/Skript/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
           test -n "$SKRIPT_URL"
-          echo "Downloading Skript from $SKRIPT_URL"
           curl -L --fail -o server/plugins/Skript.jar "$SKRIPT_URL"
 
       - name: Install ViaVersion and ViaBackwards
@@ -83,6 +82,12 @@ jobs:
           AUTHME_URL=$(curl -s https://api.github.com/repos/AuthMe/AuthMeReloaded/releases/latest | grep -o 'https://[^"]*\.jar' | head -n 1)
           test -n "$AUTHME_URL"
           curl -L --fail -o server/plugins/AuthMe.jar "$AUTHME_URL"
+
+      - name: Prepare Geyser config directory
+        shell: bash
+        run: |
+          mkdir -p server/plugins/Geyser-Spigot
+          touch server/plugins/Geyser-Spigot/config.yml
 
       - name: Configure Geyser for Bedrock on the same AizenSMP server
         shell: bash
@@ -165,7 +170,7 @@ jobs:
           cleanup() {
             echo "Preparing persistent AizenSMP data..."
             rm -f persistent-data.tar.zst
-            tar --zstd -cf persistent-data.tar.zst               world               world_nether               world_the_end               plugins/Skript               2>/dev/null || true
+            tar --zstd -cf persistent-data.tar.zst               world world_nether world_the_end plugins/Skript               2>/dev/null || true
           }
 
           trap cleanup EXIT INT TERM
