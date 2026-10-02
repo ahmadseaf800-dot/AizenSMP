@@ -107,6 +107,8 @@ jobs:
 
       - name: Claim and start playit.gg agent
         shell: bash
+        env:
+          PLAYIT_SETUP_CODE: ${{ secrets.PLAYIT_SETUP_CODE }}
         run: |
           set -e
           curl -L --fail -o playit-agent "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
@@ -139,7 +141,21 @@ jobs:
           echo "Approve the agent in your Playit account."
           echo "=================================="
 
-          echo "Starting Playit setup. Approve the claim URL shown below in your Playit account."          ./playit-agent --socket-path "$PLAYIT_SOCKET" setup 2>&1 | tee playit-setup.log          echo ""          echo "========== PLAYIT OUTPUT =========="          cat playit-setup.log || true          cat playit-daemon.log || true          echo "==================================="          echo "If tunnels are configured in your Playit account, their public addresses should appear above."          echo "Java target: 127.0.0.1:25565 (TCP)"          echo "Bedrock target: 127.0.0.1:19132 (UDP)"
+          echo "Starting Playit setup using the GitHub Actions secret PLAYIT_SETUP_CODE."
+          if [ -z "${PLAYIT_SETUP_CODE:-}" ]; then
+            echo "PLAYIT_SETUP_CODE secret is missing."
+            exit 1
+          fi
+
+          printf '%s\n' "$PLAYIT_SETUP_CODE" | ./playit-agent --socket-path "$PLAYIT_SOCKET" setup 2>&1 | tee playit-setup.log
+
+          echo ""
+          echo "========== PLAYIT OUTPUT =========="
+          cat playit-setup.log || true
+          cat playit-daemon.log || true
+          echo "==================================="
+          echo "Java target: 127.0.0.1:25565 (TCP)"
+          echo "Bedrock target: 127.0.0.1:19132 (UDP)"
       - name: Start AizenSMP and save on shutdown
         shell: bash
         working-directory: server
