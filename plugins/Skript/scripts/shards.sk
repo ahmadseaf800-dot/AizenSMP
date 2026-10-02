@@ -1,0 +1,98 @@
+# =========================================================
+# AizenSMP - Shards System
+# Currency: Shards
+# Main command: /shard
+# Shop: /shard shop
+# =========================================================
+
+options:
+    prefix: &6[&eAizenSMP&6] &r
+    shard-name: &bShards
+    shard-symbol: &b✦
+
+# -------------------------
+# Main Shard Command
+# -------------------------
+
+command /shard [<text>] [<number>]:
+    trigger:
+        if arg-1 is not set:
+            send "%{@prefix}% &fYour balance: &b%{aizensmp.shards.%uuid of player%}% ✦" to player
+            send "&7Use &b/shard shop &7to open the Shard Shop." to player
+            stop
+
+        if arg-1 is "shop":
+            open chest inventory with 3 rows named "&8✦ &bShard Shop &8✦" to player
+            wait 1 tick
+
+            # Shop items
+            set slot 10 of player's current inventory to 8 diamond named "&b8 Diamonds &7- &e10 ✦"
+            set slot 12 of player's current inventory to 16 gold ingots named "&616 Gold Ingots &7- &e6 ✦"
+            set slot 14 of player's current inventory to 1 golden apple named "&6Golden Apple &7- &e12 ✦"
+            set slot 16 of player's current inventory to 1 ender pearl named "&5Ender Pearl &7- &e3 ✦"
+            set slot 22 of player's current inventory to 1 netherite scrap named "&8Netherite Scrap &7- &e20 ✦"
+            stop
+
+        if arg-1 is "give":
+            if player has permission "aizensmp.admin":
+                if arg-2 is not set:
+                    send "%{@prefix}% &cUsage: /shard give <amount>" to player
+                    stop
+                if arg-2 <= 0:
+                    send "%{@prefix}% &cAmount must be positive." to player
+                    stop
+                add arg-2 to {aizensmp.shards.%uuid of player%}
+                send "%{@prefix}% &aAdded &b%arg-2% ✦ &ato your Shards." to player
+                stop
+
+        send "%{@prefix}% &cUnknown shard command." to player
+
+# -------------------------
+# Shop Clicks
+# -------------------------
+
+on inventory click:
+    if name of event-inventory is "&8✦ &bShard Shop &8✦":
+        cancel event
+
+        if clicked slot is 10:
+            set {_price} to 10
+            set {_item} to 8 diamonds
+        else if clicked slot is 12:
+            set {_price} to 6
+            set {_item} to 16 gold ingots
+        else if clicked slot is 14:
+            set {_price} to 12
+            set {_item} to 1 golden apple
+        else if clicked slot is 16:
+            set {_price} to 3
+            set {_item} to 1 ender pearl
+        else if clicked slot is 22:
+            set {_price} to 20
+            set {_item} to 1 netherite scrap
+        else:
+            stop
+
+        if {aizensmp.shards.%uuid of player%} < {_price}:
+            send "%{@prefix}% &cYou need &b%{_price}% ✦ &cto buy this." to player
+            stop
+
+        if player's inventory has no space for {_item}:
+            send "%{@prefix}% &cYour inventory is full." to player
+            stop
+
+        remove {_price} from {aizensmp.shards.%uuid of player%}
+        give {_item} to player
+        send "%{@prefix}% &aPurchase complete! &7Cost: &b%{_price}% ✦" to player
+
+# -------------------------
+# Death Protection / Reset
+# -------------------------
+
+on first join:
+    if {aizensmp.shards.%uuid of player%} is not set:
+        set {aizensmp.shards.%uuid of player%} to 0
+
+on join:
+    if {aizensmp.shards.%uuid of player%} is not set:
+        set {aizensmp.shards.%uuid of player%} to 0
