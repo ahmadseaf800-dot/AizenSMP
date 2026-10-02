@@ -42,6 +42,11 @@ jobs:
             unzip -q restore/persistent.zip -d restore/artifact
             if [ -f restore/artifact/persistent-data.tar.zst ]; then
               tar --zstd -xf restore/artifact/persistent-data.tar.zst -C server
+              if [ -d server/playit_gg ]; then
+                mkdir -p "$HOME/.config"
+                rm -rf "$HOME/.config/playit_gg"
+                mv server/playit_gg "$HOME/.config/playit_gg"
+              fi
             fi
           fi
 
@@ -105,56 +110,47 @@ jobs:
           enable-query=false
           EOF
 
-      - name: Start playit.gg agent with setup secret
+      - name: Setup playit.gg agent
         shell: bash
-        env:
-          PLAYIT_SETUP_CODE: ${{ secrets.PLAYIT_SETUP_CODE }}
         run: |
           set -e
-          if [ -z "${PLAYIT_SETUP_CODE:-}" ]; then
-            echo "PLAYIT_SETUP_CODE secret is missing."
-            exit 1
-          fi
-
-          curl -L --fail -o playitd "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
-          chmod +x playitd
-
           mkdir -p "$HOME/.config/playit_gg"
           PLAYIT_SOCKET="$HOME/.config/playit_gg/playit.sock"
-          PLAYIT_SECRET_FILE="$HOME/.config/playit_gg/playit.toml"
-          rm -f "$PLAYIT_SOCKET" "$PLAYIT_SECRET_FILE"
 
-          echo "========== PLAYIT START =========="
-          echo "Starting Playit daemon with the configured account secret."
-          echo "Socket: $PLAYIT_SOCKET"
-          echo "=================================="
+          curl -L --fail -o playitd "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
+          curl -L --fail -o playit-cli "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-cli-linux-amd64"
+          chmod +x playitd playit-cli
 
-          nohup ./playitd \
-            --secret "$PLAYIT_SETUP_CODE" \
-            --socket-path "$PLAYIT_SOCKET" \
-            --log-path "$PWD/playit-daemon.log" \
-            > playit-process.log 2>&1 &
-          PLAYIT_DAEMON_PID=$!
-          echo "$PLAYIT_DAEMON_PID" > playit.pid
+          echo "========== PLAYIT SETUP =========="
+          echo "Checking for a previously claimed Playit agent..."
+          echo "================================="
 
-          sleep 3
+          if [ -f "$HOME/.config/playit_gg/playit.toml" ]; then
+            echo "Existing Playit secret found; starting the agent."
+            nohup ./playitd               --socket-path "$PLAYIT_SOCKET"               --log-path "$PWD/playit-daemon.log"               > playit-process.log 2>&1 &
+            PLAYIT_DAEMON_PID=$!
+            echo "$PLAYIT_DAEMON_PID" > playit.pid
+            sleep 3
+          else
+            echo "No Playit secret found."
+            echo "The next command will print a CLAIM URL."
+            echo "Open that URL on your phone, sign in to Playit, and approve the agent."
+            echo "The workflow will continue automatically after approval."
+            echo ""
 
-          if ! kill -0 "$PLAYIT_DAEMON_PID" 2>/dev/null; then
-            echo "Playit daemon failed to start."
-            cat playit-process.log || true
-            cat playit-daemon.log || true
-            exit 1
+            ./playit-cli --socket-path "$PLAYIT_SOCKET" setup 2>&1 | tee playit-setup.log
           fi
 
           echo ""
           echo "========== PLAYIT OUTPUT =========="
-          cat playit-process.log || true
-          cat playit-daemon.log || true
+          cat playit-setup.log 2>/dev/null || true
+          cat playit-process.log 2>/dev/null || true
+          cat playit-daemon.log 2>/dev/null || true
           echo "==================================="
           echo "Java target: 127.0.0.1:25565 (TCP)"
           echo "Bedrock target: 127.0.0.1:19132 (UDP)"
-          echo "Playit daemon is running."
-          
+          echo "Playit setup/agent step completed."
+
       - name: Start AizenSMP and save on shutdown
         shell: bash
         working-directory: server
