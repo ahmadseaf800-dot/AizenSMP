@@ -996,45 +996,135 @@ on inventory click:
         give azSpawner({_type}) to player
         send "%{@prefix}% &aSpawner purchased."
 
-# ---------------- NPC COMMAND BUTTONS ----------------
+# ---------------- DONUT-STYLE SPAWN + NPC BOTS ----------------
+# Inspired by modern SMP hubs: central platform, roads, tower and command NPCs.
+# This does not copy a proprietary map. Run /buildspawn at the desired location.
 
-command /setrtpbot:
+command /buildspawn:
     permission: aizensmp.admin
     trigger:
-        spawn a villager at location of player
+        set {az.spawn} to location of player
+        set {_w} to world of player
+        set {_cx} to floor(x-coordinate of player)
+        set {_cy} to floor(y-coordinate of player)
+        set {_cz} to floor(z-coordinate of player)
+
+        # Main 41x41 spawn platform
+        loop numbers from -20 to 20:
+            set {_x} to loop-number
+            loop numbers from -20 to 20:
+                set {_z} to loop-number
+                set {_d} to sqrt(({_x} * {_x}) + ({_z} * {_z}))
+                if {_d} <= 20:
+                    set block at location ({_cx} + {_x}), {_cy} - 1, ({_cz} + {_z}) in {_w} to polished andesite
+                    if {_d} <= 17:
+                        set block at location ({_cx} + {_x}), {_cy} - 2, ({_cz} + {_z}) in {_w} to stone
+
+        # Four main roads
+        loop numbers from -20 to 20:
+            set {_n} to loop-number
+            loop numbers from -2 to 2:
+                set {_r} to loop-number
+                set block at location ({_cx} + {_n}), {_cy}, ({_cz} + {_r}) in {_w} to smooth stone
+                set block at location ({_cx} + {_r}), {_cy}, ({_cz} + {_n}) in {_w} to smooth stone
+
+        # Central square
+        loop numbers from -5 to 5:
+            set {_x} to loop-number
+            loop numbers from -5 to 5:
+                set {_z} to loop-number
+                set block at location ({_cx} + {_x}), {_cy}, ({_cz} + {_z}) in {_w} to quartz block
+
+        # Central beacon monument
+        set block at location {_cx}, {_cy} + 1, {_cz} in {_w} to beacon
+        set block at location {_cx} + 1, {_cy}, {_cz} in {_w} to emerald block
+        set block at location {_cx} - 1, {_cy}, {_cz} in {_w} to emerald block
+        set block at location {_cx}, {_cy}, {_cz} + 1 in {_w} to emerald block
+        set block at location {_cx}, {_cy}, {_cz} - 1 in {_w} to emerald block
+        set block at location {_cx}, {_cy} + 1, {_cz} + 1 in {_w} to gold block
+        set block at location {_cx} + 1, {_cy} + 1, {_cz} in {_w} to gold block
+        set block at location {_cx} - 1, {_cy} + 1, {_cz} in {_w} to gold block
+        set block at location {_cx}, {_cy} + 1, {_cz} - 1 in {_w} to gold block
+
+        # Four decorative towers
+        loop numbers from -1 to 1:
+            set {_n} to loop-number
+            loop 6 times:
+                set {_y} to loop-number
+                set block at location {_cx} + 15 + {_n}, {_cy} + {_y}, {_cz} + 15 in {_w} to stone bricks
+                set block at location {_cx} - 15 + {_n}, {_cy} + {_y}, {_cz} - 15 in {_w} to stone bricks
+                set block at location {_cx} + 15, {_cy} + {_y}, {_cz} - 15 + {_n} in {_w} to stone bricks
+                set block at location {_cx} - 15, {_cy} + {_y}, {_cz} + 15 + {_n} in {_w} to stone bricks
+
+        # Command NPC bots around the central square
+        spawn a villager at location ({_cx} + 7), {_cy} + 1, {_cz} in {_w}
         set {_e} to last spawned entity
         set name of {_e} to "&b&lRTP"
         set {az.bot.rtp.%uuid of {_e}%} to true
-        send "%{@prefix}% &aRTP bot created."
+        set AI of {_e} to false
 
-command /setshop:
-    permission: aizensmp.admin
-    trigger:
-        spawn a villager at location of player
+        spawn a villager at location ({_cx} - 7), {_cy} + 1, {_cz} in {_w}
         set {_e} to last spawned entity
-        set name of {_e} to "&6&lSHOP"
-        set {az.bot.shop.%uuid of {_e}%} to true
-        send "%{@prefix}% &aShop bot created."
+        set name of {_e} to "&6&lAUCTION HOUSE"
+        set {az.bot.ah.%uuid of {_e}%} to true
+        set AI of {_e} to false
 
-command /setduelbot:
-    permission: aizensmp.admin
-    trigger:
-        spawn a villager at location of player
+        spawn a villager at location {_cx}, {_cy} + 1, ({_cz} + 7) in {_w}
+        set {_e} to last spawned entity
+        set name of {_e} to "&e&lSHOP"
+        set {az.bot.shop.%uuid of {_e}%} to true
+        set AI of {_e} to false
+
+        spawn a villager at location {_cx}, {_cy} + 1, ({_cz} - 7) in {_w}
         set {_e} to last spawned entity
         set name of {_e} to "&c&lDUELS"
         set {az.bot.duel.%uuid of {_e}%} to true
-        send "%{@prefix}% &aDuel bot created."
+        set AI of {_e} to false
+
+        send "%{@prefix}% &aSpawn built and command bots created."
+        send "%{@prefix}% &7RTP &8• &6AH &8• &eSHOP &8• &cDUELS"
+
+# Extra bots can be placed anywhere by admins.
+command /setahbot:
+    permission: aizensmp.admin
+    trigger:
+        spawn a villager at location of player
+        set {_e} to last spawned entity
+        set name of {_e} to "&6&lAUCTION HOUSE"
+        set {az.bot.ah.%uuid of {_e}%} to true
+        set AI of {_e} to false
+        send "%{@prefix}% &aAH bot created."
+
+command /setsettingsbot:
+    permission: aizensmp.admin
+    trigger:
+        spawn a villager at location of player
+        set {_e} to last spawned entity
+        set name of {_e} to "&b&lSETTINGS"
+        set {az.bot.settings.%uuid of {_e}%} to true
+        set AI of {_e} to false
+        send "%{@prefix}% &aSettings bot created."
+
+command /setfriendsbot:
+    permission: aizensmp.admin
+    trigger:
+        spawn a villager at location of player
+        set {_e} to last spawned entity
+        set name of {_e} to "&d&lFRIENDS"
+        set {az.bot.friends.%uuid of {_e}%} to true
+        set AI of {_e} to false
+        send "%{@prefix}% &aFriends bot created."
 
 on right click on entity:
-    if {az.bot.rtp.%uuid of clicked entity%} is set:
+    if {az.bot.ah.%uuid of clicked entity%} is set:
         cancel event
-        make player execute command "/rtp"
-    else if {az.bot.shop.%uuid of clicked entity%} is set:
+        make player execute command "/ah"
+    else if {az.bot.settings.%uuid of clicked entity%} is set:
         cancel event
-        make player execute command "/shardshop"
-    else if {az.bot.duel.%uuid of clicked entity%} is set:
+        make player execute command "/settings"
+    else if {az.bot.friends.%uuid of clicked entity%} is set:
         cancel event
-        make player execute command "/duel"
+        make player execute command "/friend list"
 
 # ---------------- HELP ----------------
 
