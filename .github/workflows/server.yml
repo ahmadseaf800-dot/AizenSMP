@@ -107,8 +107,6 @@ jobs:
 
       - name: Claim and start playit.gg agent
         shell: bash
-        env:
-          PLAYIT_SETUP_CODE: ${{ secrets.PLAYIT_SETUP_CODE }}
         run: |
           set -e
           curl -L --fail -o playit-agent "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
@@ -134,25 +132,18 @@ jobs:
             exit 1
           fi
 
-          echo ""
-          echo "========== PLAYIT CLAIM =========="
-          echo "The command below generates the official Playit claim URL."
-          echo "Open the printed https://playit.gg/claim/... link on your phone."
-          echo "Approve the agent in your Playit account."
-          echo "=================================="
-
-          echo "Starting Playit setup using the GitHub Actions secret PLAYIT_SETUP_CODE."
-          if [ -z "${PLAYIT_SETUP_CODE:-}" ]; then
-            echo "PLAYIT_SETUP_CODE secret is missing."
-            exit 1
+          if [ -f "$HOME/.config/playit_gg/playit.toml" ]; then
+            echo "Existing Playit configuration found."
+          else
+            echo "No Playit configuration found."
+            echo "Generating the official Playit Claim URL..."
+            ./playit-agent --socket-path "$PLAYIT_SOCKET" setup 2>&1 | tee playit-setup.log
           fi
-
-          printf '%s\n' "$PLAYIT_SETUP_CODE" | ./playit-agent --socket-path "$PLAYIT_SOCKET" setup 2>&1 | tee playit-setup.log
 
           echo ""
           echo "========== PLAYIT OUTPUT =========="
-          cat playit-setup.log || true
-          cat playit-daemon.log || true
+          cat playit-setup.log 2>/dev/null || true
+          cat playit-daemon.log 2>/dev/null || true
           echo "==================================="
           echo "Java target: 127.0.0.1:25565 (TCP)"
           echo "Bedrock target: 127.0.0.1:19132 (UDP)"
@@ -164,6 +155,9 @@ jobs:
           cleanup() {
             rm -f persistent-data.tar.zst
             tar --zstd -cf persistent-data.tar.zst world world_nether world_the_end plugins/Skript plugins/AizenCore 2>/dev/null || true
+            if [ -d "$HOME/.config/playit_gg" ]; then
+              tar --zstd -rf persistent-data.tar.zst -C "$HOME/.config" playit_gg 2>/dev/null || true
+            fi
           }
           trap cleanup EXIT INT TERM
           java -Xms1G -Xmx6G -jar server.jar --nogui
