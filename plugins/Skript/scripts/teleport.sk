@@ -14,9 +14,13 @@ command /tpa <player>:
         if arg-1 is not online:
             send "%{@prefix}% &cThat player is not online." to player
             stop
-        if {aizensmp.settings.tpa.%uuid of arg-1%} is false:
+        if {aizensmp.settings.tpa.%uuid of arg-1%} is "none":
             send "%{@prefix}% &cThat player has disabled TPA requests." to player
             stop
+        if {aizensmp.settings.tpa.%uuid of arg-1%} is "friends":
+            if {aizensmp.friend.%uuid of arg-1%.%uuid of player%} is not true:
+                send "%{@prefix}% &cOnly that player's friends can send a TPA request." to player
+                stop
         set {aizensmp.tpa.%uuid of arg-1%} to player
         send "%{@prefix}% &aTeleport request sent to &e%arg-1%&a." to player
         send "%{@prefix}% &e%player% &f wants to teleport to you." to arg-1
@@ -33,9 +37,13 @@ command /tpahere <player>:
         if arg-1 is not online:
             send "%{@prefix}% &cThat player is not online." to player
             stop
-        if {aizensmp.settings.tpahere.%uuid of arg-1%} is false:
+        if {aizensmp.settings.tpahere.%uuid of arg-1%} is "none":
             send "%{@prefix}% &cThat player has disabled TPAHERE requests." to player
             stop
+        if {aizensmp.settings.tpahere.%uuid of arg-1%} is "friends":
+            if {aizensmp.friend.%uuid of arg-1%.%uuid of player%} is not true:
+                send "%{@prefix}% &cOnly that player's friends can send a TPAHERE request." to player
+                stop
         set {aizensmp.tpahere.%uuid of arg-1%} to player
         send "%{@prefix}% &aTeleport-here request sent to &e%arg-1%&a." to player
         send "%{@prefix}% &e%player% &f wants you to teleport to them." to arg-1
