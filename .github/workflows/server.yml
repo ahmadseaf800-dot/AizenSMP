@@ -141,25 +141,50 @@ jobs:
 
           echo "========== PLAYIT AGENT =========="
           echo "Starting Playit without a secret."
-          echo "A Claim URL should appear below. Open it on your phone and claim the agent."
+          echo "Waiting for Playit to print the Claim URL..."
           echo "=================================="
 
           nohup ./playit-agent > playit.log 2>&1 &
-          echo $! > playit.pid
+          PLAYIT_PID=$!
+          echo "$PLAYIT_PID" > playit.pid
 
-          for i in {1..30}; do
+          CLAIM_URL=""
+          for i in {1..60}; do
             sleep 2
-            if grep -Eqi 'https?://|claim|agent|tunnel' playit.log; then
-              echo "========== PLAYIT OUTPUT =========="
-              cat playit.log || true
-              echo "==================================="
+            if [ -f playit.log ]; then
+              echo "--- Playit status $i/60 ---"
+              tail -n 20 playit.log || true
+
+              CLAIM_URL=$(grep -Eo 'https?://[^[:space:]]+' playit.log | grep -Ei 'playit|claim' | head -n 1 | sed 's/[),]$//' || true)
+
+              if [ -n "$CLAIM_URL" ]; then
+                echo ""
+                echo "=============================================="
+                echo "        PLAYIT CLAIM URL FOUND"
+                echo "=============================================="
+                echo "$CLAIM_URL"
+                echo "=============================================="
+                echo "OPEN THIS URL ON YOUR PHONE TO CLAIM THE AGENT."
+                echo "=============================================="
+                break
+              fi
+            fi
+
+            if ! kill -0 "$PLAYIT_PID" 2>/dev/null; then
+              echo "Playit agent process stopped."
               break
             fi
           done
 
-          echo "========== PLAYIT LOG =========="
-          cat playit.log || true
-          echo "================================"
+          if [ -z "$CLAIM_URL" ]; then
+            echo ""
+            echo "=============================================="
+            echo "NO CLAIM URL WAS DETECTED IN THE FIRST 120 SECONDS"
+            echo "FULL PLAYIT LOG:"
+            echo "=============================================="
+            cat playit.log || true
+            echo "=============================================="
+          fi
 
       - name: Start AizenSMP and save on shutdown
         shell: bash
