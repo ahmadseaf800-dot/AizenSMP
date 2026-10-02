@@ -63,8 +63,13 @@ jobs:
       - name: Install ViaVersion and ViaBackwards
         shell: bash
         run: |
-          curl -L --fail -o server/plugins/ViaVersion.jar "https://github.com/ViaVersion/ViaVersion/releases/latest/download/ViaVersion.jar"
-          curl -L --fail -o server/plugins/ViaBackwards.jar "https://github.com/ViaVersion/ViaBackwards/releases/latest/download/ViaBackwards.jar"
+          set -e
+          VIAVERSION_URL=$(curl -fsSL https://api.github.com/repos/ViaVersion/ViaVersion/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
+          VIABACKWARDS_URL=$(curl -fsSL https://api.github.com/repos/ViaVersion/ViaBackwards/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
+          test -n "$VIAVERSION_URL"
+          test -n "$VIABACKWARDS_URL"
+          curl -L --fail -o server/plugins/ViaVersion.jar "$VIAVERSION_URL"
+          curl -L --fail -o server/plugins/ViaBackwards.jar "$VIABACKWARDS_URL"
 
       - name: Install Geyser and Floodgate
         shell: bash
