@@ -1,6 +1,7 @@
 # =========================================================
 # AizenSMP - RTPQ
-# /rtpq <player> teleports two players together.
+# /rtpq automatically finds one random online player and
+# teleports both players to the same safe random location.
 # No kit/items are added or removed.
 # =========================================================
 
@@ -8,17 +9,18 @@ options:
     prefix: &6[&eAizenSMP&6] &r
     rtp-range: 10000
 
-command /rtpq <player>:
+command /rtpq:
     trigger:
-        if arg-1 is player:
-            send "%{@prefix}% &cYou cannot RTPQ with yourself." to player
-            stop
-        if arg-1 is not online:
-            send "%{@prefix}% &cThat player is not online." to player
-            stop
-
-        if world of player is not world of arg-1:
-            send "%{@prefix}% &cBoth players must be in the same world." to player
+        set {_target} to random player
+        if {_target} is player:
+            delete {_target}
+        if {_target} is not set:
+            loop all players:
+                if loop-player is not player:
+                    set {_target} to loop-player
+                    stop
+        if {_target} is not set:
+            send "%{@prefix}% &cThere is no other online player available." to player
             stop
 
         set {_world} to world of player
@@ -40,10 +42,10 @@ command /rtpq <player>:
                                 if {_head} is air:
                                     if y-coordinate of {_base} > 5:
                                         teleport player to {_base}
-                                        teleport arg-1 to {_base}
+                                        teleport {_target} to {_base}
                                         set {_found} to true
-                                        send "%{@prefix}% &aRTPQ complete. You were sent to the same random location." to player
-                                        send "%{@prefix}% &aRTPQ complete. You were sent to the same random location." to arg-1
+                                        send "%{@prefix}% &aYou were matched with &e%{_target}%&a and RTPQ'd together." to player
+                                        send "%{@prefix}% &aYou were matched with &e%player%&a and RTPQ'd together." to {_target}
 
         if {_found} is false:
             send "%{@prefix}% &cCould not find a safe random location. Try again." to player
