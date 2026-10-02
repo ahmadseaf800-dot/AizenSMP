@@ -77,6 +77,30 @@ jobs:
           test -n "$AUTHME_URL"
           curl -L --fail -o server/plugins/AuthMe.jar "$AUTHME_URL"
 
+      - name: Configure Geyser for Bedrock on the same AizenSMP server
+        shell: bash
+        run: |
+          cat > server/plugins/Geyser-Spigot/config.yml <<'EOF'
+          bedrock:
+            address: 0.0.0.0
+            port: 19132
+            clone-remote-port: false
+          remote:
+            address: 127.0.0.1
+            port: 25565
+            auth-type: floodgate
+          command-suggestions: true
+          passthrough-motd: true
+          passthrough-player-counts: true
+          allow-third-party-capes: true
+          show-cooldown: title
+          show-coordinates: true
+          disable-bedrock-scaffolding: false
+          metrics:
+            enabled: false
+          debug-mode: false
+          EOF
+
       - name: Configure cracked Java and server
         shell: bash
         run: |
@@ -111,7 +135,9 @@ jobs:
             sleep 2
             if grep -Eqi 'minecraft|tcp|address|tunnel|connect' playit.log; then
               echo "========== AizenSMP PLAYIT.GG =========="
-              grep -Ei 'minecraft|tcp|address|tunnel|connect' playit.log | tail -n 20 || true
+              echo "Java tunnel: TCP -> 25565"
+              echo "Bedrock tunnel: UDP -> 19132"
+              grep -Ei 'minecraft|tcp|udp|address|tunnel|connect' playit.log | tail -n 30 || true
               echo "========================================"
               break
             fi
