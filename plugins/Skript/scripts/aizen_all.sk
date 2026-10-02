@@ -538,7 +538,7 @@ command /sell:
         set slot 50 of player's current inventory to paper named "&eHow to sell" with lore "&7Put items here | &7Close the menu | &7Then use &e/ah sell <price>"
 
 on inventory close:
-    if name of event-inventory is "&8✦ &6Sell Basket &8✦":
+    if name of event-inventory is "&8✦ &6AH Sell Basket &8✦":
         loop 54 times:
             set {_slot} to loop-number - 1
             if {_slot} is 49:
@@ -828,37 +828,83 @@ command /sellprice:
             set {_unit} to 1
         send "{@prefix} &e%type of player's tool% &7server price: &6$%{_unit}% &7each."
 
-# ---------------- MONEY SHOP ----------------
+# ---------------- OLD-STYLE /SHOP ----------------
 
 command /shop:
     trigger:
         open chest inventory with 3 rows named "&8✦ &6Aizen Shop &8✦" to player
         wait 1 tick
-        set slot 10 of player's current inventory to cooked beef named "&e32 Steak &7[$500]"
-        set slot 12 of player's current inventory to ender pearl named "&b16 Ender Pearls &7[$1500]"
-        set slot 14 of player's current inventory to obsidian named "&816 Obsidian &7[$2000]"
-        set slot 16 of player's current inventory to golden apple named "&6Golden Apple &7[$3000]"
+        set slot 10 of player's current inventory to ender chest named "&5&lEND SHOP" with lore "&7Shulkers, End materials and Ender Pearls"
+        set slot 12 of player's current inventory to netherrack named "&c&lNETHER SHOP" with lore "&7Quartz, Blaze Rods and Nether blocks"
+        set slot 14 of player's current inventory to cooked beef named "&6&lFOOD SHOP" with lore "&7Fast food for survival and PvP"
+        set slot 16 of player's current inventory to prismarine shard named "&b&lSHARD SHOP" with lore "&7Spend Shards on rare items and Spawners"
         set slot 22 of player's current inventory to barrier named "&cClose"
+
+command /endshop:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &5End Shop &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to shulker box named "&dShulker Box &7[$25000]"
+        set slot 12 of player's current inventory to ender pearl named "&b16 Ender Pearls &7[$1500]"
+        set slot 14 of player's current inventory to ender eye named "&a8 Eyes of Ender &7[$4000]"
+        set slot 16 of player's current inventory to end stone named "&f64 End Stone &7[$1200]"
+        set slot 22 of player's current inventory to barrier named "&cBack"
+
+command /netherShop:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &cNether Shop &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to quartz named "&f32 Quartz &7[$1200]"
+        set slot 12 of player's current inventory to blaze rod named "&e16 Blaze Rods &7[$3000]"
+        set slot 14 of player's current inventory to netherrack named "&c64 Netherrack &7[$400]"
+        set slot 16 of player's current inventory to soul sand named "&864 Soul Sand &7[$800]"
+        set slot 22 of player's current inventory to barrier named "&cBack"
 
 on inventory click:
     if name of event-inventory is "&8✦ &6Aizen Shop &8✦":
         cancel event
         if clicked slot is 22:
             close player's inventory
+        else if clicked slot is 10:
+            close player's inventory
+            make player execute command "/endshop"
+        else if clicked slot is 12:
+            close player's inventory
+            make player execute command "/netherShop"
+        else if clicked slot is 14:
+            open chest inventory with 3 rows named "&8✦ &6Food Shop &8✦" to player
+            wait 1 tick
+            set slot 10 of player's current inventory to cooked beef named "&e32 Steak &7[$500]"
+            set slot 12 of player's current inventory to cooked chicken named "&e32 Chicken &7[$450]"
+            set slot 14 of player's current inventory to golden carrot named "&632 Golden Carrots &7[$1800]"
+            set slot 16 of player's current inventory to bread named "&f64 Bread &7[$400]"
+            set slot 22 of player's current inventory to barrier named "&cBack"
+        else if clicked slot is 16:
+            close player's inventory
+            make player execute command "/shardshop"
+        stop
+
+on inventory click:
+    if name of event-inventory is "&8✦ &5End Shop &8✦":
+        cancel event
+        if clicked slot is 22:
+            close player's inventory
+            make player execute command "/shop"
             stop
         set {_price} to 0
+        set {_item} to air
         if clicked slot is 10:
-            set {_price} to 500
-            set {_item} to 32 cooked beef
+            set {_price} to 25000
+            set {_item} to shulker box
         else if clicked slot is 12:
             set {_price} to 1500
             set {_item} to 16 ender pearls
         else if clicked slot is 14:
-            set {_price} to 2000
-            set {_item} to 16 obsidian
+            set {_price} to 4000
+            set {_item} to 8 ender eyes
         else if clicked slot is 16:
-            set {_price} to 3000
-            set {_item} to 1 golden apple
+            set {_price} to 1200
+            set {_item} to 64 end stone
         else:
             stop
         if {az.money.%uuid of player%} < {_price}:
@@ -867,6 +913,157 @@ on inventory click:
         remove {_price} from {az.money.%uuid of player%}
         give {_item} to player
         send "{@prefix} &aPurchase complete."
+
+on inventory click:
+    if name of event-inventory is "&8✦ &cNether Shop &8✦":
+        cancel event
+        if clicked slot is 22:
+            close player's inventory
+            make player execute command "/shop"
+            stop
+        set {_price} to 0
+        set {_item} to air
+        if clicked slot is 10:
+            set {_price} to 1200
+            set {_item} to 32 quartz
+        else if clicked slot is 12:
+            set {_price} to 3000
+            set {_item} to 16 blaze rods
+        else if clicked slot is 14:
+            set {_price} to 400
+            set {_item} to 64 netherrack
+        else if clicked slot is 16:
+            set {_price} to 800
+            set {_item} to 64 soul sand
+        else:
+            stop
+        if {az.money.%uuid of player%} < {_price}:
+            send "{@prefix} &cNot enough money."
+            stop
+        remove {_price} from {az.money.%uuid of player%}
+        give {_item} to player
+        send "{@prefix} &aPurchase complete."
+
+on inventory click:
+    if name of event-inventory is "&8✦ &6Food Shop &8✦":
+        cancel event
+        if clicked slot is 22:
+            close player's inventory
+            make player execute command "/shop"
+            stop
+        set {_price} to 0
+        set {_item} to air
+        if clicked slot is 10:
+            set {_price} to 500
+            set {_item} to 32 cooked beef
+        else if clicked slot is 12:
+            set {_price} to 450
+            set {_item} to 32 cooked chicken
+        else if clicked slot is 14:
+            set {_price} to 1800
+            set {_item} to 32 golden carrots
+        else if clicked slot is 16:
+            set {_price} to 400
+            set {_item} to 64 bread
+        else:
+            stop
+        if {az.money.%uuid of player%} < {_price}:
+            send "{@prefix} &cNot enough money."
+            stop
+        remove {_price} from {az.money.%uuid of player%}
+        give {_item} to player
+        send "{@prefix} &aPurchase complete."
+
+# ---------------- OLD /SELL ----------------
+
+function azSellUnit(i: item) :: number:
+    if {_i} is kelp:
+        return 8
+    if {_i} is dried kelp:
+        return 12
+    if {_i} is beef:
+        return 18
+    if {_i} is leather:
+        return 25
+    if {_i} is cooked beef:
+        return 22
+    if {_i} is iron ingot:
+        return 80
+    if {_i} is gold ingot:
+        return 120
+    if {_i} is sand:
+        return 10
+    if {_i} is gravel:
+        return 8
+    if {_i} is cobblestone:
+        return 3
+    if {_i} is stone:
+        return 5
+    if {_i} is wheat:
+        return 10
+    if {_i} is carrot:
+        return 8
+    if {_i} is potato:
+        return 8
+    if {_i} is rotten flesh:
+        return 5
+    if {_i} is bone:
+        return 15
+    if {_i} is string:
+        return 18
+    if {_i} is gunpowder:
+        return 30
+    if {_i} is spider eye:
+        return 12
+    if {_i} is ender pearl:
+        return 80
+    return 0
+
+command /sell:
+    trigger:
+        set {_total} to 0
+        set {_sold} to 0
+        loop 36 times:
+            set {_slot} to loop-number - 1
+            set {_it} to item in slot {_slot} of player's inventory
+            if {_it} is not air:
+                set {_unit} to azSellUnit({_it})
+                if {_unit} > 0:
+                    set {_amount} to amount of {_it}
+                    add ({_unit} * {_amount}) to {_total}
+                    add {_amount} to {_sold}
+                    set slot {_slot} of player's inventory to air
+        if {_total} <= 0:
+            send "{@prefix} &cThere are no sellable items in your inventory."
+            stop
+        add {_total} to {az.money.%uuid of player%}
+        send "{@prefix} &aSold &e%{_sold}% &aitems for &6$%{_total}%&a."
+
+# AH basket is now separate from /sell.
+command /sellbasket:
+    trigger:
+        open chest inventory with 6 rows named "&8✦ &6AH Sell Basket &8✦" to player
+        wait 1 tick
+        loop 54 times:
+            set {_slot} to loop-number - 1
+            if {az.sellbasket.%uuid of player%.%{_slot}%} is set:
+                set slot {_slot} of player's current inventory to {az.sellbasket.%uuid of player%.%{_slot}%}
+        set slot 49 of player's current inventory to barrier named "&cClose"
+        set slot 50 of player's current inventory to paper named "&eHow to sell" with lore "&7Put items here | &7Close the menu | &7Then use &e/ah sell <price>"
+
+on inventory close:
+    if name of event-inventory is "&8✦ &6AH Sell Basket &8✦":
+        loop 54 times:
+            set {_slot} to loop-number - 1
+            if {_slot} is 49:
+                next loop
+            if {_slot} is 50:
+                next loop
+            set {_it} to item in slot {_slot} of event-inventory
+            if {_it} is air:
+                delete {az.sellbasket.%uuid of player%.%{_slot}%}
+            else:
+                set {az.sellbasket.%uuid of player%.%{_slot}%} to {_it}
 
 # ---------------- SHARDS ----------------
 
@@ -1383,7 +1580,7 @@ command /teaminfo:
         send "&7Owner UUID: &f%{az.team.owner.%{_team}%}%"
         send "&8&m--------------------------------"
 
-# ---------------- PLAYER STATS + SIDEBAR ----------------
+# ---------------- PLAYER STATS + RIGHT SIDEBAR ----------------
 
 on death of player:
     add 1 to {az.deaths.%uuid of victim%}
@@ -1403,9 +1600,20 @@ command /stats:
         send "&7Team: &f%{az.team.%uuid of player%}%"
         send "&8&m--------------------------------"
 
+# Vanilla-style sidebar on the RIGHT side of the screen.
+# The board is refreshed per player so every player sees their own values.
 every 2 seconds:
     loop all players:
-        send action bar "&6&lAIZEN SMP &7| &f%loop-player% &7| &6$%{az.money.%uuid of loop-player%}% &7| &aKills: %{az.kills.%uuid of loop-player%}% &7| &cDeaths: %{az.deaths.%uuid of loop-player%}% &7| &bShards: %{az.shards.%uuid of loop-player%}%" to loop-player
+        set {_p} to loop-player
+        set title of {_p}'s scoreboard to "&6&lAIZEN SMP"
+        set line 1 of {_p}'s scoreboard to "&7&m----------------"
+        set line 2 of {_p}'s scoreboard to "&f%{_p}%"
+        set line 3 of {_p}'s scoreboard to "&6$ &f%{az.money.%uuid of {_p}%}%"
+        set line 4 of {_p}'s scoreboard to "&b✦ &f%{az.shards.%uuid of {_p}%}%"
+        set line 5 of {_p}'s scoreboard to "&aKills &f%{az.kills.%uuid of {_p}%}%"
+        set line 6 of {_p}'s scoreboard to "&cDeaths &f%{az.deaths.%uuid of {_p}%}%"
+        set line 7 of {_p}'s scoreboard to "&ePlaytime &f%{az.playtime.%uuid of {_p}%}%m"
+        set line 8 of {_p}'s scoreboard to "&7&m----------------"
 
 # ---------------- PLAYTIME ----------------
 
@@ -1437,6 +1645,102 @@ command /playtime [<player>]:
         send "&7Total minutes: &f%{_minutes}%"
         send "&8&m--------------------------------"
 
+# ---------------- PLAYER ORDERS ----------------
+# /orders <item> <amount> <price> creates a simple buy order.
+# /orders lists open orders. /orders buy <id> fulfills an order.
+
+command /orders [<text>] [<number>] [<number>]:
+    trigger:
+        if arg-1 is not set:
+            send "&8&m--------------------------------"
+            send "&6&lPLAYER ORDERS"
+            send "&7Create: &e/orders <item> <amount> <price>"
+            send "&7Fulfill: &e/orders buy <id>"
+            send "&7Cancel your order: &e/orders cancel <id>"
+            set {_shown} to 0
+            loop {az.order.item::*}:
+                set {_id} to loop-index parsed as integer
+                set {_qty} to {az.order.qty.%{_id}%}
+                set {_price} to {az.order.price.%{_id}%}
+                set {_buyer} to {az.order.buyer.%{_id}%}
+                send "&e#%{_id}% &f%{az.order.item.%{_id}%}% &7x%{_qty}% &6$%{_price}% &7by &f%{_buyer}%"
+                add 1 to {_shown}
+            if {_shown} is 0:
+                send "&7No open orders."
+            send "&8&m--------------------------------"
+            stop
+        if arg-1 is "buy":
+            if arg-2 is not set:
+                send "{@prefix} &cUsage: /orders buy <id>"
+                stop
+            set {_id} to arg-2
+            if {az.order.item.%{_id}%} is not set:
+                send "{@prefix} &cOrder not found."
+                stop
+            set {_qty} to {az.order.qty.%{_id}%}
+            set {_price} to {az.order.price.%{_id}%}
+            set {_itemText} to {az.order.item.%{_id}%}
+            if {az.money.%uuid of player%} < {_price}:
+                send "{@prefix} &cYou need &6$%{_price}%&c."
+                stop
+            set {_sellerItem} to air
+            loop 36 times:
+                set {_slot} to loop-number - 1
+                set {_it} to item in slot {_slot} of player's inventory
+                if "%type of {_it}%" is {_itemText}:
+                    if amount of {_it} >= {_qty}:
+                        set {_sellerItem} to {_it}
+                        set {_sellerSlot} to {_slot}
+                        stop loop
+            if {_sellerItem} is air:
+                send "{@prefix} &cYou do not have the required quantity."
+                stop
+            remove {_qty} from item in slot {_sellerSlot} of player's inventory
+            set {_buyerUUID} to {az.order.buyeruuid.%{_id}%}
+            remove {_price} from {az.money.%uuid of player%}
+            add {_price} to {az.money.%{_buyerUUID}%}
+            set {_buyerName} to {az.order.buyer.%{_id}%}
+            set {_buyerPlayer} to player named {_buyerName}
+            if {_buyerPlayer} is online:
+                send "{@prefix} &aYour order &e#%{_id}% &awas fulfilled by &f%player%&a." to {_buyerPlayer}
+            delete {az.order.item.%{_id}%}
+            delete {az.order.qty.%{_id}%}
+            delete {az.order.price.%{_id}%}
+            delete {az.order.buyer.%{_id}%}
+            delete {az.order.buyeruuid.%{_id}%}
+            send "{@prefix} &aOrder fulfilled for &6$%{_price}%&a."
+            stop
+        if arg-1 is "cancel":
+            if arg-2 is not set:
+                send "{@prefix} &cUsage: /orders cancel <id>"
+                stop
+            set {_id} to arg-2
+            if {az.order.buyeruuid.%{_id}%} is not uuid of player:
+                send "{@prefix} &cOnly the order creator can cancel it."
+                stop
+            delete {az.order.item.%{_id}%}
+            delete {az.order.qty.%{_id}%}
+            delete {az.order.price.%{_id}%}
+            delete {az.order.buyer.%{_id}%}
+            delete {az.order.buyeruuid.%{_id}%}
+            send "{@prefix} &aOrder cancelled."
+            stop
+        if arg-2 is not set or arg-3 is not set:
+            send "{@prefix} &cUsage: /orders <item> <amount> <price>"
+            stop
+        if arg-2 <= 0 or arg-3 <= 0:
+            send "{@prefix} &cAmount and price must be positive."
+            stop
+        set {az.order.next} to {az.order.next} + 1
+        set {_id} to {az.order.next}
+        set {az.order.item.%{_id}%} to arg-1
+        set {az.order.qty.%{_id}%} to arg-2
+        set {az.order.price.%{_id}%} to arg-3
+        set {az.order.buyer.%{_id}%} to name of player
+        set {az.order.buyeruuid.%{_id}%} to uuid of player
+        remove arg-3 from {az.money.%uuid of player%}
+        send "{@prefix} &aOrder &e#%{_id}% &acreated for &f%arg-1% &7x%arg-2% &aat &6$%arg-3%&a."
+
 # ---------------- HELP ----------------
 
 command /help:
@@ -1452,9 +1756,15 @@ command /help:
         send "&e/friend &7- Friends"
         send "&e/tpa &7- Teleport requests"
         send "&e/duel &7- Duels"
-        send "&e/shop &7- Money shop"
+        send "&e/shop &7- Old-style category shop"
+        send "&e/endshop &7- End resources"
+        send "&e/netherShop &7- Nether resources"
+        send "&e/sell &7- Sell all sellable inventory items"
+        send "&e/sellbasket &7- AH sell basket"
         send "&e/shardshop &7- Shard shop"
         send "&e/spawnershop &7- Spawners"
+        send "&e/ah &7- Auction House"
+        send "&e/orders &7- Player orders"
         send "&e/settings &7- Privacy/settings"
         send "&8&m--------------------------------"
 
