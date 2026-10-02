@@ -11,8 +11,6 @@ jobs:
   server:
     runs-on: ubuntu-latest
     timeout-minutes: 350
-    env:
-      PLAYIT_SECRET: ${{ secrets.PLAYIT_SECRET }}
 
     steps:
       - name: Checkout AizenSMP
@@ -120,31 +118,34 @@ jobs:
             cp -r plugins/Skript/scripts/. server/plugins/Skript/scripts/
           fi
 
-      - name: Start playit.gg tunnel
-        if: ${{ env.PLAYIT_SECRET != '' }}
+      - name: Start playit.gg agent and show claim link
         shell: bash
         run: |
           set -e
           curl -L --fail -o playit-agent "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
           chmod +x playit-agent
-          nohup ./playit-agent --secret "$PLAYIT_SECRET" > playit.log 2>&1 &
+
+          echo "========== PLAYIT AGENT =========="
+          echo "Starting Playit without a secret."
+          echo "A Claim URL should appear below. Open it on your phone and claim the agent."
+          echo "=================================="
+
+          nohup ./playit-agent > playit.log 2>&1 &
           echo $! > playit.pid
 
-          echo "Waiting for playit.gg tunnel..."
           for i in {1..30}; do
             sleep 2
-            if grep -Eqi 'minecraft|tcp|address|tunnel|connect' playit.log; then
-              echo "========== AizenSMP PLAYIT.GG =========="
-              echo "Java tunnel: TCP -> 25565"
-              echo "Bedrock tunnel: UDP -> 19132"
-              grep -Ei 'minecraft|tcp|udp|address|tunnel|connect' playit.log | tail -n 30 || true
-              echo "========================================"
+            if grep -Eqi 'https?://|claim|agent|tunnel' playit.log; then
+              echo "========== PLAYIT OUTPUT =========="
+              cat playit.log || true
+              echo "==================================="
               break
             fi
           done
 
-          echo "playit.gg log:"
+          echo "========== PLAYIT LOG =========="
           cat playit.log || true
+          echo "================================"
 
       - name: Start AizenSMP and save on shutdown
         shell: bash
