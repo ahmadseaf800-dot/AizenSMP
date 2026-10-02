@@ -54,7 +54,11 @@ jobs:
       - name: Install Skript
         shell: bash
         run: |
-          curl -L --fail -o server/plugins/Skript.jar "https://github.com/SkriptLang/Skript/releases/latest/download/Skript.jar"
+          set -e
+          SKRIPT_URL=$(curl -fsSL https://api.github.com/repos/SkriptLang/Skript/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
+          test -n "$SKRIPT_URL"
+          echo "Downloading Skript from $SKRIPT_URL"
+          curl -L --fail -o server/plugins/Skript.jar "$SKRIPT_URL"
 
       - name: Install ViaVersion and ViaBackwards
         shell: bash
