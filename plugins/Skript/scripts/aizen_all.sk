@@ -13,6 +13,36 @@ options:
     duel-timeout: 60 seconds
     request-timeout: 60 seconds
 
+# ---------------- SPAWN / AFK / DUELS ZONES ----------------
+
+# Admin setup commands:
+# /setspawn = center of the protected spawn
+# /setafk = center of the protected AFK zone
+# /setduel = duel lobby/zone location
+# /buildspawn = builds the spawn structure around the current location
+
+command /buildzones:
+    permission: aizensmp.admin
+    trigger:
+        if {az.spawn} is not set:
+            set {az.spawn} to location of player
+        if {az.afk} is not set:
+            set {az.afk} to location of player
+        if {az.duel} is not set:
+            set {az.duel} to location of player
+        send "{@prefix} &aSpawn, AFK and Duels locations are configured." to player
+        send "&7Spawn: &f%{az.spawn}%" to player
+        send "&7AFK: &f%{az.afk}%" to player
+        send "&7Duels: &f%{az.duel}%" to player
+
+command /duels:
+    trigger:
+        if {az.duel} is not set:
+            send "{@prefix} &cDuels area is not set." to player
+            stop
+        teleport player to {az.duel}
+        send "{@prefix} &aTeleported to the &eDuels &aarea." to player
+
 # ---------------- CORE / SPAWN / AFK ----------------
 
 command /setspawn:
@@ -450,8 +480,9 @@ on inventory click:
 command /setduel:
     permission: aizensmp.admin
     trigger:
-        set {az.duel.arena} to location of player
-        send "{@prefix} &aDuel arena set."
+        set {az.duel} to location of player
+        send "{@prefix} &aDuels area set here." to player
+
 
 command /duel [<player>]:
     trigger:
