@@ -1,0 +1,654 @@
+# =========================================================
+# AizenSMP - COMPLETE CUSTOM SYSTEM
+# Purpur 1.21.11 / Skript
+# No claims, no events system, no external gameplay plugins.
+# =========================================================
+
+options:
+    prefix: &6[&eAizenSMP&6] &r
+    rtp-range: 10000
+    bounty-start: 5
+    bounty-base: 1000
+    bounty-step: 1000
+    duel-timeout: 60 seconds
+    request-timeout: 60 seconds
+
+# ---------------- CORE / SPAWN / AFK ----------------
+
+command /setspawn:
+    permission: aizensmp.admin
+    trigger:
+        set {az.spawn} to location of player
+        send "%{@prefix}% &aSpawn set." to player
+
+command /spawn:
+    trigger:
+        if {az.spawn} is not set:
+            send "%{@prefix}% &cSpawn is not set." to player
+            stop
+        teleport player to {az.spawn}
+        send "%{@prefix}% &aTeleported to spawn." to player
+
+command /setafk:
+    permission: aizensmp.admin
+    trigger:
+        set {az.afk} to location of player
+        send "%{@prefix}% &aAFK area set." to player
+
+command /afk:
+    trigger:
+        if {az.afk} is not set:
+            send "%{@prefix}% &cAFK area is not set." to player
+            stop
+        teleport player to {az.afk}
+        send "%{@prefix}% &aTeleported to AFK." to player
+
+command /aizenadmin:
+    permission: aizensmp.admin
+    trigger:
+        send "&8&m-----------------------------"
+        send "&6&lAizenSMP ADMIN"
+        send "&e/setspawn &7/setafk &7/setduel"
+        send "&e/setrichsign &7/setshop"
+        send "&e/setrtpbot &7/setduelbot"
+        send "&e/give-shard <player> <amount>"
+        send "&8&m-----------------------------"
+
+on join:
+    if {az.money.%uuid of player%} is not set:
+        set {az.money.%uuid of player%} to 0
+    if {az.shards.%uuid of player%} is not set:
+        set {az.shards.%uuid of player%} to 0
+    if {az.streak.%uuid of player%} is not set:
+        set {az.streak.%uuid of player%} to 0
+    if {az.bounty.%uuid of player%} is not set:
+        set {az.bounty.%uuid of player%} to 0
+    if {az.settings.chat.%uuid of player%} is not set:
+        set {az.settings.chat.%uuid of player%} to true
+    if {az.settings.tpa.%uuid of player%} is not set:
+        set {az.settings.tpa.%uuid of player%} to "all"
+    if {az.settings.tpahere.%uuid of player%} is not set:
+        set {az.settings.tpahere.%uuid of player%} to "all"
+    if {az.settings.pay.%uuid of player%} is not set:
+        set {az.settings.pay.%uuid of player%} to "all"
+    if {az.settings.duel.%uuid of player%} is not set:
+        set {az.settings.duel.%uuid of player%} to "all"
+    set {az.name.%uuid of player%} to name of player
+    send "%{@prefix}% &fWelcome to &eAizenSMP&f!" to player
+
+on first join:
+    send "%{@prefix}% &6Welcome! &fUse &e/help &fto see the server systems." to player
+
+# Spawn/AFK protection only. No player claims.
+on block break:
+    if {az.spawn} is set:
+        if distance between location of event-block and {az.spawn} <= 50:
+            cancel event
+            send "%{@prefix}% &cSpawn is protected." to player
+            stop
+    if {az.afk} is set:
+        if distance between location of event-block and {az.afk} <= 15:
+            cancel event
+            send "%{@prefix}% &cAFK area is protected." to player
+
+on block place:
+    if {az.spawn} is set:
+        if distance between location of event-block and {az.spawn} <= 50:
+            cancel event
+            send "%{@prefix}% &cSpawn is protected." to player
+            stop
+    if {az.afk} is set:
+        if distance between location of event-block and {az.afk} <= 15:
+            cancel event
+            send "%{@prefix}% &cAFK area is protected." to player
+
+on damage:
+    if victim is a player:
+        if {az.spawn} is set:
+            if distance between location of victim and {az.spawn} <= 50:
+                cancel event
+        if {az.afk} is set:
+            if distance between location of victim and {az.afk} <= 15:
+                cancel event
+
+on explode:
+    if {az.spawn} is set:
+        if distance between event-location and {az.spawn} <= 50:
+            cancel event
+    if {az.afk} is set:
+        if distance between event-location and {az.afk} <= 15:
+            cancel event
+
+# ---------------- ECONOMY ----------------
+
+command /balance:
+    aliases: /bal, /money
+    trigger:
+        send "%{@prefix}% &fBalance: &6$%{az.money.%uuid of player%}%"
+
+command /pay <player> <number>:
+    trigger:
+        if arg-1 is player:
+            send "%{@prefix}% &cYou cannot pay yourself."
+            stop
+        if arg-2 <= 0:
+            send "%{@prefix}% &cAmount must be positive."
+            stop
+        if {az.settings.pay.%uuid of arg-1%} is "none":
+            send "%{@prefix}% &cThat player disabled payments."
+            stop
+        if {az.settings.pay.%uuid of arg-1%} is "friends":
+            if {az.friend.%uuid of arg-1%.%uuid of player%} is not true:
+                send "%{@prefix}% &cPayments are friends-only."
+                stop
+        if {az.money.%uuid of player%} < arg-2:
+            send "%{@prefix}% &cNot enough money."
+            stop
+        remove arg-2 from {az.money.%uuid of player%}
+        add arg-2 to {az.money.%uuid of arg-1%}
+        send "%{@prefix}% &aPaid &6$%arg-2% &ato &e%arg-1%&a."
+        send "%{@prefix}% &aReceived &6$%arg-2% &afrom &e%player%&a." to arg-1
+
+command /setmoney <player> <number>:
+    permission: aizensmp.admin
+    trigger:
+        set {az.money.%uuid of arg-1%} to arg-2
+        send "%{@prefix}% &aMoney updated."
+
+command /addmoney <player> <number>:
+    permission: aizensmp.admin
+    trigger:
+        add arg-2 to {az.money.%uuid of arg-1%}
+        send "%{@prefix}% &aMoney added."
+
+command /richest:
+    trigger:
+        send "&8&m-----------------------------"
+        send "&6&lRICHEST PLAYERS"
+        set {_n} to 0
+        loop {az.money::*}:
+            if loop-index does not contain ".":
+                if loop-value > 0:
+                    add 1 to {_n}
+                    if {_n} <= 10:
+                        send "&e%{_n}%. &f%{az.name.%loop-index%}% &7- &6$%loop-value%"
+        if {_n} is 0:
+            send "&7No rich players yet."
+        send "&8&m-----------------------------"
+
+command /setrichsign:
+    permission: aizensmp.admin
+    trigger:
+        set {az.richsign} to location of player
+        send "%{@prefix}% &aRichest leaderboard sign location saved."
+
+every 1 minute:
+    if {az.richsign} is set:
+        set line 1 of block at {az.richsign} to "&6&lAIZEN RICH"
+        set line 2 of block at {az.richsign} to "&eUse /richest"
+        set line 3 of block at {az.richsign} to "&7Top players"
+        set line 4 of block at {az.richsign} to "&6AizenSMP"
+
+# ---------------- RTP / RTPQ ----------------
+
+function azRTP(p: player, w: world):
+    set {_found} to false
+    loop 50 times:
+        if {_found} is false:
+            set {_x} to random integer between -{@rtp-range} and {@rtp-range}
+            set {_z} to random integer between -{@rtp-range} and {@rtp-range}
+            set {_loc} to location at {_x}, 0, {_z} in {_w}
+            set {_top} to highest block at {_loc}
+            set {_feet} to location of {_top}
+            if block below {_feet} is not water:
+                if block below {_feet} is not lava:
+                    if block at {_feet} is air:
+                        if block above {_feet} is air:
+                            if y-coordinate of {_feet} > 5:
+                                teleport {_p} to {_feet}
+                                set {_found} to true
+    if {_found} is false:
+        send "%{@prefix}% &cNo safe RTP location found." to {_p}
+    else:
+        send "%{@prefix}% &aRTP complete." to {_p}
+
+command /rtp:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &bAizenSMP RTP &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to grass block named "&aOverworld"
+        set slot 13 of player's current inventory to netherrack named "&cNether"
+        set slot 16 of player's current inventory to end stone named "&dThe End"
+        set slot 22 of player's current inventory to barrier named "&cClose"
+
+on inventory click:
+    if name of event-inventory is "&8✦ &bAizenSMP RTP &8✦":
+        cancel event
+        if clicked slot is 22:
+            close player's inventory
+        else if clicked slot is 10:
+            close player's inventory
+            azRTP(player, world of player)
+        else if clicked slot is 13:
+            if world named "world_nether" is set:
+                close player's inventory
+                azRTP(player, world named "world_nether")
+        else if clicked slot is 16:
+            if world named "world_the_end" is set:
+                close player's inventory
+                azRTP(player, world named "world_the_end")
+
+command /rtpq:
+    trigger:
+        set {_target} to random player
+        if {_target} is player:
+            delete {_target}
+        if {_target} is not set:
+            loop all players:
+                if loop-player is not player:
+                    set {_target} to loop-player
+                    stop
+        if {_target} is not set:
+            send "%{@prefix}% &cNo other player is online."
+            stop
+        set {_w} to world of player
+        set {_x} to random integer between -{@rtp-range} and {@rtp-range}
+        set {_z} to random integer between -{@rtp-range} and {@rtp-range}
+        set {_loc} to highest block at location at {_x}, 0, {_z} in {_w}
+        teleport player to {_loc}
+        teleport {_target} to {_loc}
+        send "%{@prefix}% &aRTPQ matched you with &e%{_target}%&a." to player
+        send "%{@prefix}% &aRTPQ matched you with &e%player%&a." to {_target}
+
+# ---------------- BOUNTY / KILL STREAK ----------------
+
+on death of player:
+    if attacker is a player:
+        add 1 to {az.streak.%uuid of attacker%}
+        set {_s} to {az.streak.%uuid of attacker%}
+        if {_s} >= {@bounty-start}:
+            set {_b} to {@bounty-base} + (({_s} - {@bounty-start}) * {@bounty-step})
+            set {az.bounty.%uuid of attacker%} to {_b}
+            send "%{@prefix}% &cBOUNTY &7Your bounty is now &6$%{_b}%&7." to attacker
+            broadcast "%{@prefix}% &e%attacker% &7has a &6$%{_b}% &7bounty!"
+    set {az.streak.%uuid of victim%} to 0
+    set {az.bounty.%uuid of victim%} to 0
+
+command /bounty:
+    aliases: /mybounty
+    trigger:
+        send "%{@prefix}% &fBounty: &6$%{az.bounty.%uuid of player%}% &7| Streak: &c%{az.streak.%uuid of player%}%"
+
+command /bountytop:
+    trigger:
+        send "&8&m-----------------------------"
+        send "&c&lBOUNTY BOARD"
+        loop {az.bounty::*}:
+            if loop-value > 0:
+                send "&c• &f%{az.name.%loop-index%}% &7- &6$%loop-value%"
+        send "&8&m-----------------------------"
+
+# ---------------- FRIENDS ----------------
+
+command /friend <text> [<player>]:
+    aliases: /friends
+    trigger:
+        if arg-1 is "add":
+            if arg-2 is not set:
+                send "%{@prefix}% &c/friend add <player>"
+                stop
+            if arg-2 is player:
+                stop
+            set {az.friend.%uuid of player%.%uuid of arg-2%} to true
+            set {az.friend.%uuid of arg-2%.%uuid of player%} to true
+            send "%{@prefix}% &aFriend added."
+            send "%{@prefix}% &a%player% added you as a friend." to arg-2
+        else if arg-1 is "remove":
+            if arg-2 is not set:
+                stop
+            delete {az.friend.%uuid of player%.%uuid of arg-2%}
+            delete {az.friend.%uuid of arg-2%.%uuid of player%}
+            send "%{@prefix}% &cFriend removed."
+        else if arg-1 is "list":
+            send "&8&m-----------------------------"
+            send "&b&lFRIENDS"
+            set {_found} to false
+            loop all players:
+                if {az.friend.%uuid of player%.%uuid of loop-player%} is true:
+                    send "&a• &f%loop-player%"
+                    set {_found} to true
+            if {_found} is false:
+                send "&7No online friends."
+            send "&8&m-----------------------------"
+        else:
+            send "%{@prefix}% &7/friend add <player>"
+            send "%{@prefix}% &7/friend remove <player>"
+            send "%{@prefix}% &7/friend list"
+
+# ---------------- TPA ----------------
+
+command /tpa <player>:
+    trigger:
+        if arg-1 is player:
+            stop
+        if {az.settings.tpa.%uuid of arg-1%} is "none":
+            send "%{@prefix}% &cTPA disabled."
+            stop
+        if {az.settings.tpa.%uuid of arg-1%} is "friends":
+            if {az.friend.%uuid of arg-1%.%uuid of player%} is not true:
+                send "%{@prefix}% &cTPA is friends-only."
+                stop
+        set {az.tpa.%uuid of arg-1%} to player
+        send "%{@prefix}% &aTPA request sent."
+        send "%{@prefix}% &e%player% &fwants to teleport to you. &a/tpaccept &7or &c/tpdeny" to arg-1
+        wait {@request-timeout}
+        if {az.tpa.%uuid of arg-1%} is player:
+            delete {az.tpa.%uuid of arg-1%}
+
+command /tpahere <player>:
+    trigger:
+        if {az.settings.tpahere.%uuid of arg-1%} is "none":
+            send "%{@prefix}% &cTPAHERE disabled."
+            stop
+        if {az.settings.tpahere.%uuid of arg-1%} is "friends":
+            if {az.friend.%uuid of arg-1%.%uuid of player%} is not true:
+                send "%{@prefix}% &cTPAHERE is friends-only."
+                stop
+        set {az.tpahere.%uuid of arg-1%} to player
+        send "%{@prefix}% &aTPAHERE request sent."
+        send "%{@prefix}% &e%player% &fwants you to teleport to them. &a/tpaccept &7or &c/tpdeny" to arg-1
+        wait {@request-timeout}
+        if {az.tpahere.%uuid of arg-1%} is player:
+            delete {az.tpahere.%uuid of arg-1%}
+
+command /tpaccept:
+    trigger:
+        if {az.tpa.%uuid of player%} is set:
+            set {_p} to {az.tpa.%uuid of player%}
+            delete {az.tpa.%uuid of player%}
+            if {_p} is online:
+                teleport {_p} to player
+                send "%{@prefix}% &aAccepted." to player
+                send "%{@prefix}% &aYour TPA was accepted." to {_p}
+            stop
+        if {az.tpahere.%uuid of player%} is set:
+            set {_p} to {az.tpahere.%uuid of player%}
+            delete {az.tpahere.%uuid of player%}
+            if {_p} is online:
+                teleport player to {_p}
+                send "%{@prefix}% &aAccepted." to player
+                send "%{@prefix}% &aYour TPAHERE was accepted." to {_p}
+            stop
+        send "%{@prefix}% &cNo pending request."
+
+command /tpdeny:
+    trigger:
+        delete {az.tpa.%uuid of player%}
+        delete {az.tpahere.%uuid of player%}
+        send "%{@prefix}% &cPending teleport request denied."
+
+# ---------------- SETTINGS ----------------
+
+command /settings:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &bAizen Settings &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to paper named "&eChat" with lore "&7%{az.settings.chat.%uuid of player%}%"
+        set slot 12 of player's current inventory to ender pearl named "&bTPA" with lore "&7%{az.settings.tpa.%uuid of player%}%"
+        set slot 14 of player's current inventory to ender pearl named "&bTPAHERE" with lore "&7%{az.settings.tpahere.%uuid of player%}%"
+        set slot 16 of player's current inventory to gold ingot named "&6Payments" with lore "&7%{az.settings.pay.%uuid of player%}%"
+        set slot 22 of player's current inventory to diamond sword named "&cDuels" with lore "&7%{az.settings.duel.%uuid of player%}%"
+
+on chat:
+    if {az.settings.chat.%uuid of player%} is false:
+        cancel event
+        send "%{@prefix}% &cChat is disabled in your settings."
+
+# ---------------- DUELS ----------------
+
+command /setduel:
+    permission: aizensmp.admin
+    trigger:
+        set {az.duel.arena} to location of player
+        send "%{@prefix}% &aDuel arena set."
+
+command /duel <player>:
+    trigger:
+        if arg-1 is player:
+            stop
+        if {az.duel.%uuid of player%} is set:
+            send "%{@prefix}% &cYou are already dueling."
+            stop
+        if {az.duel.%uuid of arg-1%} is set:
+            send "%{@prefix}% &cThat player is already dueling."
+            stop
+        if {az.settings.duel.%uuid of arg-1%} is "none":
+            send "%{@prefix}% &cDuel requests disabled."
+            stop
+        if {az.settings.duel.%uuid of arg-1%} is "friends":
+            if {az.friend.%uuid of arg-1%.%uuid of player%} is not true:
+                send "%{@prefix}% &cDuel requests are friends-only."
+                stop
+        if {az.duel.arena} is not set:
+            send "%{@prefix}% &cDuel arena is not set."
+            stop
+        set {az.duel.request.%uuid of arg-1%} to player
+        send "%{@prefix}% &aDuel request sent."
+        send "%{@prefix}% &e%player% &fwants to duel you: &a/duelaccept &7or &c/dueldeny" to arg-1
+        wait {@duel-timeout}
+        if {az.duel.request.%uuid of arg-1%} is player:
+            delete {az.duel.request.%uuid of arg-1%}
+
+command /duelaccept:
+    trigger:
+        if {az.duel.request.%uuid of player%} is not set:
+            send "%{@prefix}% &cNo duel request."
+            stop
+        set {_p} to {az.duel.request.%uuid of player%}
+        delete {az.duel.request.%uuid of player%}
+        if {_p} is online:
+            set {az.duel.%uuid of player%} to {_p}
+            set {az.duel.%uuid of {_p}%} to player
+            teleport player to {az.duel.arena}
+            teleport {_p} to {az.duel.arena}
+            send "%{@prefix}% &aDuel started." to player
+            send "%{@prefix}% &aDuel started." to {_p}
+
+command /dueldeny:
+    trigger:
+        if {az.duel.request.%uuid of player%} is set:
+            set {_p} to {az.duel.request.%uuid of player%}
+            delete {az.duel.request.%uuid of player%}
+            send "%{@prefix}% &cDuel denied." to player
+            if {_p} is online:
+                send "%{@prefix}% &cYour duel request was denied." to {_p}
+
+on death of player:
+    if {az.duel.%uuid of victim%} is set:
+        set {_opponent} to {az.duel.%uuid of victim%}
+        delete {az.duel.%uuid of victim%}
+        if {_opponent} is online:
+            delete {az.duel.%uuid of {_opponent}%}
+            send "%{@prefix}% &aDuel ended." to {_opponent}
+
+# ---------------- SHARDS ----------------
+
+command /shard:
+    aliases: /shards
+    trigger:
+        send "%{@prefix}% &bYour shards: &f%{az.shards.%uuid of player%}% ✦"
+        send "%{@prefix}% &7Use &e/shardshop &7to spend them."
+
+command /shardshop:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &bShard Shop &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to ender pearl named "&b8 Crystals &7[1✦]"
+        set slot 12 of player's current inventory to enchanted golden apple named "&6Enchanted Apple &7[16✦]"
+        set slot 14 of player's current inventory to netherite chestplate named "&8Netherite Chestplate &7[2✦]"
+        set slot 16 of player's current inventory to wind charge named "&fWind Charge x64 &7[1✦]"
+        set slot 22 of player's current inventory to barrier named "&cClose"
+
+on inventory click:
+    if name of event-inventory is "&8✦ &bShard Shop &8✦":
+        cancel event
+        if clicked slot is 22:
+            close player's inventory
+        else:
+            set {_price} to 0
+            if clicked slot is 10:
+                set {_price} to 1
+                set {_item} to 8 ender crystals
+            else if clicked slot is 12:
+                set {_price} to 16
+                set {_item} to 1 enchanted golden apple
+            else if clicked slot is 14:
+                set {_price} to 2
+                set {_item} to 1 netherite chestplate
+            else if clicked slot is 16:
+                set {_price} to 1
+                set {_item} to 64 wind charges
+            else:
+                stop
+            if {az.shards.%uuid of player%} < {_price}:
+                send "%{@prefix}% &cNot enough shards."
+                stop
+            remove {_price} from {az.shards.%uuid of player%}
+            give {_item} to player
+            send "%{@prefix}% &aPurchase complete."
+
+on death of player:
+    if attacker is a player:
+        add 10 to {az.shards.%uuid of attacker%}
+        send "%{@prefix}% &aKill reward: &b+10 ✦" to attacker
+
+every 1 minute:
+    loop all players:
+        if {az.afk} is set:
+            if distance between loop-player and {az.afk} <= 3:
+                add 1 to {az.shards.%uuid of loop-player%}
+                send "%{@prefix}% &aAFK reward: &b+1 ✦" to loop-player
+
+command /give-shard <player> <number>:
+    permission: aizensmp.admin
+    trigger:
+        add arg-2 to {az.shards.%uuid of arg-1%}
+        send "%{@prefix}% &aGave &b%arg-2% ✦ &ato &e%arg-1%&a."
+
+# ---------------- SPANWERS ----------------
+
+command /spawnershop:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &eSpawner Shop &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to zombie spawn egg named "&eZombie Spawner &7[500✦]"
+        set slot 12 of player's current inventory to skeleton spawn egg named "&eSkeleton Spawner &7[1000✦]"
+        set slot 14 of player's current inventory to blaze spawn egg named "&eBlaze Spawner &7[2000✦]"
+        set slot 16 of player's current inventory to enderman spawn egg named "&eEnderman Spawner &7[3500✦]"
+        set slot 22 of player's current inventory to barrier named "&cClose"
+
+function azSpawner(t: text) :: item:
+    if {_t} is "Zombie":
+        return zombie spawner named "&eZombie Spawner &7[1]"
+    if {_t} is "Skeleton":
+        return skeleton spawner named "&eSkeleton Spawner &7[1]"
+    if {_t} is "Blaze":
+        return blaze spawner named "&eBlaze Spawner &7[1]"
+    if {_t} is "Enderman":
+        return enderman spawner named "&eEnderman Spawner &7[1]"
+
+on inventory click:
+    if name of event-inventory is "&8✦ &eSpawner Shop &8✦":
+        cancel event
+        if clicked slot is 22:
+            close player's inventory
+            stop
+        set {_price} to 0
+        set {_type} to ""
+        if clicked slot is 10:
+            set {_price} to 500
+            set {_type} to "Zombie"
+        else if clicked slot is 12:
+            set {_price} to 1000
+            set {_type} to "Skeleton"
+        else if clicked slot is 14:
+            set {_price} to 2000
+            set {_type} to "Blaze"
+        else if clicked slot is 16:
+            set {_price} to 3500
+            set {_type} to "Enderman"
+        else:
+            stop
+        if {az.shards.%uuid of player%} < {_price}:
+            send "%{@prefix}% &cNot enough shards."
+            stop
+        remove {_price} from {az.shards.%uuid of player%}
+        give azSpawner({_type}) to player
+        send "%{@prefix}% &aSpawner purchased."
+
+# ---------------- NPC COMMAND BUTTONS ----------------
+
+command /setrtpbot:
+    permission: aizensmp.admin
+    trigger:
+        spawn a villager at location of player
+        set {_e} to last spawned entity
+        set name of {_e} to "&b&lRTP"
+        set {az.bot.rtp.%uuid of {_e}%} to true
+        send "%{@prefix}% &aRTP bot created."
+
+command /setshop:
+    permission: aizensmp.admin
+    trigger:
+        spawn a villager at location of player
+        set {_e} to last spawned entity
+        set name of {_e} to "&6&lSHOP"
+        set {az.bot.shop.%uuid of {_e}%} to true
+        send "%{@prefix}% &aShop bot created."
+
+command /setduelbot:
+    permission: aizensmp.admin
+    trigger:
+        spawn a villager at location of player
+        set {_e} to last spawned entity
+        set name of {_e} to "&c&lDUELS"
+        set {az.bot.duel.%uuid of {_e}%} to true
+        send "%{@prefix}% &aDuel bot created."
+
+on right click on entity:
+    if {az.bot.rtp.%uuid of clicked entity%} is set:
+        cancel event
+        make player execute command "/rtp"
+    else if {az.bot.shop.%uuid of clicked entity%} is set:
+        cancel event
+        make player execute command "/shardshop"
+    else if {az.bot.duel.%uuid of clicked entity%} is set:
+        cancel event
+        make player execute command "/duel"
+
+# ---------------- HELP ----------------
+
+command /help:
+    trigger:
+        send "&8&m--------------------------------"
+        send "&6&lAizenSMP"
+        send "&e/spawn &7- Spawn"
+        send "&e/rtp &7- Random teleport"
+        send "&e/rtpq &7- Random player teleport"
+        send "&e/bal &7- Economy"
+        send "&e/pay &7- Pay player"
+        send "&e/bounty &7- Bounty"
+        send "&e/friend &7- Friends"
+        send "&e/tpa &7- Teleport requests"
+        send "&e/duel &7- Duels"
+        send "&e/shardshop &7- Shard shop"
+        send "&e/spawnershop &7- Spawners"
+        send "&e/settings &7- Privacy/settings"
+        send "&8&m--------------------------------"
+
+# ---------------- DATA CLEANUP ----------------
+
+on quit:
+    delete {az.tpa.%uuid of player%}
+    delete {az.tpahere.%uuid of player%}
+    delete {az.duel.request.%uuid of player%}
