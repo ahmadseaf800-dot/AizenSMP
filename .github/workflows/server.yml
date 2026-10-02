@@ -140,14 +140,20 @@ jobs:
           curl -L --fail -o playit-agent "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
           chmod +x playit-agent
 
+          # playit-agent needs a runtime directory for its local IPC socket.
+          export XDG_RUNTIME_DIR="$HOME/.run"
+          mkdir -p "$XDG_RUNTIME_DIR"
+          chmod 700 "$XDG_RUNTIME_DIR"
+
           mkdir -p "$HOME/.config/playit_gg"
 
           echo "========== PLAYIT AGENT =========="
           echo "Starting Playit without a secret."
+          echo "Runtime socket directory: $XDG_RUNTIME_DIR"
           echo "Waiting for Playit to print the Claim URL..."
           echo "=================================="
 
-          nohup ./playit-agent > playit.log 2>&1 &
+          nohup env XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" ./playit-agent > playit.log 2>&1 &
           PLAYIT_PID=$!
           echo "$PLAYIT_PID" > playit.pid
 
