@@ -1,0 +1,67 @@
+# =========================================================
+# AizenSMP - Player Settings
+# =========================================================
+
+options:
+    prefix: &6[&eAizenSMP&6] &r
+
+on join:
+    if {aizensmp.settings.chat.%uuid of player%} is not set:
+        set {aizensmp.settings.chat.%uuid of player%} to true
+    if {aizensmp.settings.tpa.%uuid of player%} is not set:
+        set {aizensmp.settings.tpa.%uuid of player%} to true
+    if {aizensmp.settings.tpahere.%uuid of player%} is not set:
+        set {aizensmp.settings.tpahere.%uuid of player%} to true
+    if {aizensmp.settings.pay.%uuid of player%} is not set:
+        set {aizensmp.settings.pay.%uuid of player%} to true
+    if {aizensmp.settings.duel.%uuid of player%} is not set:
+        set {aizensmp.settings.duel.%uuid of player%} to true
+
+command /settings:
+    aliases: /setting
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &bSettings &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to paper named "&eChat" with lore "&7Status: %{aizensmp.settings.chat.%uuid of player%}%" 
+        set slot 12 of player's current inventory to ender pearl named "&bTPA Requests" with lore "&7Status: %{aizensmp.settings.tpa.%uuid of player%}%"
+        set slot 14 of player's current inventory to paper named "&bTPAHERE Requests" with lore "&7Status: %{aizensmp.settings.tpahere.%uuid of player%}%"
+        set slot 16 of player's current inventory to gold ingot named "&6Payments" with lore "&7Status: %{aizensmp.settings.pay.%uuid of player%}%"
+        set slot 22 of player's current inventory to diamond sword named "&cDuel Requests" with lore "&7Status: %{aizensmp.settings.duel.%uuid of player%}%"
+
+on inventory click:
+    if name of event-inventory is "&8✦ &bSettings &8✦":
+        cancel event
+        if clicked slot is 10:
+            if {aizensmp.settings.chat.%uuid of player%} is true:
+                set {aizensmp.settings.chat.%uuid of player%} to false
+            else:
+                set {aizensmp.settings.chat.%uuid of player%} to true
+        else if clicked slot is 12:
+            if {aizensmp.settings.tpa.%uuid of player%} is true:
+                set {aizensmp.settings.tpa.%uuid of player%} to false
+            else:
+                set {aizensmp.settings.tpa.%uuid of player%} to true
+        else if clicked slot is 14:
+            if {aizensmp.settings.tpahere.%uuid of player%} is true:
+                set {aizensmp.settings.tpahere.%uuid of player%} to false
+            else:
+                set {aizensmp.settings.tpahere.%uuid of player%} to true
+        else if clicked slot is 16:
+            if {aizensmp.settings.pay.%uuid of player%} is true:
+                set {aizensmp.settings.pay.%uuid of player%} to false
+            else:
+                set {aizensmp.settings.pay.%uuid of player%} to true
+        else if clicked slot is 22:
+            if {aizensmp.settings.duel.%uuid of player%} is true:
+                set {aizensmp.settings.duel.%uuid of player%} to false
+            else:
+                set {aizensmp.settings.duel.%uuid of player%} to true
+        else:
+            stop
+        close player's inventory
+        send "%{@prefix}% &aSetting updated. &7Use /settings to view it."
+
+on chat:
+    if {aizensmp.settings.chat.%uuid of player%} is false:
+        cancel event
+        send "%{@prefix}% &cYour chat is hidden. Use &e/settings &cto enable it." to player
