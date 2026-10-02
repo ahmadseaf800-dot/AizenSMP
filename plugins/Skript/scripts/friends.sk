@@ -1,0 +1,48 @@
+# =========================================================
+# AizenSMP - Friends
+# =========================================================
+
+options:
+    prefix: &6[&eAizenSMP&6] &r
+
+command /friend <text> [<player>]:
+    aliases: /friends
+    trigger:
+        if arg-1 is "add":
+            if arg-2 is not set:
+                send "%{@prefix}% &cUsage: /friend add <player>" to player
+                stop
+            if arg-2 is player:
+                send "%{@prefix}% &cYou cannot add yourself." to player
+                stop
+            set {aizensmp.friend.%uuid of player%.%uuid of arg-2%} to true
+            set {aizensmp.friend.%uuid of arg-2%.%uuid of player%} to true
+            send "%{@prefix}% &a%arg-2% is now your friend." to player
+            send "%{@prefix}% &a%player% added you as a friend." to arg-2
+            stop
+
+        if arg-1 is "remove":
+            if arg-2 is not set:
+                send "%{@prefix}% &cUsage: /friend remove <player>" to player
+                stop
+            delete {aizensmp.friend.%uuid of player%.%uuid of arg-2%}
+            delete {aizensmp.friend.%uuid of arg-2%.%uuid of player%}
+            send "%{@prefix}% &c%arg-2% was removed from your friends." to player
+            stop
+
+        if arg-1 is "list":
+            send "&8&m------------------------------"
+            send "&b&lYOUR FRIENDS"
+            set {_found} to false
+            loop all players:
+                if {aizensmp.friend.%uuid of player%.%uuid of loop-player%} is true:
+                    send "&a• &f%loop-player%"
+                    set {_found} to true
+            if {_found} is false:
+                send "&7You have no online friends."
+            send "&8&m------------------------------"
+            stop
+
+        send "%{@prefix}% &7/friend add <player>"
+        send "%{@prefix}% &7/friend remove <player>"
+        send "%{@prefix}% &7/friend list"
