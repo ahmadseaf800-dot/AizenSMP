@@ -404,6 +404,47 @@ on chat:
         cancel event
         send "%{@prefix}% &cChat is disabled in your settings."
 
+# ---------------- SETTINGS GUI ACTIONS ----------------
+
+on inventory click:
+    if name of event-inventory is "&8✦ &bAizen Settings &8✦":
+        cancel event
+        if clicked slot is 10:
+            if {az.settings.chat.%uuid of player%} is true:
+                set {az.settings.chat.%uuid of player%} to false
+            else:
+                set {az.settings.chat.%uuid of player%} to true
+        else if clicked slot is 12:
+            if {az.settings.tpa.%uuid of player%} is "all":
+                set {az.settings.tpa.%uuid of player%} to "friends"
+            else if {az.settings.tpa.%uuid of player%} is "friends":
+                set {az.settings.tpa.%uuid of player%} to "none"
+            else:
+                set {az.settings.tpa.%uuid of player%} to "all"
+        else if clicked slot is 14:
+            if {az.settings.tpahere.%uuid of player%} is "all":
+                set {az.settings.tpahere.%uuid of player%} to "friends"
+            else if {az.settings.tpahere.%uuid of player%} is "friends":
+                set {az.settings.tpahere.%uuid of player%} to "none"
+            else:
+                set {az.settings.tpahere.%uuid of player%} to "all"
+        else if clicked slot is 16:
+            if {az.settings.pay.%uuid of player%} is "all":
+                set {az.settings.pay.%uuid of player%} to "friends"
+            else if {az.settings.pay.%uuid of player%} is "friends":
+                set {az.settings.pay.%uuid of player%} to "none"
+            else:
+                set {az.settings.pay.%uuid of player%} to "all"
+        else if clicked slot is 22:
+            if {az.settings.duel.%uuid of player%} is "all":
+                set {az.settings.duel.%uuid of player%} to "friends"
+            else if {az.settings.duel.%uuid of player%} is "friends":
+                set {az.settings.duel.%uuid of player%} to "none"
+            else:
+                set {az.settings.duel.%uuid of player%} to "all"
+        close player's inventory
+        send "%{@prefix}% &aSetting updated."
+
 # ---------------- DUELS ----------------
 
 command /setduel:
@@ -411,6 +452,22 @@ command /setduel:
     trigger:
         set {az.duel.arena} to location of player
         send "%{@prefix}% &aDuel arena set."
+
+command /duel:
+    trigger:
+        set {_target} to random player
+        if {_target} is player:
+            delete {_target}
+        if {_target} is not set:
+            loop all players:
+                if loop-player is not player:
+                    if {az.duel.%uuid of loop-player%} is not set:
+                        set {_target} to loop-player
+                        stop
+        if {_target} is not set:
+            send "%{@prefix}% &cNo available opponent."
+            stop
+        make player execute command "/duel %{_target}%"
 
 command /duel <player>:
     trigger:
@@ -470,6 +527,46 @@ on death of player:
         if {_opponent} is online:
             delete {az.duel.%uuid of {_opponent}%}
             send "%{@prefix}% &aDuel ended." to {_opponent}
+
+# ---------------- MONEY SHOP ----------------
+
+command /shop:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &6Aizen Shop &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to cooked beef named "&e32 Steak &7[$500]"
+        set slot 12 of player's current inventory to ender pearl named "&b16 Ender Pearls &7[$1500]"
+        set slot 14 of player's current inventory to obsidian named "&816 Obsidian &7[$2000]"
+        set slot 16 of player's current inventory to golden apple named "&6Golden Apple &7[$3000]"
+        set slot 22 of player's current inventory to barrier named "&cClose"
+
+on inventory click:
+    if name of event-inventory is "&8✦ &6Aizen Shop &8✦":
+        cancel event
+        if clicked slot is 22:
+            close player's inventory
+            stop
+        set {_price} to 0
+        if clicked slot is 10:
+            set {_price} to 500
+            set {_item} to 32 cooked beef
+        else if clicked slot is 12:
+            set {_price} to 1500
+            set {_item} to 16 ender pearls
+        else if clicked slot is 14:
+            set {_price} to 2000
+            set {_item} to 16 obsidian
+        else if clicked slot is 16:
+            set {_price} to 3000
+            set {_item} to 1 golden apple
+        else:
+            stop
+        if {az.money.%uuid of player%} < {_price}:
+            send "%{@prefix}% &cNot enough money."
+            stop
+        remove {_price} from {az.money.%uuid of player%}
+        give {_item} to player
+        send "%{@prefix}% &aPurchase complete."
 
 # ---------------- SHARDS ----------------
 
@@ -641,6 +738,7 @@ command /help:
         send "&e/friend &7- Friends"
         send "&e/tpa &7- Teleport requests"
         send "&e/duel &7- Duels"
+        send "&e/shop &7- Money shop"
         send "&e/shardshop &7- Shard shop"
         send "&e/spawnershop &7- Spawners"
         send "&e/settings &7- Privacy/settings"
