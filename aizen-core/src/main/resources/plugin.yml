@@ -1,0 +1,15 @@
+name: AizenCore
+version: 1.0.0
+main: com.aizen.smp.AizenCore
+api-version: '1.21'
+author: Aizen
+description: Custom AizenSMP systems built from source.
+
+commands:
+  balance:
+    description: Show your balance
+    aliases: [bal]
+  pay:
+    description: Pay another player
+  bounty:
+    description: Show active bounties
