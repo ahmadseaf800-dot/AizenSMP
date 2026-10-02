@@ -54,6 +54,9 @@ command /duel <player>:
         if arg-1 is not online:
             send "%{@prefix}% &cThat player is not online." to player
             stop
+        if {aizensmp.settings.duel.%uuid of arg-1%} is false:
+            send "%{@prefix}% &cThat player has disabled duel requests." to player
+            stop
         if {aizensmp.duel.arena} is not set:
             send "%{@prefix}% &cThe duel arena has not been set yet." to player
             stop
