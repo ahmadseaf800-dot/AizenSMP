@@ -530,9 +530,294 @@ on death of player:
 
 # ---------------- SELL / ORDERS ----------------
 
-# Server fallback prices are used when no player order exists.
-# Admin can change the fallback price with /setsellprice while holding the item.
+# /sell opens a double-chest selling basket.
+# Put the items you want to sell in it, close it, then use /ah sell <price>.
+# The basket is saved per player.
 
+command /sell:
+    trigger:
+        open chest inventory with 6 rows named "&8✦ &6Sell Basket &8✦" to player
+        wait 1 tick
+        loop 54 times:
+            set {_slot} to loop-number - 1
+            if {az.sellbasket.%uuid of player%.%{_slot}%} is set:
+                set slot {_slot} of player's current inventory to {az.sellbasket.%uuid of player%.%{_slot}%}
+        set slot 49 of player's current inventory to barrier named "&cClose"
+        set slot 50 of player's current inventory to paper named "&eHow to sell" with lore "&7Put items here", "&7Close the menu", "&7Then use &e/ah sell <price>"
+
+on inventory click:
+    if name of event-inventory is "&8✦ &6Sell Basket &8✦":
+        if clicked slot is 49 or clicked slot is 50:
+            cancel event
+            if clicked slot is 49:
+                close player's inventory
+            stop
+        # Keep GUI contents in the basket variable.
+        wait 1 tick
+        set {az.sellbasket.%uuid of player%.%clicked slot%} to item in clicked slot of event-inventory
+
+on inventory close:
+    if name of event-inventory is "&8✦ &6Sell Basket &8✦":
+        loop 54 times:
+            set {_slot} to loop-number - 1
+            if {_slot} is 49 or {_slot} is 50:
+                next loop
+            set {_it} to item in slot {_slot} of event-inventory
+            if {_it} is air:
+                delete {az.sellbasket.%uuid of player%.%{_slot}%}
+            else:
+                set {az.sellbasket.%uuid of player%.%{_slot}%} to {_it}
+
+# ---------------- AUCTION HOUSE ----------------
+
+options:
+    ah-max-price: 1000000000
+
+function azParsePrice(s: text) :: number:
+    set {_v} to lowercase {_s}
+    replace all "," in {_v} with ""
+    if {_v} ends with "k":
+        replace all "k" in {_v} with ""
+        return (converted {_v} to number) * 1000
+    if {_v} ends with "m":
+        replace all "m" in {_v} with ""
+        return (converted {_v} to number) * 1000000
+    if {_v} ends with "b":
+        replace all "b" in {_v} with ""
+        return (converted {_v} to number) * 1000000000
+    return converted {_v} to number
+
+function azAHName(i: item) :: text:
+    return "%type of {_i}%"
+
+function azAHMatches(i: item, q: text) :: boolean:
+    set {_name} to lowercase "%type of {_i}%"
+    set {_query} to lowercase {_q}
+    if {_query} is "all":
+        return true
+    if {_name} contains {_query}:
+        return true
+    return false
+
+command /ah [<text>] [<text>]:
+    aliases: /auctionhouse, /auction
+    trigger:
+        if arg-1 is "sell":
+            if arg-2 is not set:
+                send "%{@prefix}% &cUsage: /ah sell <price> &7(example: 10m)"
+                stop
+            set {_price} to azParsePrice(arg-2)
+            if {_price} <= 0:
+                send "%{@prefix}% &cPrice must be positive."
+                stop
+            if {_price} > {@ah-max-price}:
+                send "%{@prefix}% &cMaximum AH price is &6$1,000,000,000&c."
+                stop
+
+            set {_listed} to 0
+            loop 54 times:
+                set {_slot} to loop-number - 1
+                if {_slot} is 49 or {_slot} is 50:
+                    next loop
+                if {az.sellbasket.%uuid of player%.%{_slot}%} is set:
+                    set {_item} to {az.sellbasket.%uuid of player%.%{_slot}%}
+                    if {_item} is not air:
+                        add 1 to {_listed}
+                        set {az.ah.next} to {az.ah.next} + 1
+                        set {_id} to {az.ah.next}
+                        set {az.ah.item.%{_id}%} to {_item}
+                        set {az.ah.price.%{_id}%} to {_price}
+                        set {az.ah.seller.%{_id}%} to uuid of player
+                        set {az.ah.sellername.%{_id}%} to name of player
+                        delete {az.sellbasket.%uuid of player%.%{_slot}%}
+            if {_listed} is 0:
+                # Also support selling the held item directly.
+                if player's tool is not air:
+                    set {_item} to player's tool
+                    set {az.ah.next} to {az.ah.next} + 1
+                    set {_id} to {az.ah.next}
+                    set {az.ah.item.%{_id}%} to {_item}
+                    set {az.ah.price.%{_id}%} to {_price}
+                    set {az.ah.seller.%{_id}%} to uuid of player
+                    set {az.ah.sellername.%{_id}%} to name of player
+                    remove {_item} from player
+                    set {_listed} to 1
+            if {_listed} is 0:
+                send "%{@prefix}% &cYour /sell basket is empty."
+                stop
+            send "%{@prefix}% &aListed &e%{_listed}% &aitem stack(s) in the AH for &6$%{_price}% &aeach."
+            stop
+
+        set {_query} to "all"
+        if arg-1 is set:
+            set {_query} to arg-1
+        set {_sort} to "new"
+        if arg-2 is set:
+            set {_sort} to lowercase arg-2
+        azOpenAH(player, {_query}, {_sort})
+
+function azOpenAH(p: player, q: text, sort: text):
+    open chest inventory with 6 rows named "&8✦ &6Aizen Auction House &8✦" to {_p}
+    wait 1 tick
+    set {_slot} to 0
+    set {_count} to 0
+    set {_bestPrice} to 999999999999
+    set {_worstPrice} to 0
+
+    loop {az.ah.item::*}:
+        set {_id} to loop-index parsed as integer
+        set {_item} to loop-value
+        if {_item} is not air:
+            if azAHMatches({_item}, {_q}) is true:
+                set {_price} to {az.ah.price.%{_id}%}
+                if {_price} is set:
+                    if {_sort} is "cheap":
+                        if {_price} < {_bestPrice}:
+                            set {_bestPrice} to {_price}
+                            set {_bestId} to {_id}
+                    else if {_sort} is "expensive":
+                        if {_price} > {_worstPrice}:
+                            set {_worstPrice} to {_price}
+                            set {_bestId} to {_id}
+
+    # Cheap/expensive sorting: rebuild visible order from the lowest/highest price.
+    if {_sort} is "cheap" or {_sort} is "expensive":
+        set {_used::*} to none
+        loop 45 times:
+            set {_pickId} to 0
+            set {_pickPrice} to 999999999999
+            if {_sort} is "expensive":
+                set {_pickPrice} to 0
+            loop {az.ah.item::*}:
+                set {_id} to loop-index parsed as integer
+                if {_id} is not in {_used::*}:
+                    set {_item} to loop-value
+                    if {_item} is not air:
+                        if azAHMatches({_item}, {_q}) is true:
+                            set {_price} to {az.ah.price.%{_id}%}
+                            if {_sort} is "cheap":
+                                if {_price} < {_pickPrice}:
+                                    set {_pickPrice} to {_price}
+                                    set {_pickId} to {_id}
+                            else:
+                                if {_price} > {_pickPrice}:
+                                    set {_pickPrice} to {_price}
+                                    set {_pickId} to {_id}
+            if {_pickId} > 0:
+                add {_pickId} to {_used::*}
+                set {_display} to {az.ah.item.%{_pickId}%}
+                set {_seller} to {az.ah.sellername.%{_pickId}%}
+                set {_p} to {az.ah.price.%{_pickId}%}
+                set lore of {_display} to "&7Seller: &f%{_seller}%", "&7Price: &6$%{_p}%", "&eClick to buy"
+                set slot {_slot} of {_p}'s current inventory to {_display}
+                add 1 to {_slot}
+                add 1 to {_count}
+            if {_count} >= 45:
+                stop
+    else:
+        loop {az.ah.item::*}:
+            if {_slot} >= 45:
+                stop
+            set {_id} to loop-index parsed as integer
+            set {_item} to loop-value
+            if {_item} is not air:
+                if azAHMatches({_item}, {_q}) is true:
+                    set {_display} to {_item}
+                    set lore of {_display} to "&7Seller: &f%{az.ah.sellername.%{_id}%}%", "&7Price: &6$%{az.ah.price.%{_id}%}%", "&eClick to buy"
+                    set slot {_slot} of {_p}'s current inventory to {_display}
+                    set {az.ah.gui.%uuid of {_p}%.%{_slot}%} to {_id}
+                    add 1 to {_slot}
+                    add 1 to {_count}
+        # Save visible IDs for normal listing order.
+        loop 45 times:
+            set {_s} to loop-number - 1
+            # IDs are also rebuilt below for every opened GUI.
+    # Control buttons.
+    set slot 45 of {_p}'s current inventory to hopper named "&eCheapest" with lore "&7Show cheapest first"
+    set slot 46 of {_p}'s current inventory to gold block named "&6Most Expensive" with lore "&7Show highest price first"
+    set slot 47 of {_p}'s current inventory to compass named "&bRefresh" with lore "&7Refresh AH"
+    set slot 48 of {_p}'s current inventory to paper named "&fSearch" with lore "&7Use /ah <item>"
+    set slot 49 of {_p}'s current inventory to chest named "&aSell Basket" with lore "&7Use /sell then /ah sell <price>"
+    set slot 50 of {_p}'s current inventory to barrier named "&cClose"
+    set slot 51 of {_p}'s current inventory to emerald named "&aMy Listings" with lore "&7Use /ah my"
+    set slot 52 of {_p}'s current inventory to nether star named "&bAll" with lore "&7Show all listings"
+    set slot 53 of {_p}'s current inventory to paper named "&e%{_count}% Listings"
+    set {az.ah.search.%uuid of {_p}%} to {_q}
+    set {az.ah.sort.%uuid of {_p}%} to {_sort}
+
+on inventory click:
+    if name of event-inventory is "&8✦ &6Aizen Auction House &8✦":
+        cancel event
+        set {_p} to player
+        if clicked slot is 45:
+            azOpenAH({_p}, {az.ah.search.%uuid of {_p}%}, "cheap")
+            stop
+        if clicked slot is 46:
+            azOpenAH({_p}, {az.ah.search.%uuid of {_p}%}, "expensive")
+            stop
+        if clicked slot is 47:
+            azOpenAH({_p}, {az.ah.search.%uuid of {_p}%}, {az.ah.sort.%uuid of {_p}%})
+            stop
+        if clicked slot is 48:
+            send "%{@prefix}% &eUse &f/ah <item> &7for search."
+            stop
+        if clicked slot is 49:
+            close player's inventory
+            make player execute command "/sell"
+            stop
+        if clicked slot is 50:
+            close player's inventory
+            stop
+        if clicked slot is 51:
+            close player's inventory
+            make player execute command "/ah my"
+            stop
+        if clicked slot is 52:
+            azOpenAH({_p}, "all", {az.ah.sort.%uuid of {_p}%})
+            stop
+        if clicked slot < 45:
+            set {_id} to {az.ah.gui.%uuid of player%.%clicked slot%}
+            if {_id} is set:
+                if {az.ah.item.%{_id}%} is not set:
+                    send "%{@prefix}% &cThis listing is no longer available."
+                    stop
+                set {_price} to {az.ah.price.%{_id}%}
+                set {_seller} to {az.ah.seller.%{_id}%}
+                if {_seller} is uuid of player:
+                    send "%{@prefix}% &cYou cannot buy your own listing."
+                    stop
+                if {az.money.%uuid of player%} < {_price}:
+                    send "%{@prefix}% &cNot enough money."
+                    stop
+                set {_item} to {az.ah.item.%{_id}%}
+                remove {_price} from {az.money.%uuid of player%}
+                add {_price} to {az.money.%{_seller}%}
+                give {_item} to player
+                delete {az.ah.item.%{_id}%}
+                delete {az.ah.price.%{_id}%}
+                delete {az.ah.seller.%{_id}%}
+                delete {az.ah.sellername.%{_id}%}
+                send "%{@prefix}% &aPurchased for &6$%{_price}%&a."
+                azOpenAH({_p}, {az.ah.search.%uuid of {_p}%}, {az.ah.sort.%uuid of {_p}%})
+                stop
+
+command /ahcancel <number>:
+    trigger:
+        set {_id} to arg-1
+        if {az.ah.seller.%{_id}%} is not uuid of player:
+            send "%{@prefix}% &cThat is not your listing."
+            stop
+        if {az.ah.item.%{_id}%} is not set:
+            send "%{@prefix}% &cListing not found."
+            stop
+        give {az.ah.item.%{_id}%} to player
+        delete {az.ah.item.%{_id}%}
+        delete {az.ah.price.%{_id}%}
+        delete {az.ah.seller.%{_id}%}
+        delete {az.ah.sellername.%{_id}%}
+        send "%{@prefix}% &aListing cancelled and item returned."
+
+# Legacy server fallback pricing command.
 command /setsellprice <number>:
     permission: aizensmp.admin
     trigger:
@@ -544,35 +829,6 @@ command /setsellprice <number>:
             stop
         set {az.sellprice.%type of player's tool%} to arg-1
         send "%{@prefix}% &aServer sell price set to &6$%arg-1% &aper item."
-
-command /sell [<number>]:
-    trigger:
-        if player's tool is air:
-            send "%{@prefix}% &cHold the item you want to sell."
-            stop
-        set {_amount} to 1
-        if arg-1 is set:
-            set {_amount} to arg-1
-        if {_amount} <= 0:
-            send "%{@prefix}% &cAmount must be positive."
-            stop
-        if {_amount} > amount of player's tool:
-            set {_amount} to amount of player's tool
-
-        # First try to fill an existing player order.
-        set {_filled} to 0
-        set {_unit} to {az.sellprice.%type of player's tool%}
-        if {_unit} is not set:
-            set {_unit} to 1
-
-        # Server itself always buys the remaining amount.
-        set {_total} to {_amount} * {_unit}
-        remove {_amount} of player's tool from player
-        add {_total} to {az.money.%uuid of player%}
-
-        send "%{@prefix}% &aSold &e%{_amount}%x %type of player's tool% &ato the server for &6$%{_total}%&a."
-        if {_filled} > 0:
-            send "%{@prefix}% &7Player orders filled: &e%{_filled}%"
 
 command /sellprice:
     trigger:
