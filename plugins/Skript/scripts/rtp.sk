@@ -1,0 +1,73 @@
+# =========================================================
+# AizenSMP - RTP World Selector
+# /rtp opens a world-selection GUI.
+# =========================================================
+
+options:
+    prefix: &6[&eAizenSMP&6] &r
+    rtp-range: 10000
+
+command /rtp:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &bAizenSMP RTP &8✦" to player
+        wait 1 tick
+        set {_slot} to 10
+        loop all worlds:
+            if {_slot} <= 16:
+                set slot {_slot} of player's current inventory to grass block named "&a%loop-world%"
+                set {_slot} to {_slot} + 2
+        set slot 22 of player's current inventory to barrier named "&cClose"
+        send "&7Choose the world where you want to RTP." to player
+
+on inventory click:
+    if name of event-inventory is "&8✦ &bAizenSMP RTP &8✦":
+        cancel event
+        if clicked slot is 22:
+            close player's inventory
+            stop
+        if clicked item is grass block:
+            set {_worldName} to uncolored name of clicked item
+            set {_targetWorld} to world named {_worldName}
+            if {_targetWorld} is not set:
+                send "%{@prefix}% &cThat world is not available." to player
+                stop
+            close player's inventory
+            set {_found} to false
+            loop 40 times:
+                if {_found} is false:
+                    set {_x} to random integer between -{@rtp-range} and {@rtp-range}
+                    set {_z} to random integer between -{@rtp-range} and {@rtp-range}
+                    set {_base} to highest block at location at {_x}, 0, {_z} in {_targetWorld}
+                    set {_ground} to block below {_base}
+                    set {_feet} to {_base}
+                    set {_head} to block above {_base}
+                    if {_ground} is not water:
+                        if {_ground} is not lava:
+                            if {_ground} is not air:
+                                if {_feet} is air:
+                                    if {_head} is air:
+                                        if y-coordinate of {_base} > 5:
+                                            teleport player to {_base}
+                                            set {_found} to true
+            if {_found} is true:
+                send "%{@prefix}% &aRTP complete in &e%{_worldName}%&a." to player
+            else:
+                send "%{@prefix}% &cCould not find a safe location. Try again." to player
+
+command /setrtpbot:
+    permission: aizensmp.admin
+    permission message: &cYou don't have permission.
+    trigger:
+        spawn a villager at location of player
+        set {_bot} to last spawned entity
+        set custom name of {_bot} to "&b/rtp"
+        set custom name visibility of {_bot} to true
+        set ai of {_bot} to false
+        set invulnerability of {_bot} to true
+        set {aizensmp.rtpbot.%uuid of {_bot}%} to true
+        send "%{@prefix}% &aRTP bot created." to player
+
+on right click on entity:
+    if {aizensmp.rtpbot.%uuid of clicked entity%} is set:
+        cancel event
+        make player execute command "/rtp"
