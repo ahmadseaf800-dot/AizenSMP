@@ -105,48 +105,56 @@ jobs:
           enable-query=false
           EOF
 
-      - name: Claim and start playit.gg agent
+      - name: Start playit.gg agent with setup secret
         shell: bash
+        env:
+          PLAYIT_SETUP_CODE: ${{ secrets.PLAYIT_SETUP_CODE }}
         run: |
           set -e
-          curl -L --fail -o playit-agent "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
-          chmod +x playit-agent
+          if [ -z "${PLAYIT_SETUP_CODE:-}" ]; then
+            echo "PLAYIT_SETUP_CODE secret is missing."
+            exit 1
+          fi
+
+          curl -L --fail -o playitd "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
+          chmod +x playitd
 
           mkdir -p "$HOME/.config/playit_gg"
           PLAYIT_SOCKET="$HOME/.config/playit_gg/playit.sock"
-          rm -f "$PLAYIT_SOCKET"
+          PLAYIT_SECRET_FILE="$HOME/.config/playit_gg/playit.toml"
+          rm -f "$PLAYIT_SOCKET" "$PLAYIT_SECRET_FILE"
 
-          echo "========== PLAYIT SETUP =========="
-          echo "Starting Playit daemon..."
+          echo "========== PLAYIT START =========="
+          echo "Starting Playit daemon with the configured account secret."
           echo "Socket: $PLAYIT_SOCKET"
           echo "=================================="
 
-          nohup ./playit-agent --socket-path "$PLAYIT_SOCKET" > playit-daemon.log 2>&1 &
+          nohup ./playitd \
+            --secret "$PLAYIT_SETUP_CODE" \
+            --socket-path "$PLAYIT_SOCKET" \
+            --log-path "$PWD/playit-daemon.log" \
+            > playit-process.log 2>&1 &
           PLAYIT_DAEMON_PID=$!
           echo "$PLAYIT_DAEMON_PID" > playit.pid
-          sleep 2
+
+          sleep 3
 
           if ! kill -0 "$PLAYIT_DAEMON_PID" 2>/dev/null; then
             echo "Playit daemon failed to start."
+            cat playit-process.log || true
             cat playit-daemon.log || true
             exit 1
           fi
 
-          if [ -f "$HOME/.config/playit_gg/playit.toml" ]; then
-            echo "Existing Playit configuration found."
-          else
-            echo "No Playit configuration found."
-            echo "Generating the official Playit Claim URL..."
-            ./playit-agent --socket-path "$PLAYIT_SOCKET" setup 2>&1 | tee playit-setup.log
-          fi
-
           echo ""
           echo "========== PLAYIT OUTPUT =========="
-          cat playit-setup.log 2>/dev/null || true
-          cat playit-daemon.log 2>/dev/null || true
+          cat playit-process.log || true
+          cat playit-daemon.log || true
           echo "==================================="
           echo "Java target: 127.0.0.1:25565 (TCP)"
           echo "Bedrock target: 127.0.0.1:19132 (UDP)"
+          echo "Playit daemon is running."
+          
       - name: Start AizenSMP and save on shutdown
         shell: bash
         working-directory: server
