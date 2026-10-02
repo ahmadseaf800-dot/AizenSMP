@@ -11,6 +11,8 @@ jobs:
   server:
     runs-on: ubuntu-latest
     timeout-minutes: 350
+    env:
+      PLAYIT_SECRET: ${{ secrets.PLAYIT_SECRET }}
 
     steps:
       - name: Checkout AizenSMP
@@ -96,8 +98,6 @@ jobs:
 
       - name: Start playit.gg tunnel
         if: ${{ env.PLAYIT_SECRET != '' }}
-        env:
-          PLAYIT_SECRET: ${{ secrets.PLAYIT_SECRET }}
         shell: bash
         run: |
           set -e
