@@ -36,38 +36,27 @@ jobs:
         run: |
           set -e
           ARTIFACT_ID=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=aizensmp-persistent-data&per_page=1" --jq '.artifacts[0].id // empty')
-
           if [ -n "$ARTIFACT_ID" ]; then
-            echo "Restoring AizenSMP persistent data from artifact $ARTIFACT_ID"
             mkdir -p restore
             gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip" > restore/persistent.zip
             unzip -q restore/persistent.zip -d restore/artifact
             if [ -f restore/artifact/persistent-data.tar.zst ]; then
               tar --zstd -xf restore/artifact/persistent-data.tar.zst -C server
-            else
-              echo "No persistent-data archive found; starting with a fresh world."
             fi
-          else
-            echo "No previous persistent data found; starting with a fresh world."
           fi
 
       - name: Install gameplay and compatibility plugins
         shell: bash
         run: |
           set -e
-
-          # Ready-made connectivity/compatibility plugins requested for AizenSMP.
           curl -L --fail -o server/plugins/Geyser-Spigot.jar "https://download.geysermc.org/v2/projects/geyser/versions/latest/builds/latest/downloads/spigot"
           curl -L --fail -o server/plugins/floodgate-spigot.jar "https://download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest/downloads/spigot"
-
           SKRIPT_URL=$(curl -fsSL https://api.github.com/repos/SkriptLang/Skript/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
           curl -L --fail -o server/plugins/Skript.jar "$SKRIPT_URL"
-
           VIAVERSION_URL=$(curl -fsSL https://api.github.com/repos/ViaVersion/ViaVersion/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
           VIABACKWARDS_URL=$(curl -fsSL https://api.github.com/repos/ViaVersion/ViaBackwards/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
           curl -L --fail -o server/plugins/ViaVersion.jar "$VIAVERSION_URL"
           curl -L --fail -o server/plugins/ViaBackwards.jar "$VIABACKWARDS_URL"
-
           SVC_URL=$(curl -fsSL 'https://api.modrinth.com/v2/project/simple-voice-chat/version?loaders=%5B%22paper%22%5D&game_versions=%5B%221.21.11%22%5D' | jq -r '.[0].files[] | select(.primary == true) | .url' | head -n 1)
           test -n "$SVC_URL"
           curl -L --fail -o server/plugins/voicechat.jar "$SVC_URL"
@@ -77,21 +66,13 @@ jobs:
         run: |
           set -e
           mkdir -p server/plugins/Skript/scripts
-          if [ -d "plugins/Skript/scripts" ]; then
-            cp -f plugins/Skript/scripts/*.sk server/plugins/Skript/scripts/
-          fi
-          echo "Installed custom AizenSMP scripts:"
+          if [ -d "plugins/Skript/scripts" ]; then cp -f plugins/Skript/scripts/*.sk server/plugins/Skript/scripts/; fi
           ls -1 server/plugins/Skript/scripts
 
-      - name: Prepare Geyser config directory
+      - name: Configure Geyser
         shell: bash
         run: |
           mkdir -p server/plugins/Geyser-Spigot
-          touch server/plugins/Geyser-Spigot/config.yml
-
-      - name: Configure Geyser for Bedrock on the same AizenSMP server
-        shell: bash
-        run: |
           cat > server/plugins/Geyser-Spigot/config.yml <<'EOF'
           bedrock:
             address: 0.0.0.0
@@ -113,7 +94,7 @@ jobs:
           debug-mode: false
           EOF
 
-      - name: Configure cracked Java and server
+      - name: Configure server
         shell: bash
         run: |
           cat > server/server.properties <<'EOF'
@@ -130,19 +111,17 @@ jobs:
           set -e
           curl -L --fail -o playit-agent "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
           chmod +x playit-agent
-
-          # Force Playit to use an explicit socket path whose parent exists.
           mkdir -p "$HOME/.config/playit_gg"
           PLAYIT_SOCKET="$HOME/.config/playit_gg/playit.sock"
           rm -f "$PLAYIT_SOCKET"
 
           echo "========== PLAYIT AGENT =========="
-          echo "Starting Playit with explicit IPC socket."
+          echo "Starting Playit with socket-path."
           echo "Socket: $PLAYIT_SOCKET"
           echo "Waiting for Playit to print the Claim URL..."
           echo "=================================="
 
-          nohup ./playit-agent --socket "$PLAYIT_SOCKET" > playit.log 2>&1 &
+          nohup ./playit-agent --socket-path "$PLAYIT_SOCKET" > playit.log 2>&1 &
           PLAYIT_PID=$!
           echo "$PLAYIT_PID" > playit.pid
 
@@ -152,22 +131,15 @@ jobs:
             if [ -f playit.log ]; then
               echo "--- Playit status $i/60 ---"
               tail -n 20 playit.log || true
-
               CLAIM_URL=$(grep -Eo 'https?://[^[:space:]]+' playit.log | grep -Ei 'playit|claim' | head -n 1 | sed 's/[),]$//' || true)
-
               if [ -n "$CLAIM_URL" ]; then
-                echo ""
                 echo "=============================================="
-                echo "        PLAYIT CLAIM URL FOUND"
-                echo "=============================================="
+                echo "PLAYIT CLAIM URL FOUND"
                 echo "$CLAIM_URL"
-                echo "=============================================="
-                echo "OPEN THIS URL ON YOUR PHONE TO CLAIM THE AGENT."
                 echo "=============================================="
                 break
               fi
             fi
-
             if ! kill -0 "$PLAYIT_PID" 2>/dev/null; then
               echo "Playit agent process stopped."
               break
@@ -175,13 +147,9 @@ jobs:
           done
 
           if [ -z "$CLAIM_URL" ]; then
-            echo ""
-            echo "=============================================="
             echo "NO CLAIM URL WAS DETECTED IN THE FIRST 120 SECONDS"
             echo "FULL PLAYIT LOG:"
-            echo "=============================================="
             cat playit.log || true
-            echo "=============================================="
           fi
 
       - name: Start AizenSMP and save on shutdown
@@ -189,15 +157,11 @@ jobs:
         working-directory: server
         run: |
           set -e
-
           cleanup() {
-            echo "Preparing persistent AizenSMP data..."
             rm -f persistent-data.tar.zst
-            tar --zstd -cf persistent-data.tar.zst               world world_nether world_the_end plugins/Skript plugins/AizenCore               2>/dev/null || true
+            tar --zstd -cf persistent-data.tar.zst world world_nether world_the_end plugins/Skript plugins/AizenCore 2>/dev/null || true
           }
-
           trap cleanup EXIT INT TERM
-
           java -Xms1G -Xmx6G -jar server.jar --nogui
 
       - name: Upload persistent world and player data
