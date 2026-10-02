@@ -117,35 +117,38 @@ jobs:
           mkdir -p "$HOME/.config/playit_gg"
           PLAYIT_SOCKET="$HOME/.config/playit_gg/playit.sock"
 
-          curl -L --fail -o playitd "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
-          curl -L --fail -o playit-cli "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-cli-linux-amd64"
-          chmod +x playitd playit-cli
+          curl -L --fail -o playit "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-cli-linux-amd64"
+          chmod +x playit
 
           echo "========== PLAYIT SETUP =========="
           echo "Checking for a previously claimed Playit agent..."
           echo "================================="
 
           if [ -f "$HOME/.config/playit_gg/playit.toml" ]; then
-            echo "Existing Playit secret found; starting the agent."
-            nohup ./playitd               --socket-path "$PLAYIT_SOCKET"               --log-path "$PWD/playit-daemon.log"               > playit-process.log 2>&1 &
-            PLAYIT_DAEMON_PID=$!
-            echo "$PLAYIT_DAEMON_PID" > playit.pid
-            sleep 3
+            echo "Existing Playit secret found; starting the Playit service."
           else
-            echo "No Playit secret found."
-            echo "The next command will print a CLAIM URL."
-            echo "Open that URL on your phone, sign in to Playit, and approve the agent."
-            echo "The workflow will continue automatically after approval."
-            echo ""
-
-            ./playit-cli --socket-path "$PLAYIT_SOCKET" setup 2>&1 | tee playit-setup.log
+            echo "No Playit secret found; starting the Playit service first."
           fi
+
+          echo "Starting Playit service with: playit start"
+          nohup ./playit start > playit-service.log 2>&1 &
+          PLAYIT_PID=$!
+          echo "$PLAYIT_PID" > playit.pid
+
+          for i in {1..10}; do
+            if [ -S "$PLAYIT_SOCKET" ]; then
+              break
+            fi
+            sleep 1
+          done
+
+          echo "Running Playit setup through the CLI service..."
+          ./playit setup 2>&1 | tee playit-setup.log
 
           echo ""
           echo "========== PLAYIT OUTPUT =========="
           cat playit-setup.log 2>/dev/null || true
-          cat playit-process.log 2>/dev/null || true
-          cat playit-daemon.log 2>/dev/null || true
+          cat playit-service.log 2>/dev/null || true
           echo "==================================="
           echo "Java target: 127.0.0.1:25565 (TCP)"
           echo "Bedrock target: 127.0.0.1:19132 (UDP)"
