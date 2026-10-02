@@ -79,7 +79,8 @@ jobs:
       - name: Install AuthMe
         shell: bash
         run: |
-          AUTHME_URL=$(curl -s https://api.github.com/repos/AuthMe/AuthMeReloaded/releases/latest | grep -o 'https://[^"]*\.jar' | head -n 1)
+          set -e
+          AUTHME_URL=$(curl -fsSL https://api.github.com/repos/AuthMe/AuthMeReloaded/releases/latest | jq -r '.assets[] | select(.name == "AuthMe-6.0.1-Paper.jar") | .browser_download_url')
           test -n "$AUTHME_URL"
           curl -L --fail -o server/plugins/AuthMe.jar "$AUTHME_URL"
 
@@ -138,6 +139,8 @@ jobs:
           set -e
           curl -L --fail -o playit-agent "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
           chmod +x playit-agent
+
+          mkdir -p "$HOME/.config/playit_gg"
 
           echo "========== PLAYIT AGENT =========="
           echo "Starting Playit without a secret."
