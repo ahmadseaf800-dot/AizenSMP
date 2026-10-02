@@ -139,7 +139,7 @@ jobs:
           echo "Approve the agent in your Playit account."
           echo "=================================="
 
-          ./playit-agent --stdout --socket-path "$PLAYIT_SOCKET" setup
+          ./playit-agent --socket-path "$PLAYIT_SOCKET" setup
       - name: Start AizenSMP and save on shutdown
         shell: bash
         working-directory: server
