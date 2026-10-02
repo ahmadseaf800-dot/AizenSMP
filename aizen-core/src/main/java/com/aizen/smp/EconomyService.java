@@ -10,10 +10,20 @@ import java.util.*;
 public final class EconomyService implements CommandExecutor {
     private final AizenCore plugin;
     private final Map<UUID, Double> balances = new HashMap<>();
+    public EconomyService(AizenCore plugin) {
+        this.plugin = plugin;
+        FileConfiguration cfg = plugin.getConfig();
+        if (cfg.isConfigurationSection("balances")) {
+            for (String key : cfg.getConfigurationSection("balances").getKeys(false)) {
+                try { balances.put(UUID.fromString(key), cfg.getDouble("balances." + key)); } catch (IllegalArgumentException ignored) {}
+            }
+        }
+    }
 
-    {\n        // balances are loaded after the plugin is enabled\n    }
-
-    public EconomyService(AizenCore plugin) {\n        this.plugin = plugin;\n        FileConfiguration cfg = plugin.getConfig();\n        if (cfg.isConfigurationSection("balances")) {\n            for (String key : cfg.getConfigurationSection("balances").getKeys(false)) {\n                try { balances.put(UUID.fromString(key), cfg.getDouble("balances." + key)); } catch (IllegalArgumentException ignored) {}\n            }\n        }\n    }\n\n    public void save() {\n        for (Map.Entry<UUID, Double> e : balances.entrySet()) plugin.getConfig().set("balances." + e.getKey(), e.getValue());\n        plugin.saveConfig();\n    }
+    public void save() {
+        for (Map.Entry<UUID, Double> e : balances.entrySet()) plugin.getConfig().set("balances." + e.getKey(), e.getValue());
+        plugin.saveConfig();
+    }
 
     public double get(UUID id) { return balances.getOrDefault(id, 0.0); }
     public void add(UUID id, double amount) { balances.put(id, get(id) + amount); }
