@@ -19,5 +19,5 @@ public final class AizenCore extends JavaPlugin {
         getLogger().info("AizenCore enabled - custom systems loaded from source.");
     }
 
-    public EconomyService economy() { return economy; }
+    @Override\n    public void onDisable() {\n        if (economy != null) economy.save();\n    }\n\n    public EconomyService economy() { return economy; }
 }
