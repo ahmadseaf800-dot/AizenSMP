@@ -240,12 +240,10 @@ on inventory click:
 
 command /rtpq:
     trigger:
-        set {_target} to random player
-        if {_target} is player:
-            delete {_target}
-        if {_target} is not set:
-            loop all players:
-                if loop-player is not player:
+        set {_target} to none
+        loop all players:
+            if loop-player is not player:
+                if {_target} is not set:
                     set {_target} to loop-player
                     stop
         if {_target} is not set:
@@ -453,48 +451,42 @@ command /setduel:
         set {az.duel.arena} to location of player
         send "{@prefix} &aDuel arena set."
 
-command /duel:
+command /duel [<player>]:
     trigger:
-        set {_target} to random player
-        if {_target} is player:
-            delete {_target}
+        set {_target} to arg-1
         if {_target} is not set:
             loop all players:
                 if loop-player is not player:
                     if {az.duel.%uuid of loop-player%} is not set:
                         set {_target} to loop-player
                         stop
-        if {_target} is not set:
-            send "{@prefix} &cNo available opponent."
-            stop
-        make player execute command "/duel %{_target}%"
-
-command /duel <player>:
-    trigger:
-        if arg-1 is player:
+            if {_target} is not set:
+                send "{@prefix} &cNo available opponent."
+                stop
+        if {_target} is player:
             stop
         if {az.duel.%uuid of player%} is set:
             send "{@prefix} &cYou are already dueling."
             stop
-        if {az.duel.%uuid of arg-1%} is set:
+        if {az.duel.%uuid of {_target}%} is set:
             send "{@prefix} &cThat player is already dueling."
             stop
-        if {az.settings.duel.%uuid of arg-1%} is "none":
+        if {az.settings.duel.%uuid of {_target}%} is "none":
             send "{@prefix} &cDuel requests disabled."
             stop
-        if {az.settings.duel.%uuid of arg-1%} is "friends":
-            if {az.friend.%uuid of arg-1%.%uuid of player%} is not true:
+        if {az.settings.duel.%uuid of {_target}%} is "friends":
+            if {az.friend.%uuid of {_target}%.%uuid of player%} is not true:
                 send "{@prefix} &cDuel requests are friends-only."
                 stop
         if {az.duel.arena} is not set:
             send "{@prefix} &cDuel arena is not set."
             stop
-        set {az.duel.request.%uuid of arg-1%} to player
+        set {az.duel.request.%uuid of {_target}%} to player
         send "{@prefix} &aDuel request sent."
-        send "{@prefix} &e%player% &fwants to duel you: &a/duelaccept &7or &c/dueldeny" to arg-1
+        send "{@prefix} &e%player% &fwants to duel you: &a/duelaccept &7or &c/dueldeny" to {_target}
         wait {@duel-timeout}
-        if {az.duel.request.%uuid of arg-1%} is player:
-            delete {az.duel.request.%uuid of arg-1%}
+        if {az.duel.request.%uuid of {_target}%} is player:
+            delete {az.duel.request.%uuid of {_target}%}
 
 command /duelaccept:
     trigger:
@@ -543,24 +535,16 @@ command /sell:
             if {az.sellbasket.%uuid of player%.%{_slot}%} is set:
                 set slot {_slot} of player's current inventory to {az.sellbasket.%uuid of player%.%{_slot}%}
         set slot 49 of player's current inventory to barrier named "&cClose"
-        set slot 50 of player's current inventory to paper named "&eHow to sell" with lore "&7Put items here", "&7Close the menu", "&7Then use &e/ah sell <price>"
-
-on inventory click:
-    if name of event-inventory is "&8✦ &6Sell Basket &8✦":
-        if clicked slot is 49 or clicked slot is 50:
-            cancel event
-            if clicked slot is 49:
-                close player's inventory
-            stop
-        # Keep GUI contents in the basket variable.
-        wait 1 tick
-        set {az.sellbasket.%uuid of player%.%clicked slot%} to item in clicked slot of event-inventory
+        set slot 50 of player's current inventory to paper named "&eHow to sell" with lore "&7Put items here | &7Close the menu | &7Then use &e/ah sell <price>"
 
 on inventory close:
     if name of event-inventory is "&8✦ &6Sell Basket &8✦":
         loop 54 times:
             set {_slot} to loop-number - 1
-            if {_slot} is 49 or {_slot} is 50:
+            if {_slot} is 49:
+                next loop
+            if {_slot} is 50:
+                next loop
                 next loop
             set {_it} to item in slot {_slot} of event-inventory
             if {_it} is air:
@@ -617,7 +601,10 @@ command /ah [<text>] [<text>]:
             set {_listed} to 0
             loop 54 times:
                 set {_slot} to loop-number - 1
-                if {_slot} is 49 or {_slot} is 50:
+                if {_slot} is 49:
+                next loop
+            if {_slot} is 50:
+                next loop
                     next loop
                 if {az.sellbasket.%uuid of player%.%{_slot}%} is set:
                     set {_item} to {az.sellbasket.%uuid of player%.%{_slot}%}
@@ -958,14 +945,16 @@ command /spawnershop:
         set slot 22 of player's current inventory to barrier named "&cClose"
 
 function azSpawner(t: text) :: item:
+    set {_i} to spawner
     if {_t} is "Zombie":
-        return zombie spawner named "&eZombie Spawner &7[1]"
-    if {_t} is "Skeleton":
-        return skeleton spawner named "&eSkeleton Spawner &7[1]"
-    if {_t} is "Blaze":
-        return blaze spawner named "&eBlaze Spawner &7[1]"
-    if {_t} is "Enderman":
-        return enderman spawner named "&eEnderman Spawner &7[1]"
+        set name of {_i} to "&eZombie Spawner &7[1]"
+    else if {_t} is "Skeleton":
+        set name of {_i} to "&eSkeleton Spawner &7[1]"
+    else if {_t} is "Blaze":
+        set name of {_i} to "&eBlaze Spawner &7[1]"
+    else if {_t} is "Enderman":
+        set name of {_i} to "&eEnderman Spawner &7[1]"
+    return {_i}
 
 on inventory click:
     if name of event-inventory is "&8✦ &eSpawner Shop &8✦":
@@ -1013,7 +1002,7 @@ command /buildspawn:
         loop numbers from -20 to 20:
             set {_x} to loop-number
             loop numbers from -20 to 20:
-                set {_z} to loop-number
+                set {_z} to loop-number-2
                 set {_d} to sqrt(({_x} * {_x}) + ({_z} * {_z}))
                 if {_d} <= 20:
                     set block at location ({_cx} + {_x}), {_cy} - 1, ({_cz} + {_z}) in {_w} to polished andesite
@@ -1024,7 +1013,7 @@ command /buildspawn:
         loop numbers from -20 to 20:
             set {_n} to loop-number
             loop numbers from -2 to 2:
-                set {_r} to loop-number
+                set {_r} to loop-number-2
                 set block at location ({_cx} + {_n}), {_cy}, ({_cz} + {_r}) in {_w} to smooth stone
                 set block at location ({_cx} + {_r}), {_cy}, ({_cz} + {_n}) in {_w} to smooth stone
 
@@ -1032,7 +1021,7 @@ command /buildspawn:
         loop numbers from -5 to 5:
             set {_x} to loop-number
             loop numbers from -5 to 5:
-                set {_z} to loop-number
+                set {_z} to loop-number-2
                 set block at location ({_cx} + {_x}), {_cy}, ({_cz} + {_z}) in {_w} to quartz block
 
         # Central beacon monument
@@ -1050,7 +1039,7 @@ command /buildspawn:
         loop numbers from -1 to 1:
             set {_n} to loop-number
             loop 6 times:
-                set {_y} to loop-number
+                set {_y} to loop-number-2
                 set block at location {_cx} + 15 + {_n}, {_cy} + {_y}, {_cz} + 15 in {_w} to stone bricks
                 set block at location {_cx} - 15 + {_n}, {_cy} + {_y}, {_cz} - 15 in {_w} to stone bricks
                 set block at location {_cx} + 15, {_cy} + {_y}, {_cz} - 15 + {_n} in {_w} to stone bricks
@@ -1313,9 +1302,12 @@ every 1 hour:
 command /givekitkey <player> <text> <number>:
     permission: aizensmp.admin
     trigger:
-        if arg-2 is not "Starter" and arg-2 is not "Rare" and arg-2 is not "Epic":
-            send "{@prefix} &cKey types: Starter, Rare, Epic."
-            stop
+        set {_kitType} to arg-2
+        if {_kitType} is not "Starter":
+            if {_kitType} is not "Rare":
+                if {_kitType} is not "Epic":
+                    send "{@prefix} &cKey types: Starter, Rare, Epic."
+                    stop
         loop arg-3 times:
             azGiveKitKey(arg-1, arg-2)
         send "{@prefix} &aGave &e%arg-3%x &6%arg-2% Kit Key&a."
