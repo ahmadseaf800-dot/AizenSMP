@@ -1,6 +1,7 @@
 package com.aizen.smp;
 
 import org.bukkit.Bukkit;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.*;
 import org.bukkit.entity.Player;
@@ -10,7 +11,9 @@ public final class EconomyService implements CommandExecutor {
     private final AizenCore plugin;
     private final Map<UUID, Double> balances = new HashMap<>();
 
-    public EconomyService(AizenCore plugin) { this.plugin = plugin; }
+    {\n        // balances are loaded after the plugin is enabled\n    }
+
+    public EconomyService(AizenCore plugin) {\n        this.plugin = plugin;\n        FileConfiguration cfg = plugin.getConfig();\n        if (cfg.isConfigurationSection("balances")) {\n            for (String key : cfg.getConfigurationSection("balances").getKeys(false)) {\n                try { balances.put(UUID.fromString(key), cfg.getDouble("balances." + key)); } catch (IllegalArgumentException ignored) {}\n            }\n        }\n    }\n\n    public void save() {\n        for (Map.Entry<UUID, Double> e : balances.entrySet()) plugin.getConfig().set("balances." + e.getKey(), e.getValue());\n        plugin.saveConfig();\n    }
 
     public double get(UUID id) { return balances.getOrDefault(id, 0.0); }
     public void add(UUID id, double amount) { balances.put(id, get(id) + amount); }
