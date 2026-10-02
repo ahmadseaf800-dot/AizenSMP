@@ -1,7 +1,8 @@
 # =========================================================
 # AizenSMP - Shards System
-# Currency: Shards
-# /shard shop sells ONLY spawners.
+# Kill Reward: 10 Shards
+# AFK Reward: 1 Shard / minute
+# /shard shop = Spawners only
 # =========================================================
 
 options:
@@ -21,11 +22,11 @@ command /shard [<text>] [<number>]:
             open chest inventory with 3 rows named "&8✦ &bSpawner Shard Shop &8✦" to player
             wait 1 tick
 
-            set slot 10 of player's current inventory to spawner named "&aZombie Spawner &7- &e25 ✦"
-            set slot 12 of player's current inventory to spawner named "&cSkeleton Spawner &7- &e35 ✦"
-            set slot 14 of player's current inventory to spawner named "&6Blaze Spawner &7- &e50 ✦"
-            set slot 16 of player's current inventory to spawner named "&5Enderman Spawner &7- &e75 ✦"
-            set slot 22 of player's current inventory to spawner named "&bIron Golem Spawner &7- &e100 ✦"
+            set slot 10 of player's current inventory to spawner named "&aZombie Spawner &7- &e100 ✦"
+            set slot 12 of player's current inventory to spawner named "&cSkeleton Spawner &7- &e150 ✦"
+            set slot 14 of player's current inventory to spawner named "&6Blaze Spawner &7- &e250 ✦"
+            set slot 16 of player's current inventory to spawner named "&5Enderman Spawner &7- &e400 ✦"
+            set slot 22 of player's current inventory to spawner named "&bIron Golem Spawner &7- &e750 ✦"
             stop
 
         if arg-1 is "give":
@@ -47,24 +48,19 @@ on inventory click:
         cancel event
 
         if clicked slot is 10:
-            set {_price} to 25
-            set {_type} to zombie
+            set {_price} to 100
             set {_name} to "Zombie"
         else if clicked slot is 12:
-            set {_price} to 35
-            set {_type} to skeleton
+            set {_price} to 150
             set {_name} to "Skeleton"
         else if clicked slot is 14:
-            set {_price} to 50
-            set {_type} to blaze
+            set {_price} to 250
             set {_name} to "Blaze"
         else if clicked slot is 16:
-            set {_price} to 75
-            set {_type} to enderman
+            set {_price} to 400
             set {_name} to "Enderman"
         else if clicked slot is 22:
-            set {_price} to 100
-            set {_type} to iron golem
+            set {_price} to 750
             set {_name} to "Iron Golem"
         else:
             stop
@@ -80,6 +76,32 @@ on inventory click:
         remove {_price} from {aizensmp.shards.%uuid of player%}
         give 1 spawner to player
         send "%{@prefix}% &aPurchased a &e%{_name}% Spawner &afor &b%{_price}% ✦&a." to player
+
+on death of player:
+    if attacker is a player:
+        add 10 to {aizensmp.shards.%uuid of attacker%}
+        send "%{@prefix}% &aKill reward: &b+10 ✦" to attacker
+
+command /setafk:
+    permission: aizensmp.admin
+    trigger:
+        set {aizensmp.afk.location} to location of player
+        send "%{@prefix}% &aAFK location set." to player
+
+command /afk:
+    trigger:
+        if {aizensmp.afk.location} is not set:
+            send "%{@prefix}% &cThe AFK location has not been set yet." to player
+            stop
+        teleport player to {aizensmp.afk.location}
+        send "%{@prefix}% &aYou have been teleported to the AFK area." to player
+
+every 1 minute:
+    loop all players:
+        if {aizensmp.afk.location} is set:
+            if distance between loop-player and {aizensmp.afk.location} <= 3:
+                add 1 to {aizensmp.shards.%uuid of loop-player%}
+                send "%{@prefix}% &aAFK reward: &b+1 ✦" to loop-player
 
 on first join:
     if {aizensmp.shards.%uuid of player%} is not set:
