@@ -30,8 +30,19 @@ jobs:
           cd server
           curl -fL "https://api.purpurmc.org/v2/purpur/${{ inputs.server_version }}/latest/download" -o purpur.jar
           echo "eula=true" > eula.txt
-          echo "online-mode=false" > server.properties
-          echo "enforce-secure-profile=false" >> server.properties
+          cat > server.properties <<'EOF'
+online-mode=false
+enforce-secure-profile=false
+motd=§6§lAIZEN SMP §8| §eDONUT SMP
+pvp=true
+difficulty=hard
+spawn-protection=0
+view-distance=8
+simulation-distance=6
+enable-command-block=true
+allow-flight=true
+white-list=false
+EOF
           mkdir -p plugins/Skript/scripts
           if [ -d "../plugins/Skript/scripts" ]; then
             cp -r ../plugins/Skript/scripts/* plugins/Skript/scripts/ || true
@@ -42,6 +53,20 @@ jobs:
         run: |
           cd server
           curl -fL "https://github.com/SkriptLang/Skript/releases/latest/download/Skript.jar" -o plugins/Skript.jar
+
+          # Simple Voice Chat (Bukkit/Paper/Purpur) - latest compatible release.
+          python3 - <<'PY'
+import json, urllib.request
+url = "https://api.modrinth.com/v2/project/9eGQg6e8/version?loaders=%5B%22paper%22%5D&game_versions=%5B%221.21.11%22%5D"
+with urllib.request.urlopen(url) as r:
+    versions = json.load(r)
+if not versions:
+    raise SystemExit("No Simple Voice Chat release found for Purpur 1.21.11")
+version = versions[0]
+file = next((f for f in version["files"] if f.get("primary")), version["files"][0])
+urllib.request.urlretrieve(file["url"], "plugins/voicechat-bukkit.jar")
+print("Installed Simple Voice Chat:", version["version_number"])
+PY
 
       - name: Start AizenSMP
         shell: bash
