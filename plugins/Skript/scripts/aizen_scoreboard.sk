@@ -4,6 +4,9 @@
 # =========================================================
 
 function azUpdateSidebar(p: player):
+    if {az.settings.sidebar.%uuid of {_p}%} is false:
+        clear {_p}'s scoreboard
+        stop
     set {_money} to {az.money.%uuid of {_p}%}
     if {_money} is not set:
         set {_money} to 0
