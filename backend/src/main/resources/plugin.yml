@@ -1,7 +1,15 @@
 name: AizenAuthGuard
-version: 1.0.0
+version: 1.1.0
 main: com.aizensmp.auth.AizenAuthGuard
 api-version: '1.21'
 depend: [AuthMe, LuckPerms]
 authors: [Aizen]
-description: AuthMe login gate and AizenSMP dashboard bridge.
+description: AuthMe login gate, secure dashboard bridge, staff/audit monitoring.
+commands:
+  aizenac:
+    description: Internal Aizen anti-cheat bridge command
+    usage: /aizenac flag <player> <vl> <reason>
+    permission: aizensmp.internal
+permissions:
+  aizensmp.internal:
+    default: false
