@@ -1,0 +1,75 @@
+# =========================================================
+# AIZEN SMP - FULL SPAWN PROTECTION
+# Purpur 1.21.11 / Skript
+# =========================================================
+options:
+    radius: 100
+
+function azInSpawn(loc: location) :: boolean:
+    if {az.spawn} is not set:
+        return false
+    if world of {_loc} is not world of {az.spawn}:
+        return false
+    if distance between {_loc} and {az.spawn} <= {@radius}:
+        return true
+    return false
+
+on break:
+    if azInSpawn(location of event-block) is true:
+        cancel event
+        send action bar "&c✘ Spawn محمي بالكامل" to player
+
+on place:
+    if azInSpawn(location of event-block) is true:
+        cancel event
+        send action bar "&c✘ Spawn محمي بالكامل" to player
+
+on damage:
+    if azInSpawn(location of victim) is true:
+        cancel event
+
+on explode:
+    if azInSpawn(event-location) is true:
+        cancel event
+        stop
+    loop blocks in radius 100 around event-location:
+        if azInSpawn(location of loop-block) is true:
+            cancel event
+            stop
+
+on burn:
+    if azInSpawn(location of event-entity) is true:
+        cancel event
+
+on ignite:
+    if azInSpawn(location of event-block) is true:
+        cancel event
+
+on flow:
+    if azInSpawn(location of event-block) is true:
+        cancel event
+
+on entity explode:
+    if azInSpawn(location of event-entity) is true:
+        cancel event
+
+command /setprotectedspawn:
+    permission: aizensmp.admin
+    trigger:
+        set {az.spawn} to location of player
+        set {az.donutspawn} to location of player
+        set {az.afk} to location of player
+        delete {az.spawn.built}
+        delete {az.bots.ready}
+        send "&6[&eAizenSMP&6] &aتم تعيين الـSpawn المحمي بالكامل."
+        send "&7نطاق الحماية: &e100 &7بلوك."
+
+command /spawnprotection:
+    permission: aizensmp.admin
+    trigger:
+        if {az.spawn} is not set:
+            send "&cالـSpawn غير مضبوط."
+            stop
+        send "&6[&eAizenSMP&6] &aSpawn Protection: &2مفعّل"
+        send "&7المركز: &f%{az.spawn}%"
+        send "&7النطاق: &e100 &7بلوك"
