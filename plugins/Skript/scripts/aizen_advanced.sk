@@ -24,8 +24,8 @@ on damage:
             else:
                 set {az.combat.%uuid of attacker%} to true
                 set {az.combat.%uuid of victim%} to true
-                set {az.combat.time.%uuid of attacker%} to 15 seconds
-                set {az.combat.time.%uuid of victim%} to 15 seconds
+                set {az.combat.time.%uuid of attacker%} to 20 seconds
+                set {az.combat.time.%uuid of victim%} to 20 seconds
 
 on quit:
     if {az.combat.%uuid of player%} is set:
