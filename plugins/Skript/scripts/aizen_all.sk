@@ -252,22 +252,41 @@ function azSafeRTP(p: player, worldName: text):
         send "{@prefix} &cالعالم غير موجود: &e%{_worldName}%" to {_p}
         stop
     set {_found} to false
-    loop 60 times:
+    loop 100 times:
         if {_found} is false:
             set {_x} to random integer between -5000 and 5000
             set {_z} to random integer between -5000 and 5000
-            set {_loc} to location at {_x}, 0, {_z} in {_w}
-            set {_top} to highest block at {_loc}
-            set {_feet} to location above {_top}
-            if y-coordinate of {_feet} > 5:
-                if block at {_feet} is air:
-                    if block above {_feet} is air:
-                        if block at {_top} is not water:
-                            if block at {_top} is not lava:
-                                teleport {_p} to {_feet}
-                                set {_found} to true
+            # Search downward through normal Nether terrain instead of using
+            # the world's highest block (which can be the Nether roof/bedrock).
+            if {_worldName} is "world_nether":
+                loop 90 times:
+                    if {_found} is false:
+                        set {_y} to 110 - loop-number
+                        set {_loc} to location at {_x}, {_y}, {_z} in {_w}
+                        set {_below} to location below {_loc}
+                        if block at {_loc} is air:
+                            if block above {_loc} is air:
+                                if block at {_below} is not air:
+                                    if block at {_below} is not bedrock:
+                                        if block at {_below} is not lava:
+                                            if block at {_below} is not water:
+                                                set {_feet} to {_loc}
+                                                teleport {_p} to {_feet}
+                                                set {_found} to true
+            else:
+                set {_loc} to location at {_x}, 0, {_z} in {_w}
+                set {_top} to highest block at {_loc}
+                set {_feet} to location above {_top}
+                if y-coordinate of {_feet} > 5:
+                    if block at {_feet} is air:
+                        if block above {_feet} is air:
+                            if block at {_top} is not water:
+                                if block at {_top} is not lava:
+                                    if block at {_top} is not bedrock:
+                                        teleport {_p} to {_feet}
+                                        set {_found} to true
     if {_found} is true:
-        send "{@prefix} &aتم نقلك عشوائياً إلى &e%{_worldName}% &7(&f%round(x-coordinate of {_p})%, %round(z-coordinate of {_p})%&7)." to {_p}
+        send "{@prefix} &aتم نقلك عشوائياً إلى &e%{_worldName}% &7(&f%round(x-coordinate of {_p})%, %round(y-coordinate of {_p})%, %round(z-coordinate of {_p})%&7)." to {_p}
     else:
         send "{@prefix} &cلم يتم العثور على مكان آمن. حاول مرة ثانية." to {_p}
 
