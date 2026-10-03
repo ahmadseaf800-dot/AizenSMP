@@ -322,7 +322,7 @@ public final class AizenShop extends JavaPlugin implements Listener {
             else if(e.getSlot()==35) {
                 String category=state.category();
                 pendingPurchases.remove(p.getUniqueId());
-                openCategory(p,category);
+                returnToShop(p,category);
                 return;
             } else return;
             pendingPurchases.put(p.getUniqueId(),new PurchaseState(state.item(),amount,state.category()));
@@ -477,7 +477,13 @@ public final class AizenShop extends JavaPlugin implements Listener {
         msg(p,"&aPurchased &f"+amount+" x "+s.name+"&a for "+totalText(s,amount)+"&a.");
         String category=state.category();
         pendingPurchases.remove(id);
-        openCategory(p,category);
+        returnToShop(p,category);
+    }
+
+    private void returnToShop(Player p,String category) {
+        if(SHARD.equals(category)) openShardShop(p);
+        else if(MAIN.equals(category)) openMain(p);
+        else openCategory(p,category);
     }
 
     private record PurchaseState(ShopItem item,int amount,String category) {}
