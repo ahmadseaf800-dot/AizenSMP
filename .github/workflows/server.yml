@@ -367,13 +367,11 @@ jobs:
       - name: Start AizenSMP network
         shell: bash
         run: |
-          set -e
-
+          set -u
           cleanup() {
             for pid in ${GERMANY_PID:-} ${TURKEY_PID:-} ${AMERICA_PID:-} ${VELOCITY_PID:-}; do
               [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
             done
-
             rm -f network/persistent-data.tar.zst
             tar --zstd -cf network/persistent-data.tar.zst \
               network/germany/world network/germany/world_nether network/germany/world_the_end \
@@ -381,23 +379,39 @@ jobs:
               network/america/world network/america/world_nether network/america/world_the_end \
               network/germany/plugins/Skript network/turkey/plugins/Skript network/america/plugins/Skript \
               2>/dev/null || true
-
           }
           trap cleanup EXIT INT TERM
 
-          java -Xms512M -Xmx1536M -jar network/velocity/velocity.jar > velocity.log 2>&1 &
+          java -Xms512M -Xmx1024M -jar network/velocity/velocity.jar > velocity.log 2>&1 &
           VELOCITY_PID=$!
-
-          java -Xms512M -Xmx1536M -jar network/germany/server.jar --nogui > germany.log 2>&1 &
+          java -Xms512M -Xmx1024M -jar network/germany/server.jar --nogui > germany.log 2>&1 &
           GERMANY_PID=$!
-
-          java -Xms512M -Xmx1536M -jar network/turkey/server.jar --nogui > turkey.log 2>&1 &
+          java -Xms512M -Xmx1024M -jar network/turkey/server.jar --nogui > turkey.log 2>&1 &
           TURKEY_PID=$!
-
-          java -Xms512M -Xmx1536M -jar network/america/server.jar --nogui > america.log 2>&1 &
+          java -Xms512M -Xmx1024M -jar network/america/server.jar --nogui > america.log 2>&1 &
           AMERICA_PID=$!
 
-          echo "AizenSMP network started."
+          sleep 12
+
+          echo "===== PROCESS STATUS ====="
+          ps -o pid,stat,etime,cmd -p "$VELOCITY_PID,$GERMANY_PID,$TURKEY_PID,$AMERICA_PID" || true
+          echo "===== VELOCITY LOG ====="
+          cat velocity.log 2>/dev/null || true
+          echo "===== GERMANY LOG ====="
+          tail -80 germany.log 2>/dev/null || true
+          echo "===== TURKEY LOG ====="
+          tail -80 turkey.log 2>/dev/null || true
+          echo "===== AMERICA LOG ====="
+          tail -80 america.log 2>/dev/null || true
+
+          for pid in "$VELOCITY_PID" "$GERMANY_PID" "$TURKEY_PID" "$AMERICA_PID"; do
+            if ! kill -0 "$pid" 2>/dev/null; then
+              echo "::error::AizenSMP server process $pid exited during startup."
+              exit 1
+            fi
+          done
+
+          echo "AizenSMP network is healthy and running."
           echo "Velocity: 25565"
           echo "Germany: 25566"
           echo "Turkey: 25567"
@@ -405,8 +419,7 @@ jobs:
           echo "Germany Voice: stamina-trailside.tun.ply.gg:12304 -> UDP 25570"
           echo "Turkey Voice: stamina-tolerance.tun.ply.gg:12317 -> UDP 25571"
           echo "America Voice: stamina-lightning.tun.ply.gg:12323 -> UDP 25572"
-
-          wait $VELOCITY_PID
+          wait "$VELOCITY_PID"
 
       - name: Upload persistent server data
         if: always()
