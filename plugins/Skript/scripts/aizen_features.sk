@@ -1,0 +1,290 @@
+# =========================================================
+# AizenSMP - Player Features Module
+# Homes / Stats / Kits / Social / Warps / Rewards
+# =========================================================
+
+options:
+    afs-prefix: &6[&eAizenSMP&6] &r
+    home-limit: 3
+    home-cooldown: 5 seconds
+    starter-cooldown: 24 hours
+    daily-cooldown: 24 hours
+
+# ---------------- HOMES ----------------
+
+command /sethome <text>:
+    trigger:
+        if distance between location of player and {az.spawn} <= 50:
+            send "{@afs-prefix}&cلا يمكنك وضع Home داخل الـSpawn."
+            stop
+        set {_count} to size of {az.home.%uuid of player%::*}
+        if {az.home.%uuid of player%.%arg-1%} is not set:
+            if {_count} >= {@home-limit}:
+                send "{@afs-prefix}&cوصلت إلى الحد الأقصى للمنازل: &e{@home-limit}"
+                stop
+        set {az.home.%uuid of player%.%arg-1%} to location of player
+        send "{@afs-prefix}&aتم حفظ المنزل &e%arg-1%&a."
+
+command /home [<text>]:
+    trigger:
+        if arg-1 is set:
+            set {_name} to arg-1
+        else:
+            set {_name} to "home"
+        if {az.home.%uuid of player%.%{_name}%} is not set:
+            send "{@afs-prefix}&cهذا المنزل غير موجود."
+            stop
+        if {az.combat.%uuid of player%} is set:
+            send "{@afs-prefix}&cلا يمكنك استخدام Home أثناء القتال."
+            stop
+        if {az.homecd.%uuid of player%} is set:
+            send "{@afs-prefix}&cانتظر قبل استخدام Home مرة أخرى."
+            stop
+        set {az.homecd.%uuid of player%} to true
+        teleport player to {az.home.%uuid of player%.%{_name}%}
+        send "{@afs-prefix}&aتم نقلك إلى Home: &e%{_name}%&a."
+        wait {@home-cooldown}
+        delete {az.homecd.%uuid of player%}
+
+command /delhome <text>:
+    trigger:
+        if {az.home.%uuid of player%.%arg-1%} is not set:
+            send "{@afs-prefix}&cهذا المنزل غير موجود."
+            stop
+        delete {az.home.%uuid of player%.%arg-1%}
+        send "{@afs-prefix}&aتم حذف المنزل &e%arg-1%&a."
+
+command /homes:
+    trigger:
+        send "&8&m-----------------------------"
+        send "&6&lAIZEN HOMES"
+        set {_found} to false
+        loop {az.home.%uuid of player%::*}:
+            send "&e• &f%loop-index%"
+            set {_found} to true
+        if {_found} is false:
+            send "&7لا يوجد لديك Homes."
+        send "&7Limit: &f{@home-limit}"
+        send "&8&m-----------------------------"
+
+# ---------------- PLAYER STATS ----------------
+
+command /stats [<player>]:
+    trigger:
+        if arg-1 is set:
+            set {_p} to arg-1
+        else:
+            set {_p} to player
+        send "&8&m-----------------------------"
+        send "&6&lAIZEN STATS &7- &f%{_p}%"
+        send "&eKills: &f%{az.stats.kills.%uuid of {_p}%}%"
+        send "&eDeaths: &f%{az.stats.deaths.%uuid of {_p}%}%"
+        set {_kills} to {az.stats.kills.%uuid of {_p}%}
+        set {_deaths} to {az.stats.deaths.%uuid of {_p}%}
+        if {_kills} is not set:
+            set {_kills} to 0
+        if {_deaths} is not set:
+            set {_deaths} to 0
+        if {_deaths} <= 0:
+            set {_kd} to {_kills}
+        else:
+            set {_kd} to round({_kills} / {_deaths} * 100) / 100
+        send "&eK/D: &f%{_kd}%"
+        send "&eBlocks Broken: &f%{az.stats.broken.%uuid of {_p}%}%"
+        send "&eBlocks Placed: &f%{az.stats.placed.%uuid of {_p}%}%"
+        send "&eMobs Killed: &f%{az.stats.mobs.%uuid of {_p}%}%"
+        send "&eBalance: &6$%{az.money.%uuid of {_p}%}%"
+        send "&8&m-----------------------------"
+
+on death of player:
+    add 1 to {az.stats.deaths.%uuid of victim%}
+    if attacker is a player:
+        add 1 to {az.stats.kills.%uuid of attacker%}
+
+on break:
+    if event-block is not air:
+        add 1 to {az.stats.broken.%uuid of player%}
+
+on place:
+    add 1 to {az.stats.placed.%uuid of player%}
+
+on death of living entity:
+    if victim is not a player:
+        if attacker is a player:
+            add 1 to {az.stats.mobs.%uuid of attacker%}
+
+# ---------------- STARTER KIT ----------------
+
+command /kit:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &6AIZEN KITS &8✦" to player
+        wait 1 tick
+        set slot 13 of player's current inventory to stone sword named "&a&lStarter Kit" with lore "&7Full Chainmail Armor", "&7Stone Tools", "&716 Bread", "&eClick to claim"
+
+command /kit starter:
+    trigger:
+        if {az.kit.starter.%uuid of player%} is set:
+            send "{@afs-prefix}&cلقد استخدمت Starter Kit من قبل."
+            stop
+        give chainmail helmet to player
+        give chainmail chestplate to player
+        give chainmail leggings to player
+        give chainmail boots to player
+        give stone sword to player
+        give stone pickaxe to player
+        give stone axe to player
+        give stone shovel to player
+        give 16 bread to player
+        set {az.kit.starter.%uuid of player%} to true
+        send "{@afs-prefix}&aتم استلام Starter Kit."
+
+on inventory click:
+    if name of event-inventory is "&8✦ &6AIZEN KITS &8✦":
+        cancel event
+        if clicked slot is 13:
+            close player's inventory
+            make player execute command "/kit starter"
+
+# ---------------- DAILY REWARD ----------------
+
+command /daily:
+    trigger:
+        if {az.daily.%uuid of player%} is set:
+            send "{@afs-prefix}&cاستلمت المكافأة اليومية مسبقاً."
+            stop
+        add 500 to {az.money.%uuid of player%}
+        set {az.daily.%uuid of player%} to true
+        send "{@afs-prefix}&aحصلت على المكافأة اليومية: &6$500"
+
+every 24 hours:
+    loop all players:
+        delete {az.daily.%uuid of loop-player%}
+
+# ---------------- SOCIAL / PRIVATE MESSAGES ----------------
+
+command /msg <player> <text>:
+    aliases: /tell, /whisper, /w
+    trigger:
+        if {az.ignore.%uuid of arg-1%.%uuid of player%} is true:
+            send "{@afs-prefix}&cهذا اللاعب يتجاهلك."
+            stop
+        set {az.reply.%uuid of arg-1%} to player
+        set {az.reply.%uuid of player%} to arg-1
+        send "&7[&d%player% &7-> &d%arg-1%&7] &f%arg-2%" to player
+        send "&7[&d%player% &7-> &d%arg-1%&7] &f%arg-2%" to arg-1
+
+command /r <text>:
+    trigger:
+        if {az.reply.%uuid of player%} is not set:
+            send "{@afs-prefix}&cلا يوجد شخص للرد عليه."
+            stop
+        set {_p} to {az.reply.%uuid of player%}
+        if {_p} is not online:
+            send "{@afs-prefix}&cاللاعب غير متصل."
+            stop
+        if {az.ignore.%uuid of {_p}%.%uuid of player%} is true:
+            send "{@afs-prefix}&cهذا اللاعب يتجاهلك."
+            stop
+        set {az.reply.%uuid of {_p}%} to player
+        send "&7[&d%player% &7-> &d%{_p}%&7] &f%arg-1%" to player
+        send "&7[&d%player% &7-> &d%{_p}%&7] &f%arg-1%" to {_p}
+
+command /ignore <player>:
+    trigger:
+        if arg-1 is player:
+            send "{@afs-prefix}&cلا يمكنك تجاهل نفسك."
+            stop
+        if {az.ignore.%uuid of player%.%uuid of arg-1%} is true:
+            delete {az.ignore.%uuid of player%.%uuid of arg-1%}
+            send "{@afs-prefix}&aتم إلغاء تجاهل &e%arg-1%&a."
+        else:
+            set {az.ignore.%uuid of player%.%uuid of arg-1%} to true
+            send "{@afs-prefix}&aتم تجاهل &e%arg-1%&a."
+
+# ---------------- RULES / HELP ----------------
+
+command /rules:
+    trigger:
+        send "&8&m-----------------------------"
+        send "&6&lAIZENSMP RULES"
+        send "&e1. &fNo cheating or exploits."
+        send "&e2. &fNo duplication or economy abuse."
+        send "&e3. &fRespect other players."
+        send "&e4. &fNo spam or harassment."
+        send "&e5. &fReport bugs to staff."
+        send "&8&m-----------------------------"
+
+command /help:
+    trigger:
+        send "&8&m-----------------------------"
+        send "&6&lAIZENSMP HELP"
+        send "&e/shop &7- Shop"
+        send "&e/ah &7- Auction House"
+        send "&e/rtp &7- Random Teleport"
+        send "&e/sethome &7- Create Home"
+        send "&e/home &7- Teleport Home"
+        send "&e/homes &7- Home list"
+        send "&e/tpa &7- Teleport request"
+        send "&e/pay &7- Send money"
+        send "&e/stats &7- Player stats"
+        send "&e/kit &7- Kits"
+        send "&e/daily &7- Daily reward"
+        send "&e/msg &7- Private message"
+        send "&e/settings &7- Player settings"
+        send "&8&m-----------------------------"
+
+# ---------------- PLAYER WARPS ----------------
+
+command /setwarp <text>:
+    permission: aizensmp.admin
+    trigger:
+        set {az.warp.%arg-1%} to location of player
+        send "{@afs-prefix}&aWarp &e%arg-1% &asaved."
+
+command /warp <text>:
+    trigger:
+        if {az.warp.%arg-1%} is not set:
+            send "{@afs-prefix}&cWarp not found."
+            stop
+        teleport player to {az.warp.%arg-1%}
+        send "{@afs-prefix}&aTeleported to &e%arg-1%&a."
+
+command /delwarp <text>:
+    permission: aizensmp.admin
+    trigger:
+        delete {az.warp.%arg-1%}
+        send "{@afs-prefix}&aWarp deleted."
+
+command /warps:
+    trigger:
+        send "&8&m-----------------------------"
+        send "&6&lAIZEN WARPS"
+        loop {az.warp::*}:
+            send "&e• &f%loop-index%"
+        send "&8&m-----------------------------"
+
+# ---------------- PLAYTIME ----------------
+
+every 1 minute:
+    loop all players:
+        add 1 to {az.playtime.%uuid of loop-player%}
+
+command /playtime [<player>]:
+    trigger:
+        if arg-1 is set:
+            set {_p} to arg-1
+        else:
+            set {_p} to player
+        set {_minutes} to {az.playtime.%uuid of {_p}%}
+        if {_minutes} is not set:
+            set {_minutes} to 0
+        set {_hours} to floor({_minutes} / 60)
+        set {_mins} to {_minutes} - ({_hours} * 60)
+        send "{@afs-prefix}&e%{_p}% &7Playtime: &f%{_hours}%h %{_mins}%m"
+
+# ---------------- PLAYTIME REWARD ----------------
+
+every 60 minutes:
+    loop all players:
+        add 250 to {az.money.%uuid of loop-player%}
+        send "{@afs-prefix}&aPlaytime reward: &6+$250" to loop-player
