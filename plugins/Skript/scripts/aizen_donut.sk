@@ -104,12 +104,20 @@ function azBuildDonutSpawn():
     delete {az.spawn.building}
     send "{@prefix}&aتم تجهيز Spawn AIZEN SMP تلقائياً." to player
 
-# On the first authenticated join after a spawn exists, build it once.
+# If no spawn has ever been configured, create one at the world origin.
+# Then build the protected hub automatically once.
 on join:
-    if {az.spawn} is set:
-        wait 2 seconds
-        if player is online:
-            azBuildDonutSpawn()
+    if {az.spawn} is not set:
+        set {_base} to location at 0, 0, 0 in world of player
+        set {_top} to highest block at {_base}
+        set {_newspawn} to location above {_top}
+        set {az.spawn} to {_newspawn}
+        set {az.afk} to {_newspawn}
+        set {az.donutspawn} to {_newspawn}
+        send "{@prefix}&eتم إنشاء Spawn افتراضي عند مركز العالم." to player
+    wait 2 seconds
+    if player is online:
+        azBuildDonutSpawn()
 
 # Admin command to build/rebuild at the player's current position.
 command /builddonutspawn:
