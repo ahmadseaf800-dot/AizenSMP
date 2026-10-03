@@ -5,7 +5,7 @@
 
 options:
     prefix: &6[&eAizenSMP&6] &r
-    spawn-radius: 150
+    spawn-radius: 250
 
 # ---------------- QUICK COMMANDS ----------------
 
@@ -106,7 +106,32 @@ function azBuildDonutSpawn():
     execute console command "execute at %player% run fill ~-6 ~4 ~32 ~6 ~6 ~34 gold_block"
     execute console command "execute at %player% run fill ~-4 ~7 ~32 ~4 ~7 ~34 beacon"
 
-    # Large Donut-style expansion: 150x150 hub with multiple rings, roads and towers.
+    # Massive Donut-style expansion: 500x500 protected hub.
+    execute console command "execute at %player% run fill ~-250 ~-2 ~-250 ~250 ~-2 ~250 polished_blackstone"
+    execute console command "execute at %player% run fill ~-240 ~-1 ~-240 ~240 ~-1 ~240 blackstone"
+    execute console command "execute at %player% run fill ~-225 ~0 ~-225 ~225 ~0 ~225 smooth_quartz"
+    execute console command "execute at %player% run fill ~-210 ~1 ~-210 ~210 ~1 ~210 black_concrete"
+    execute console command "execute at %player% run fill ~-4 ~2 ~-225 ~4 ~2 ~225 gold_block"
+    execute console command "execute at %player% run fill ~-225 ~2 ~-4 ~225 ~2 ~4 gold_block"
+    # Four giant entrance plazas.
+    execute console command "execute at %player% run fill ~-24 ~2 ~-250 ~24 ~2 ~-220 quartz_block"
+    execute console command "execute at %player% run fill ~-18 ~3 ~-250 ~18 ~9 ~-242 gold_block"
+    execute console command "execute at %player% run fill ~-24 ~2 ~220 ~24 ~2 ~250 quartz_block"
+    execute console command "execute at %player% run fill ~-18 ~3 ~242 ~18 ~9 ~250 gold_block"
+    execute console command "execute at %player% run fill ~-250 ~2 ~-24 ~-220 ~2 ~24 quartz_block"
+    execute console command "execute at %player% run fill ~-250 ~3 ~-18 ~-242 ~9 ~18 gold_block"
+    execute console command "execute at %player% run fill ~220 ~2 ~-24 ~250 ~2 ~24 quartz_block"
+    execute console command "execute at %player% run fill ~242 ~3 ~-18 ~250 ~9 ~18 gold_block"
+    # Giant outer corner towers.
+    execute console command "execute at %player% run fill ~-235 ~2 ~-235 ~-215 ~28 ~-215 polished_blackstone_bricks"
+    execute console command "execute at %player% run fill ~215 ~2 ~-235 ~235 ~28 ~-215 polished_blackstone_bricks"
+    execute console command "execute at %player% run fill ~-235 ~2 ~215 ~-215 ~28 ~235 polished_blackstone_bricks"
+    execute console command "execute at %player% run fill ~215 ~2 ~215 ~235 ~28 ~235 polished_blackstone_bricks"
+    # Decorative outer ring.
+    execute console command "execute at %player% run fill ~-250 ~2 ~-250 ~250 ~6 ~-246 blackstone"
+    execute console command "execute at %player% run fill ~-250 ~2 ~246 ~250 ~6 ~250 blackstone"
+    execute console command "execute at %player% run fill ~-250 ~2 ~-246 ~-246 ~6 ~246 blackstone"
+    execute console command "execute at %player% run fill ~246 ~2 ~-246 ~250 ~6 ~246 blackstone
     execute console command "execute at %player% run fill ~-75 ~-2 ~-75 ~75 ~-2 ~75 polished_blackstone"
     execute console command "execute at %player% run fill ~-70 ~-1 ~-70 ~70 ~-1 ~70 blackstone"
     execute console command "execute at %player% run fill ~-64 ~0 ~-64 ~64 ~0 ~64 smooth_quartz"
@@ -149,7 +174,7 @@ function azBuildDonutSpawn():
     execute console command "execute at %player% run fill ~-75 ~2 ~-73 ~-73 ~5 ~73 blackstone"
     execute console command "execute at %player% run fill ~73 ~2 ~-73 ~75 ~5 ~73 blackstone"
 
-    # Low walls around the 150x150 hub boundary.
+    # Low walls around the massive 500x500 hub boundary.
     execute console command "execute at %player% run fill ~-35 ~1 ~-35 ~35 ~4 ~-34 blackstone"
     execute console command "execute at %player% run fill ~-35 ~1 ~34 ~35 ~4 ~35 blackstone"
     execute console command "execute at %player% run fill ~-35 ~1 ~-34 ~-34 ~4 ~34 blackstone"
@@ -192,13 +217,44 @@ command /builddonutspawn:
         send "{@prefix}&7الحماية: نصف قطر &e{@spawn-radius} &7بلوك."
 
 # Players cannot walk out of the protected hub.
-# They leave through teleport systems such as /rtp, /tpa, /home or /warp.
+# Leaving is only possible through approved teleport commands.
 on player move:
     if {az.spawn} is set:
         if distance between location of player and {az.spawn} <= {@spawn-radius}:
             if distance between event-location and {az.spawn} > {@spawn-radius}:
                 cancel event
-                send action bar "&cالـSpawn مغلق &7- استخدم &e/rtp &7أو أوامر النقل للخروج." to player
+                send action bar "&c✘ لا يمكنك مغادرة الـSpawn سيراً &7- استخدم &e/rtp &7أو &e/tpa" to player
+                stop
+        else:
+            if {az.spawn.lock.%uuid of player%} is true:
+                cancel event
+                delete {az.spawn.lock.%uuid of player%}
+
+# Mark approved teleports outside the spawn.
+on teleport:
+    if {az.spawn} is set:
+        if {az.spawn.lock.%uuid of player%} is true:
+            stop
+        if distance between event-location and {az.spawn} > {@spawn-radius}:
+            # Normal plugin/command teleports are allowed.
+            stop
+
+command /spawn:
+    trigger:
+        set {az.spawn.lock.%uuid of player%} to true
+        teleport player to {az.spawn}
+        wait 1 tick
+        delete {az.spawn.lock.%uuid of player%}
+
+command /rtp:
+    trigger:
+        set {az.spawn.lock.%uuid of player%} to true
+        make player execute command "/rtp"
+        wait 2 ticks
+        delete {az.spawn.lock.%uuid of player%}
+
+on quit:
+    delete {az.spawn.lock.%uuid of player%}
 
 # ---------------- SPAWN PROTECTION ----------------
 
