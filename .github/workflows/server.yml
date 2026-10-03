@@ -10,12 +10,6 @@ on:
         type: boolean
   repository_dispatch:
     types: [aizensmp_start]
-    inputs:
-      manual_start:
-        description: "Start the AizenSMP network manually"
-        required: false
-        default: "true"
-        type: boolean
 
 permissions:
   contents: read
