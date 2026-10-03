@@ -1,6 +1,6 @@
 # =========================================================
 # AIZEN SMP - DONUT SMP STYLE SPAWN
-# Very large 241x241 survival-SMP hub inspired by the visual language of Donut-style spawns.
+# Very large 1001x1001 survival-SMP hub inspired by the visual language of Donut-style spawns.
 # =========================================================
 
 options:
@@ -13,25 +13,25 @@ function azBuildLegendarySpawn(p: player):
     delete {az.spawn.built}
     delete {az.bots.ready}
 
-    # Clear a large 241 x 241 x 30 build volume.
-    execute console command "execute at %{_p}% run fill ~-300 ~-3 ~-300 ~300 ~25 ~300 air"
+    # Clear a large 1001 x 1001 x 30 build volume.
+    execute console command "execute at %{_p}% run fill ~-500 ~-3 ~-500 ~500 ~25 ~500 air"
 
     # Donut-style circular foundation: dark stone, white trim and gold accents.
-    execute console command "execute at %{_p}% run fill ~-300 ~-2 ~-300 ~300 ~-2 ~300 polished_blackstone"
-    execute console command "execute at %{_p}% run fill ~-292 ~-1 ~-292 ~292 ~-1 ~292 blackstone"
-    execute console command "execute at %{_p}% run fill ~-284 ~0 ~-284 ~284 ~0 ~284 smooth_quartz"
+    execute console command "execute at %{_p}% run fill ~-500 ~-2 ~-500 ~500 ~-2 ~500 polished_blackstone"
+    execute console command "execute at %{_p}% run fill ~-487 ~-1 ~-487 ~487 ~-1 ~487 blackstone"
+    execute console command "execute at %{_p}% run fill ~-473 ~0 ~-473 ~473 ~0 ~473 smooth_quartz"
 
     # Wide radial roads from the central hub.
-    execute console command "execute at %{_p}% run fill ~-292 ~0 ~-10 ~292 ~0 ~10 polished_blackstone"
-    execute console command "execute at %{_p}% run fill ~-10 ~0 ~-292 ~10 ~0 ~292 polished_blackstone"
-    execute console command "execute at %{_p}% run fill ~-10 ~1 ~-292 ~10 ~1 ~292 gold_block"
-    execute console command "execute at %{_p}% run fill ~-292 ~1 ~-10 ~292 ~1 ~10 gold_block"
+    execute console command "execute at %{_p}% run fill ~-487 ~0 ~-10 ~487 ~0 ~10 polished_blackstone"
+    execute console command "execute at %{_p}% run fill ~-10 ~0 ~-487 ~10 ~0 ~487 polished_blackstone"
+    execute console command "execute at %{_p}% run fill ~-10 ~1 ~-487 ~10 ~1 ~487 gold_block"
+    execute console command "execute at %{_p}% run fill ~-487 ~1 ~-10 ~487 ~1 ~10 gold_block"
 
     # Four secondary diagonal roads create the familiar radial hub layout.
-    execute console command "execute at %{_p}% run fill ~-270 ~0 ~-276 ~-260 ~0 ~-86 polished_blackstone"
-    execute console command "execute at %{_p}% run fill ~260 ~0 ~-276 ~270 ~0 ~-86 polished_blackstone"
-    execute console command "execute at %{_p}% run fill ~-270 ~0 ~86 ~-260 ~0 ~276 polished_blackstone"
-    execute console command "execute at %{_p}% run fill ~260 ~0 ~86 ~270 ~0 ~276 polished_blackstone"
+    execute console command "execute at %{_p}% run fill ~-450 ~0 ~-460 ~-433 ~0 ~-143 polished_blackstone"
+    execute console command "execute at %{_p}% run fill ~433 ~0 ~-460 ~450 ~0 ~-143 polished_blackstone"
+    execute console command "execute at %{_p}% run fill ~-450 ~0 ~143 ~-433 ~0 ~460 polished_blackstone"
+    execute console command "execute at %{_p}% run fill ~433 ~0 ~143 ~450 ~0 ~460 polished_blackstone"
 
     # Large circular-looking central plaza made from nested square rings.
     execute console command "execute at %{_p}% run fill ~-40 ~1 ~-40 ~40 ~1 ~40 black_concrete"
@@ -45,60 +45,60 @@ function azBuildLegendarySpawn(p: player):
     execute console command "execute at %{_p}% run fill ~-10 ~7 ~-10 ~10 ~13 ~10 polished_blackstone_bricks"
     execute console command "execute at %{_p}% run fill ~-6 ~14 ~-6 ~6 ~17 ~6 gold_block"
     execute console command "execute at %{_p}% run setblock ~0 ~18 ~0 beacon"
-    execute console command "execute at %{_p}% run fill ~-56 ~2 ~-24 ~-36 ~4 ~-4 blackstone"
-    execute console command "execute at %{_p}% run fill ~36 ~2 ~-24 ~56 ~4 ~-4 blackstone"
-    execute console command "execute at %{_p}% run fill ~-56 ~2 ~4 ~-36 ~4 ~24 blackstone"
-    execute console command "execute at %{_p}% run fill ~36 ~2 ~4 ~56 ~4 ~24 blackstone"
+    execute console command "execute at %{_p}% run fill ~-93 ~2 ~-24 ~-36 ~4 ~-4 blackstone"
+    execute console command "execute at %{_p}% run fill ~36 ~2 ~-24 ~93 ~4 ~-4 blackstone"
+    execute console command "execute at %{_p}% run fill ~-93 ~2 ~4 ~-36 ~4 ~24 blackstone"
+    execute console command "execute at %{_p}% run fill ~36 ~2 ~4 ~93 ~4 ~24 blackstone"
 
     # Enclosed spawn perimeter: tall protected blackstone walls with four controlled entrances.
-    execute console command "execute at %{_p}% run fill ~-300 ~0 ~-300 ~300 ~10 ~-300 polished_blackstone_bricks"
-    execute console command "execute at %{_p}% run fill ~-300 ~0 ~300 ~300 ~10 ~300 polished_blackstone_bricks"
-    execute console command "execute at %{_p}% run fill ~-300 ~0 ~-300 ~-300 ~10 ~300 polished_blackstone_bricks"
-    execute console command "execute at %{_p}% run fill ~300 ~0 ~-300 ~300 ~10 ~300 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~-500 ~0 ~-500 ~500 ~10 ~-500 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~-500 ~0 ~500 ~500 ~10 ~500 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~-500 ~0 ~-500 ~-500 ~10 ~500 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~500 ~0 ~-500 ~500 ~10 ~500 polished_blackstone_bricks"
     # Four entrance openings.
-    execute console command "execute at %{_p}% run fill ~-10 ~0 ~-300 ~10 ~6 ~-298 air"
-    execute console command "execute at %{_p}% run fill ~-10 ~0 ~298 ~10 ~6 ~300 air"
-    execute console command "execute at %{_p}% run fill ~-300 ~0 ~-10 ~-298 ~6 ~10 air"
-    execute console command "execute at %{_p}% run fill ~298 ~0 ~-10 ~300 ~6 ~10 air"
+    execute console command "execute at %{_p}% run fill ~-10 ~0 ~-500 ~10 ~6 ~-497 air"
+    execute console command "execute at %{_p}% run fill ~-10 ~0 ~497 ~10 ~6 ~500 air"
+    execute console command "execute at %{_p}% run fill ~-500 ~0 ~-10 ~-497 ~6 ~10 air"
+    execute console command "execute at %{_p}% run fill ~497 ~0 ~-10 ~500 ~6 ~10 air"
     # Gold gate frames.
-    execute console command "execute at %{_p}% run fill ~-14 ~0 ~-302 ~14 ~7 ~-302 gold_block outline"
-    execute console command "execute at %{_p}% run fill ~-14 ~0 ~302 ~14 ~7 ~302 gold_block outline"
-    execute console command "execute at %{_p}% run fill ~302 ~0 ~-14 ~302 ~7 ~14 gold_block outline"
-    execute console command "execute at %{_p}% run fill ~-302 ~0 ~-14 ~-302 ~7 ~14 gold_block outline"
+    execute console command "execute at %{_p}% run fill ~-14 ~0 ~-503 ~14 ~7 ~-503 gold_block outline"
+    execute console command "execute at %{_p}% run fill ~-14 ~0 ~503 ~14 ~7 ~503 gold_block outline"
+    execute console command "execute at %{_p}% run fill ~503 ~0 ~-14 ~503 ~7 ~14 gold_block outline"
+    execute console command "execute at %{_p}% run fill ~-503 ~0 ~-14 ~-503 ~7 ~14 gold_block outline"
 
     # Donut-style outer landmark towers.
-    execute console command "execute at %{_p}% run fill ~-276 ~0 ~-276 ~-256 ~18 ~-256 polished_blackstone_bricks"
-    execute console command "execute at %{_p}% run fill ~256 ~0 ~-276 ~276 ~18 ~-256 polished_blackstone_bricks"
-    execute console command "execute at %{_p}% run fill ~-276 ~0 ~256 ~-256 ~18 ~276 polished_blackstone_bricks"
-    execute console command "execute at %{_p}% run fill ~256 ~0 ~256 ~276 ~18 ~276 polished_blackstone_bricks"
-    execute console command "execute at %{_p}% run fill ~-280 ~19 ~-280 ~-252 ~20 ~-252 gold_block"
-    execute console command "execute at %{_p}% run fill ~252 ~19 ~-280 ~280 ~20 ~-252 gold_block"
-    execute console command "execute at %{_p}% run fill ~-280 ~19 ~252 ~-252 ~20 ~280 gold_block"
-    execute console command "execute at %{_p}% run fill ~252 ~19 ~252 ~280 ~20 ~280 gold_block"
+    execute console command "execute at %{_p}% run fill ~-460 ~0 ~-460 ~-427 ~18 ~-427 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~427 ~0 ~-460 ~460 ~18 ~-427 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~-460 ~0 ~427 ~-427 ~18 ~460 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~427 ~0 ~427 ~460 ~18 ~460 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~-467 ~19 ~-467 ~-420 ~20 ~-420 gold_block"
+    execute console command "execute at %{_p}% run fill ~420 ~19 ~-467 ~467 ~20 ~-420 gold_block"
+    execute console command "execute at %{_p}% run fill ~-467 ~19 ~420 ~-420 ~20 ~467 gold_block"
+    execute console command "execute at %{_p}% run fill ~420 ~19 ~420 ~467 ~20 ~467 gold_block"
 
     # Four monumental radial entrance arches.
-    execute console command "execute at %{_p}% run fill ~-16 ~0 ~-288 ~-4 ~12 ~-276 polished_blackstone_bricks"
-    execute console command "execute at %{_p}% run fill ~4 ~0 ~-288 ~16 ~12 ~-276 polished_blackstone_bricks"
-    execute console command "execute at %{_p}% run fill ~-16 ~0 ~276 ~-4 ~12 ~288 polished_blackstone_bricks"
-    execute console command "execute at %{_p}% run fill ~4 ~0 ~276 ~16 ~12 ~288 polished_blackstone_bricks"
-    execute console command "execute at %{_p}% run fill ~-288 ~0 ~-16 ~-276 ~12 ~-4 polished_blackstone_bricks"
-    execute console command "execute at %{_p}% run fill ~276 ~0 ~-16 ~288 ~12 ~-4 polished_blackstone_bricks"
-    execute console command "execute at %{_p}% run fill ~-288 ~0 ~4 ~-276 ~12 ~16 polished_blackstone_bricks"
-    execute console command "execute at %{_p}% run fill ~276 ~0 ~4 ~288 ~12 ~16 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~-16 ~0 ~-480 ~-4 ~12 ~-460 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~4 ~0 ~-480 ~16 ~12 ~-460 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~-16 ~0 ~460 ~-4 ~12 ~480 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~4 ~0 ~460 ~16 ~12 ~480 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~-480 ~0 ~-16 ~-460 ~12 ~-4 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~460 ~0 ~-16 ~480 ~12 ~-4 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~-480 ~0 ~4 ~-460 ~12 ~16 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~460 ~0 ~4 ~480 ~12 ~16 polished_blackstone_bricks"
 
     # Royal lighting ring.
     execute console command "execute at %{_p}% run fill ~-40 ~3 ~-40 ~40 ~3 ~40 gold_block outline"
     execute console command "execute at %{_p}% run fill ~-38 ~4 ~-38 ~38 ~4 ~38 sea_lantern outline"
 
     # Decorative pillars and lights.
-    execute console command "execute at %{_p}% run fill ~-60 ~1 ~-60 ~-56 ~10 ~-56 blackstone"
-    execute console command "execute at %{_p}% run fill ~56 ~1 ~-60 ~60 ~10 ~-56 blackstone"
-    execute console command "execute at %{_p}% run fill ~-60 ~1 ~56 ~-56 ~10 ~60 blackstone"
-    execute console command "execute at %{_p}% run fill ~56 ~1 ~56 ~60 ~10 ~60 blackstone"
-    execute console command "execute at %{_p}% run setblock ~-58 ~11 ~-58 sea_lantern"
-    execute console command "execute at %{_p}% run setblock ~58 ~11 ~-58 sea_lantern"
-    execute console command "execute at %{_p}% run setblock ~-58 ~11 ~58 sea_lantern"
-    execute console command "execute at %{_p}% run setblock ~58 ~11 ~58 sea_lantern"
+    execute console command "execute at %{_p}% run fill ~-100 ~1 ~-100 ~-93 ~10 ~-93 blackstone"
+    execute console command "execute at %{_p}% run fill ~93 ~1 ~-100 ~100 ~10 ~-93 blackstone"
+    execute console command "execute at %{_p}% run fill ~-100 ~1 ~93 ~-93 ~10 ~100 blackstone"
+    execute console command "execute at %{_p}% run fill ~93 ~1 ~93 ~100 ~10 ~100 blackstone"
+    execute console command "execute at %{_p}% run setblock ~-97 ~11 ~-97 sea_lantern"
+    execute console command "execute at %{_p}% run setblock ~97 ~11 ~-97 sea_lantern"
+    execute console command "execute at %{_p}% run setblock ~-97 ~11 ~97 sea_lantern"
+    execute console command "execute at %{_p}% run setblock ~97 ~11 ~97 sea_lantern"
 
     # Four service platforms for the command bots around the central hub.
     execute console command "execute at %{_p}% run fill ~-40 ~2 ~-24 ~-20 ~3 ~-8 gold_block"
@@ -107,9 +107,9 @@ function azBuildLegendarySpawn(p: player):
     execute console command "execute at %{_p}% run fill ~20 ~2 ~8 ~40 ~3 ~24 gold_block"
 
     # AIZEN crown at the back of the hub.
-    execute console command "execute at %{_p}% run fill ~-20 ~4 ~56 ~20 ~4 ~56 gold_block"
-    execute console command "execute at %{_p}% run fill ~-14 ~5 ~56 ~14 ~9 ~56 polished_blackstone"
-    execute console command "execute at %{_p}% run fill ~-8 ~10 ~56 ~8 ~12 ~56 gold_block"
+    execute console command "execute at %{_p}% run fill ~-20 ~4 ~93 ~20 ~4 ~93 gold_block"
+    execute console command "execute at %{_p}% run fill ~-14 ~5 ~93 ~14 ~9 ~93 polished_blackstone"
+    execute console command "execute at %{_p}% run fill ~-8 ~10 ~93 ~8 ~12 ~93 gold_block"
 
     set {az.spawn.built} to true
     set {az.afk} to location of {_p}
