@@ -756,6 +756,28 @@ on death:
 on load:
     execute console command "gamerule keepInventory false"
 
+# ---------------- DUEL HARD LOCK / GLOBAL INVENTORY ----------------
+# Clear any stale combat tag outside a Duel.
+every 1 second:
+    loop all players:
+        if {az.duel.%uuid of loop-player%} is not set:
+            delete {az.combat.%uuid of loop-player%}
+            delete {az.combat.time.%uuid of loop-player%}
+
+# No teleport/escape commands can bypass an active Duel.
+on command:
+    if {az.duel.%uuid of player%} is set:
+        if command is "spawn" or command is "home" or command is "homes" or command is "rtp" or command is "rtpq" or command is "tpa" or command is "tpahere" or command is "tpaccept" or command is "tpdeny" or command is "warp" or command is "warps" or command is "wild" or command is "wilderness" or command is "random" or command is "afk" or command is "duels":
+            cancel event
+            send "{@prefix} &cلا يمكنك استخدام أوامر النقل أثناء الـDuel." to player
+
+# Never allow Ender Pearls outside Duels.
+on projectile launch:
+    if projectile is an ender pearl:
+        if {az.duel.%uuid of shooter%} is not set:
+            cancel event
+            send "{@prefix} &cEnder Pearls مسموحة فقط داخل الـDuel." to shooter
+
 # ---------------- SELL / AUCTION HOUSE ----------------
 #
 # Anti-dupe rules:
