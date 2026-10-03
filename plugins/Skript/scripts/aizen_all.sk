@@ -12,6 +12,8 @@ options:
     bounty-step: 1000
     duel-timeout: 60 seconds
     request-timeout: 60 seconds
+    spawn-protection-radius: 500
+    spawn-protection-height: 80
 
 # ---------------- SPAWN / AFK / DUELS ZONES ----------------
 
@@ -134,26 +136,46 @@ on join:
 on first join:
     send "{@prefix} &6Welcome! &fUse &e/help &fto see the server systems." to player
 
-# Spawn/AFK protection only. No player claims.
+# ---------------- SPAWN / AFK / DUEL PROTECTION ----------------
+# Spawn has an inner protected core and an outer protected shell.
+# The 1000x1000 spawn is protected to a 500-block radius, including a vertical range.
+# Duel arena is the only exception inside the spawn protection zone.
+
+function azInsideProtectedSpawn(l: location) :: boolean:
+    if {az.spawn} is not set:
+        return false
+    if world of {_l} is not world of {az.spawn}:
+        return false
+    if distance between {_l} and {az.spawn} <= {@spawn-protection-radius}:
+        return true
+    return false
+
+function azInsideDuel(l: location) :: boolean:
+    if {az.duel.arena} is not set:
+        return false
+    if world of {_l} is not world of {az.duel.arena}:
+        return false
+    if distance between {_l} and {az.duel.arena} <= {@duel-radius}:
+        return true
+    return false
+
 on block break:
-    if {az.spawn} is set:
-        if distance between location of event-block and {az.spawn} <= 200:
-            if {az.duel.arena} is not set or distance between location of event-block and {az.duel.arena} > {@duel-radius}:
-                cancel event
-                send "{@prefix} &cSpawn is protected." to player
-                stop
+    if azInsideProtectedSpawn(location of event-block) is true:
+        if azInsideDuel(location of event-block) is false:
+            cancel event
+            send "{@prefix} &cهذه المنطقة محمية بالكامل." to player
+            stop
     if {az.afk} is set:
         if distance between location of event-block and {az.afk} <= 15:
             cancel event
             send "{@prefix} &cAFK area is protected." to player
 
 on block place:
-    if {az.spawn} is set:
-        if distance between location of event-block and {az.spawn} <= 200:
-            if {az.duel.arena} is not set or distance between location of event-block and {az.duel.arena} > {@duel-radius}:
-                cancel event
-                send "{@prefix} &cSpawn is protected." to player
-                stop
+    if azInsideProtectedSpawn(location of event-block) is true:
+        if azInsideDuel(location of event-block) is false:
+            cancel event
+            send "{@prefix} &cهذه المنطقة محمية بالكامل." to player
+            stop
     if {az.afk} is set:
         if distance between location of event-block and {az.afk} <= 15:
             cancel event
@@ -161,21 +183,28 @@ on block place:
 
 on damage:
     if victim is a player:
-        if {az.spawn} is set:
-            if distance between location of victim and {az.spawn} <= 200:
-                if {az.duel.arena} is not set or distance between location of victim and {az.duel.arena} > {@duel-radius}:
-                    cancel event
+        if azInsideProtectedSpawn(location of victim) is true:
+            if azInsideDuel(location of victim) is false:
+                cancel event
+                stop
         if {az.afk} is set:
             if distance between location of victim and {az.afk} <= 15:
                 cancel event
 
 on explode:
-    if {az.spawn} is set:
-        if distance between event-location and {az.spawn} <= 200:
-            if {az.duel.arena} is not set or distance between event-location and {az.duel.arena} > {@duel-radius}:
-                cancel event
+    if azInsideProtectedSpawn(event-location) is true:
+        if azInsideDuel(event-location) is false:
+            cancel event
+            stop
     if {az.afk} is set:
         if distance between event-location and {az.afk} <= 15:
+            cancel event
+
+# Prevent explosions from breaking protected spawn even when an explosion event
+# is not fully cancelled by another system.
+on explosion prime:
+    if azInsideProtectedSpawn(event-location) is true:
+        if azInsideDuel(event-location) is false:
             cancel event
 
 # ---------------- ECONOMY ----------------
