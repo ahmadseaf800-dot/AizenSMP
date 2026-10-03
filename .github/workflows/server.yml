@@ -175,16 +175,54 @@ jobs:
 
           SKRIPT_URL=$(modrinth_file "skript" "paper")
 
+          # AuthMeReloaded: cracked-mode authentication with /register and /login.
+          AUTHME_URL=$(curl -fsSL --retry 5 --retry-delay 2 \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/AuthMe/AuthMeReloaded/releases/latest" \
+            | jq -r '[.assets[] | select(.name | test("(?i)^AuthMe.*\\.jar$")) | .browser_download_url][0] // empty')
+          test -n "$AUTHME_URL" && test "$AUTHME_URL" != "null"
+
           echo "Skript: $SKRIPT_URL"
+          echo "AuthMe: $AUTHME_URL"
 
           for name in germany turkey america; do
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/Skript.jar" "$SKRIPT_URL"
+            curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/AuthMe.jar" "$AUTHME_URL"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/ViaVersion.jar" "$VIAVERSION_URL"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/ViaBackwards.jar" "$VIABACKWARDS_URL"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/WorldEdit.jar" "$WE_URL"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/voicechat.jar" "$SVC_URL"
             mkdir -p "network/$name/plugins/Skript/scripts"
             cp -f plugins/Skript/scripts/*.sk "network/$name/plugins/Skript/scripts/" 2>/dev/null || true
+
+            # AuthMe configuration: cracked-mode authentication with /register and /login.
+            mkdir -p "network/$name/plugins/AuthMe"
+            cat > "network/$name/plugins/AuthMe/config.yml" <<'EOF'
+DataSource:
+  backend: SQLITE
+settings:
+  sessions:
+    enabled: false
+  restrictions:
+    allowChat: false
+    allowCommands: false
+    allowedCommands:
+      - /login
+      - /l
+      - /register
+      - /reg
+      - /captcha
+    allowMovement: false
+    teleportUnAuthedToSpawn: true
+  security:
+    passwordHash: SHA256
+registration:
+  enabled: true
+  force: true
+  enablePasswordVerifier: true
+protection:
+  enableProtection: true
+EOF
           done
 
       - name: Configure backend servers and voice chat
@@ -210,6 +248,21 @@ jobs:
           configure_server germany 25566
           configure_server turkey 25567
           configure_server america 25568
+
+          # Make Aizenx an operator on every backend.
+          # This is Minecraft's deterministic offline UUID for the cracked-mode username Aizenx.
+          for name in germany turkey america; do
+            cat > "network/$name/ops.json" <<'EOF'
+[
+  {
+    "uuid": "400d6d51-4d5b-3ce0-a2af-b5092bef717b",
+    "name": "Aizenx",
+    "level": 4,
+    "bypassesPlayerLimit": true
+  }
+]
+EOF
+          done
 
           mkdir -p network/germany/plugins/voicechat
           cat > network/germany/plugins/voicechat/voicechat-server.properties <<'EOF'
