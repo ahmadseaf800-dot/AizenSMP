@@ -384,8 +384,10 @@ jobs:
           }
           trap cleanup EXIT INT TERM
 
-          JAVA21_HOME="$JAVA_HOME"
-          JAVA25_HOME="$(dirname "$(dirname "$(find /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/25* -type f -path '*/bin/java' | head -n1)")")"
+          # setup-java sets JAVA_HOME to the last requested JDK (25), so never
+          # assume JAVA_HOME is Java 21. Use the explicit setup-java variables.
+          JAVA21_HOME="${JAVA_HOME_21_X64:-}"
+          JAVA25_HOME="${JAVA_HOME_25_X64:-}"
           test -x "$JAVA21_HOME/bin/java"
           test -x "$JAVA25_HOME/bin/java"
 
@@ -394,6 +396,12 @@ jobs:
 
           "$JAVA25_HOME/bin/java" -Xms256M -Xmx768M -jar network/velocity/velocity.jar > velocity.log 2>&1 &
           VELOCITY_PID=$!
+          sleep 3
+          if ! kill -0 "$VELOCITY_PID" 2>/dev/null; then
+            echo "::error::Velocity exited during startup."
+            cat velocity.log 2>/dev/null || true
+            exit 1
+          fi
 
           start_backend() {
             local name="$1"
@@ -405,8 +413,8 @@ jobs:
               pid=$!
               sleep 8
               if kill -0 "$pid" 2>/dev/null; then
-                echo "$name backend is running (attempt $attempt)."
-                printf '%s' "$pid"
+                echo "$name backend is running (attempt $attempt)." >&2
+                printf '%s\n' "$pid"
                 return 0
               fi
               echo "::warning::$name backend exited during startup; retrying ($attempt/3)."
@@ -448,6 +456,8 @@ jobs:
           echo "Germany Voice: stamina-trailside.tun.ply.gg:12304 -> UDP 25570"
           echo "Turkey Voice: stamina-tolerance.tun.ply.gg:12317 -> UDP 25571"
           echo "America Voice: stamina-lightning.tun.ply.gg:12323 -> UDP 25572"
+          echo "===== PLAYIT AGENT LOG ====="
+          tail -80 playitd.log 2>/dev/null || true
           wait "$VELOCITY_PID"
 
       - name: Upload persistent server data
