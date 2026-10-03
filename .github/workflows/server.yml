@@ -290,6 +290,60 @@ jobs:
           test -s backend/build/AizenAuthGuard.jar
           echo "AizenAuthGuard built successfully with Paper API, AuthMe API, and Gson."
 
+          # Build the AizenShop economy/shop plugin.
+          rm -rf backend-shop/build
+          mkdir -p backend-shop/build
+          cat > backend-shop/build/pom.xml <<'EOF'
+          <project xmlns="http://maven.apache.org/POM/4.0.0"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+            <modelVersion>4.0.0</modelVersion>
+            <groupId>com.aizensmp</groupId>
+            <artifactId>aizen-shop-build</artifactId>
+            <version>1.0.0</version>
+            <properties>
+              <maven.compiler.release>21</maven.compiler.release>
+              <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+            </properties>
+            <repositories>
+              <repository>
+                <id>papermc</id>
+                <url>https://repo.papermc.io/repository/maven-public/</url>
+              </repository>
+            </repositories>
+            <dependencies>
+              <dependency>
+                <groupId>io.papermc.paper</groupId>
+                <artifactId>paper-api</artifactId>
+                <version>1.21.11-R0.1-SNAPSHOT</version>
+                <scope>provided</scope>
+              </dependency>
+            </dependencies>
+            <build>
+              <sourceDirectory>${project.basedir}/../src/main/java</sourceDirectory>
+              <resources>
+                <resource>
+                  <directory>${project.basedir}/../src/main/resources</directory>
+                </resource>
+              </resources>
+              <plugins>
+                <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-compiler-plugin</artifactId>
+                  <version>3.14.0</version>
+                </plugin>
+              </plugins>
+            </build>
+          </project>
+          EOF
+
+          mvn -q -f backend-shop/build/pom.xml package -DskipTests
+          test -s backend-shop/build/target/aizen-shop-build-1.0.0.jar
+          cp backend-shop/build/target/aizen-shop-build-1.0.0.jar backend-shop/build/AizenShop.jar
+          echo "AizenShop built successfully."
+
+          for name in germany turkey america; do
+
           for name in germany turkey america; do
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/Skript.jar" "$SKRIPT_URL"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/LuckPerms.jar" "$LUCKPERMS_URL"
