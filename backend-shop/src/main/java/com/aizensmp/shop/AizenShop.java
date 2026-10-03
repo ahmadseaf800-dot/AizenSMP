@@ -34,7 +34,10 @@ public final class AizenShop extends JavaPlugin implements Listener {
     private final Map<String, ShopItem> shardItems = new LinkedHashMap<>();
     private final Map<Material, Double> sellPrices = new EnumMap<>(Material.class);
     private final Map<UUID, ItemStack[]> enderChests = new HashMap<>();
+    private final Map<UUID, PurchaseState> pendingPurchases = new HashMap<>();
     private final NamespacedKey generatorKey;
+    private static final String BUY_PREFIX = ChatColor.DARK_GRAY + "✦ " + ChatColor.GOLD + "Buy: ";
+    private static final int MAX_PURCHASE = 64;
 
     private static final String SELL = ChatColor.DARK_GRAY + "✦ " + ChatColor.GREEN + "SELL" + ChatColor.DARK_GRAY + " ✦";
     private static final String EC = ChatColor.DARK_GRAY + "✦ " + ChatColor.AQUA + "ENDER CHEST" + ChatColor.DARK_GRAY + " ✦";
@@ -303,6 +306,30 @@ public final class AizenShop extends JavaPlugin implements Listener {
         if(!(e.getWhoClicked() instanceof Player p)) return;
         String title=String.valueOf(e.getView().getTitle());
 
+        if(title.startsWith(BUY_PREFIX)) {
+            e.setCancelled(true);
+            if(e.getClickedInventory()!=e.getView().getTopInventory()) return;
+            PurchaseState state=pendingPurchases.get(p.getUniqueId());
+            if(state==null) return;
+            int amount=state.amount();
+            if(e.getSlot()==20) amount=Math.max(1,amount-16);
+            else if(e.getSlot()==21) amount=Math.max(1,amount-1);
+            else if(e.getSlot()==22) amount=1;
+            else if(e.getSlot()==24) amount=Math.min(MAX_PURCHASE,amount+1);
+            else if(e.getSlot()==25) amount=Math.min(MAX_PURCHASE,amount+16);
+            else if(e.getSlot()==26) amount=MAX_PURCHASE;
+            else if(e.getSlot()==31) { finishPurchase(p); return; }
+            else if(e.getSlot()==35) {
+                String category=state.category();
+                pendingPurchases.remove(p.getUniqueId());
+                openCategory(p,category);
+                return;
+            } else return;
+            pendingPurchases.put(p.getUniqueId(),new PurchaseState(state.item(),amount,state.category()));
+            renderPurchase(p);
+            return;
+        }
+
         if(title.equals(SELL)) {
             if(e.getClickedInventory()!=e.getView().getTopInventory()) return;
             if(e.getSlot()==49) { e.setCancelled(true); sellContents(p,e.getView().getTopInventory()); }
@@ -320,12 +347,16 @@ public final class AizenShop extends JavaPlugin implements Listener {
                 if(e.getSlot()==10)openCategory(p,END); else if(e.getSlot()==12)openCategory(p,NETHER); else if(e.getSlot()==14)openCategory(p,GEAR); else if(e.getSlot()==16)openCategory(p,FOOD); else if(e.getSlot()==22)openShardShop(p);
                 return;
             }
-            ShopItem found=findByDisplay(clicked,title); if(found!=null)buy(p,found);
+            ShopItem found=findByDisplay(clicked,title); if(found!=null)openPurchase(p,found,title);
         }
     }
 
     @EventHandler public void onDrag(InventoryDragEvent e){
         String t=String.valueOf(e.getView().getTitle());
+        if(t.startsWith(BUY_PREFIX)) {
+            e.setCancelled(true);
+            return;
+        }
         if(t.equals(MAIN)||t.equals(END)||t.equals(NETHER)||t.equals(GEAR)||t.equals(FOOD)||t.equals(SHARD)) {
             e.setCancelled(true);
         } else if(t.equals(SELL)) {
@@ -337,6 +368,10 @@ public final class AizenShop extends JavaPlugin implements Listener {
         if(!(e.getPlayer() instanceof Player p)) return;
         String title=String.valueOf(e.getView().getTitle());
         if(title.equals(EC)) saveEnderChest(p,e.getInventory());
+        if(title.startsWith(BUY_PREFIX)) {
+            pendingPurchases.remove(p.getUniqueId());
+            return;
+        }
         if(title.equals(SELL)) {
             // Return unsold items to the player when /sell is closed.
             for(int i=0;i<45;i++) {
@@ -356,6 +391,96 @@ public final class AizenShop extends JavaPlugin implements Listener {
         for(ShopItem s:map.values()) if(s.name.equals(plain)) return s;
         return null;
     }
+
+    private void openPurchase(Player p, ShopItem s, String category) {
+        pendingPurchases.put(p.getUniqueId(), new PurchaseState(s, 1, category));
+        renderPurchase(p);
+    }
+
+    private void renderPurchase(Player p) {
+        PurchaseState state=pendingPurchases.get(p.getUniqueId());
+        if(state==null) return;
+        ShopItem s=state.item();
+        Inventory inv=Bukkit.createInventory(null,45,BUY_PREFIX+ChatColor.stripColor(s.name)+ChatColor.DARK_GRAY+" ✦");
+        ItemStack preview=new ItemStack(s.material,Math.min(state.amount(),s.material.getMaxStackSize()));
+        ItemMeta pm=preview.getItemMeta();
+        pm.setDisplayName(ChatColor.GOLD+s.name);
+        pm.setLore(List.of(ChatColor.GRAY+"Quantity: "+ChatColor.WHITE+state.amount(),
+                ChatColor.GRAY+"Total: "+totalText(s,state.amount())));
+        preview.setItemMeta(pm);
+        inv.setItem(13,preview);
+
+        glassButton(inv,20,Material.RED_STAINED_GLASS_PANE,"-16","&cDecrease by 16");
+        glassButton(inv,21,Material.RED_STAINED_GLASS_PANE,"-1","&cDecrease by 1");
+        glassButton(inv,22,Material.RED_STAINED_GLASS_PANE,"1","&cSet minimum: 1");
+        glassButton(inv,24,Material.GREEN_STAINED_GLASS_PANE,"+1","&aIncrease by 1");
+        glassButton(inv,25,Material.GREEN_STAINED_GLASS_PANE,"+16","&aIncrease by 16");
+        glassButton(inv,26,Material.GREEN_STAINED_GLASS_PANE,"64","&aSet to 64");
+
+        ItemStack confirm=new ItemStack(Material.EMERALD_BLOCK);
+        ItemMeta cm=confirm.getItemMeta();
+        cm.setDisplayName(ChatColor.GREEN+"Confirm Purchase");
+        cm.setLore(List.of(ChatColor.GRAY+"Buy "+state.amount()+" x "+s.name,ChatColor.GRAY+"Total: "+totalText(s,state.amount())));
+        confirm.setItemMeta(cm);
+        inv.setItem(31,confirm);
+
+        ItemStack cancel=new ItemStack(Material.BARRIER);
+        ItemMeta xm=cancel.getItemMeta();
+        xm.setDisplayName(ChatColor.RED+"Cancel");
+        xm.setLore(List.of(ChatColor.GRAY+"Return to the shop."));
+        cancel.setItemMeta(xm);
+        inv.setItem(35,cancel);
+        p.openInventory(inv);
+    }
+
+    private void glassButton(Inventory inv,int slot,Material mat,String name,String lore) {
+        ItemStack i=new ItemStack(mat);
+        ItemMeta m=i.getItemMeta();
+        m.setDisplayName(ChatColor.translateAlternateColorCodes('&',lore)+" "+name);
+        i.setItemMeta(m);
+        inv.setItem(slot,i);
+    }
+
+    private String totalText(ShopItem s,int amount) {
+        double total=s.price*amount;
+        return s.shard ? ChatColor.AQUA+money(total)+" Shards" : ChatColor.GOLD+"$"+money(total);
+    }
+
+    private void finishPurchase(Player p) {
+        PurchaseState state=pendingPurchases.get(p.getUniqueId());
+        if(state==null) return;
+        ShopItem s=state.item();
+        int amount=Math.max(1,Math.min(MAX_PURCHASE,state.amount()));
+        double total=s.price*amount;
+        UUID id=p.getUniqueId();
+
+        if(s.shard) {
+            int bal=shards.getOrDefault(id,0);
+            if(bal<total){msg(p,"&cYou need &b"+money(total)+" Shards&c.");return;}
+            shards.put(id,bal-(int)total);
+        } else {
+            double bal=balances.getOrDefault(id,0D);
+            if(bal<total){msg(p,"&cYou need &6$"+money(total)+"&c.");return;}
+            balances.put(id,bal-total);
+        }
+
+        ItemStack item=new ItemStack(s.material,amount);
+        if(s.shard) {
+            ItemMeta meta=item.getItemMeta();
+            meta.setDisplayName(ChatColor.GOLD+s.name);
+            meta.getPersistentDataContainer().set(generatorKey,PersistentDataType.STRING,s.entity);
+            item.setItemMeta(meta);
+        }
+        Map<Integer,ItemStack> left=p.getInventory().addItem(item);
+        left.values().forEach(rest->p.getWorld().dropItemNaturally(p.getLocation(),rest));
+        saveBalances();
+        msg(p,"&aPurchased &f"+amount+" x "+s.name+"&a for "+totalText(s,amount)+"&a.");
+        String category=state.category();
+        pendingPurchases.remove(id);
+        openCategory(p,category);
+    }
+
+    private record PurchaseState(ShopItem item,int amount,String category) {}
 
     private void buy(Player p,ShopItem s){
         UUID id=p.getUniqueId();
