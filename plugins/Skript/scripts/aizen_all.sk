@@ -629,7 +629,7 @@ function azDuelSaveArena():
     delete {az.duel.saved::*}
     set {_center} to {az.duel.arena}
     set {_n} to 0
-    loop blocks within location at (x-coordinate of {_center} - {@duel-radius}), (y-coordinate of {_center} - 10), (z-coordinate of {_center} - {@duel-radius}) in world of {_center} and location at (x-coordinate of {_center} + {@duel-radius}), (y-coordinate of {_center} + 10), (z-coordinate of {_center} + {@duel-radius}) in world of {_center}:
+    loop blocks within location at (x-coordinate of {_center} - {@duel-radius}), (y-coordinate of {_center} - 1), (z-coordinate of {_center} - {@duel-radius}) in world of {_center} and location at (x-coordinate of {_center} + {@duel-radius}), (y-coordinate of {_center} + 18), (z-coordinate of {_center} + {@duel-radius}) in world of {_center}:
         add 1 to {_n}
         set {az.duel.saved.%{_n}%.loc} to location of loop-block
         set {az.duel.saved.%{_n}%.type} to type of loop-block
@@ -732,8 +732,8 @@ command /duelaccept:
         set {az.duel.start.%uuid of player%} to now
         set {az.duel.start.%uuid of {_p}%} to now
 
-        teleport player to {az.duel.arena}
-        teleport {_p} to {az.duel.arena}
+        teleport player to {az.duel.spawn1}
+        teleport {_p} to {az.duel.spawn2}
         send "{@prefix} &aDuel started! &7No time limit — fight until one player dies." to player
         send "{@prefix} &aDuel started! &7No time limit — fight until one player dies." to {_p}
 
