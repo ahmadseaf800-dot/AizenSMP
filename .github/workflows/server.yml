@@ -50,13 +50,19 @@ jobs:
           done
 
           mkdir -p network/velocity
-          # Download Velocity through the live Fill API endpoint itself.
-          # The JSON metadata URL can point at an expired 410 CDN URL, so use
-          # the stable download endpoint for the latest application artifact.
+          # Resolve the newest Velocity build, then construct the official
+          # PaperMC application download URL directly. This avoids Fill's
+          # short-lived CDN URLs which can return HTTP 410 on GitHub runners.
           VELOCITY_VERSION=$(curl -fsSL https://api.papermc.io/v2/projects/velocity | jq -r '.versions[-1]')
           test -n "$VELOCITY_VERSION" && test "$VELOCITY_VERSION" != "null"
-          VELOCITY_URL="https://fill.papermc.io/v3/projects/velocity/versions/$VELOCITY_VERSION/builds/latest/downloads/application"
-          echo "Downloading Velocity $VELOCITY_VERSION from: $VELOCITY_URL"
+
+          VELOCITY_BUILD=$(curl -fsSL "https://api.papermc.io/v2/projects/velocity/versions/$VELOCITY_VERSION/builds" | jq -r '.builds[-1].build')
+          test -n "$VELOCITY_BUILD" && test "$VELOCITY_BUILD" != "null"
+
+          VELOCITY_FILE="velocity-$VELOCITY_VERSION-$VELOCITY_BUILD.jar"
+          VELOCITY_URL="https://api.papermc.io/v2/projects/velocity/versions/$VELOCITY_VERSION/builds/$VELOCITY_BUILD/downloads/$VELOCITY_FILE"
+          echo "Downloading Velocity $VELOCITY_VERSION build $VELOCITY_BUILD from: $VELOCITY_URL"
+
           curl -L --fail --retry 5 --retry-delay 2 -o network/velocity/velocity.jar "$VELOCITY_URL"
           test -s network/velocity/velocity.jar
           jar tf network/velocity/velocity.jar >/dev/null
