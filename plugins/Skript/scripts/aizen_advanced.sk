@@ -159,6 +159,60 @@ command /tradeaccept:
         open chest inventory with 3 rows named "&8✦ &6TRADE &8✦" to {_p}
         send "{@aas-prefix}&aTrade بدأ. استخدم &e/tradeoffer <amount> &aلإضافة المال، والعناصر يمكن وضعها في واجهة Trade."
 
+command /tradeitem:
+    trigger:
+        if {az.trade.%uuid of player%} is not set:
+            send "{@aas-prefix}&cأنت لست داخل Trade."
+            stop
+        if player's tool is air:
+            send "{@aas-prefix}&cأمسك العنصر الذي تريد عرضه."
+            stop
+        if {az.trade.item.%uuid of player%} is set:
+            send "{@aas-prefix}&cلديك عنصر معروض بالفعل. استخدم /tradeitemclear أولاً."
+            stop
+        set {az.trade.item.%uuid of player%} to player's tool
+        remove player's tool from player
+        set {az.trade.ready.%uuid of player%} to false
+        set {_p} to {az.trade.%uuid of player%}
+        if {_p} is online:
+            set {az.trade.ready.%uuid of {_p}%} to false
+            send "{@aas-prefix}&e%player% &7عرض &f%{az.trade.item.%uuid of player%}%&7." to {_p}
+        send "{@aas-prefix}&aتمت إضافة العنصر إلى عرضك."
+
+command /tradeitemclear:
+    trigger:
+        if {az.trade.%uuid of player%} is not set:
+            send "{@aas-prefix}&cأنت لست داخل Trade."
+            stop
+        if {az.trade.item.%uuid of player%} is set:
+            give {az.trade.item.%uuid of player%} to player
+            delete {az.trade.item.%uuid of player%}
+            set {az.trade.ready.%uuid of player%} to false
+            send "{@aas-prefix}&aتم سحب العنصر من عرضك."
+        else:
+            send "{@aas-prefix}&cلا يوجد عنصر معروض."
+
+on inventory click:
+    if name of event-inventory is "&8✦ &6TRADE &8✦":
+        cancel event
+        send "{@aas-prefix}&7استخدم /tradeitem و /tradeoffer لإضافة العروض، ثم /tradeready."
+
+on inventory close:
+    if name of event-inventory is "&8✦ &6TRADE &8✦":
+        if {az.trade.%uuid of player%} is set:
+            set {_p} to {az.trade.%uuid of player%}
+            if {_p} is online:
+                send "{@aas-prefix}&cتم إلغاء Trade لأن الواجهة أُغلقت." to {_p}
+            delete {az.trade.%uuid of player%}
+            delete {az.trade.%uuid of {_p}%}
+            if {az.trade.item.%uuid of player%} is set:
+                give {az.trade.item.%uuid of player%} to player
+                delete {az.trade.item.%uuid of player%}
+            if {_p} is online:
+                if {az.trade.item.%uuid of {_p}%} is set:
+                    give {az.trade.item.%uuid of {_p}%} to {_p}
+                    delete {az.trade.item.%uuid of {_p}%}
+
 command /tradeoffer <number>:
     trigger:
         if {az.trade.%uuid of player%} is not set:
