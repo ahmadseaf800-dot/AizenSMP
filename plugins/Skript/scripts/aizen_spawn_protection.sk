@@ -3,7 +3,7 @@
 # Purpur 1.21.11 / Skript
 # =========================================================
 options:
-    radius: 100
+    radius: 250
 
 function azInSpawn(loc: location) :: boolean:
     if {az.spawn} is not set:
@@ -73,3 +73,76 @@ command /spawnprotection:
         send "&6[&eAizenSMP&6] &aSpawn Protection: &2مفعّل"
         send "&7المركز: &f%{az.spawn}%"
         send "&7النطاق: &e100 &7بلوك"
+
+# Full 3D protection: the entire spawn cuboid is protected vertically,
+# not just blocks near the player's feet.
+function azInSpawnCuboid(loc: location) :: boolean:
+    if {az.spawn} is not set:
+        return false
+    if world of {_loc} is not world of {az.spawn}:
+        return false
+    if x-coordinate of {_loc} >= x-coordinate of {az.spawn} - 250:
+        if x-coordinate of {_loc} <= x-coordinate of {az.spawn} + 250:
+            if z-coordinate of {_loc} >= z-coordinate of {az.spawn} - 250:
+                if z-coordinate of {_loc} <= z-coordinate of {az.spawn} + 250:
+                    return true
+    return false
+
+on block break:
+    if azInSpawnCuboid(location of event-block) is true:
+        cancel event
+        send action bar "&c✘ Spawn محمي بالكامل من جميع الجهات" to player
+
+on block place:
+    if azInSpawnCuboid(location of event-block) is true:
+        cancel event
+        send action bar "&c✘ Spawn محمي بالكامل من جميع الجهات" to player
+
+on damage:
+    if azInSpawnCuboid(location of victim) is true:
+        cancel event
+
+on explode:
+    if azInSpawnCuboid(event-location) is true:
+        cancel event
+        stop
+
+on burn:
+    if azInSpawnCuboid(location of event-entity) is true:
+        cancel event
+
+on ignite:
+    if azInSpawnCuboid(location of event-block) is true:
+        cancel event
+
+on flow:
+    if azInSpawnCuboid(location of event-block) is true:
+        cancel event
+
+on entity explode:
+    if azInSpawnCuboid(location of event-entity) is true:
+        cancel event
+
+on block form:
+    if azInSpawnCuboid(location of event-block) is true:
+        cancel event
+
+on block spread:
+    if azInSpawnCuboid(location of event-block) is true:
+        cancel event
+
+on piston extend:
+    if azInSpawnCuboid(location of event-block) is true:
+        cancel event
+
+on piston retract:
+    if azInSpawnCuboid(location of event-block) is true:
+        cancel event
+
+on bucket fill:
+    if azInSpawnCuboid(location of event-block) is true:
+        cancel event
+
+on bucket empty:
+    if azInSpawnCuboid(location of event-block) is true:
+        cancel event
