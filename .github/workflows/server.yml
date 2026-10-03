@@ -72,6 +72,8 @@ jobs:
             test -s "network/$name/server.jar"
             jar tf "network/$name/server.jar" >/dev/null
             echo "eula=true" > "network/$name/eula.txt"
+            # Purpur/Paper can recreate or reject EULA state during bootstrap;
+            # keep it explicitly enabled immediately before every launch.
           done
 
           mkdir -p network/velocity
@@ -409,6 +411,7 @@ jobs:
             local log="$name.log"
             local pid
             for attempt in 1 2 3; do
+              echo "eula=true" > "network/$name/eula.txt"
               "$JAVA21_HOME/bin/java" -Xms512M -Xmx1024M -jar "$jar" --nogui > "$log" 2>&1 &
               pid=$!
               sleep 8
