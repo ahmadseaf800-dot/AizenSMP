@@ -25,7 +25,7 @@ public final class AizenProxy {
         Player player = event.getPlayer();
         proxy.getScheduler().buildTask(this, () -> {
             if (!player.isActive()) return;
-            Optional<RegisteredServer> germany = proxy.getServer("Germany");
+            Optional<RegisteredServer> germany = proxy.getServer("Turkey");
             if (germany.isPresent() && player.getCurrentServer().isEmpty()) {
                 player.createConnectionRequest(germany.get()).connect();
             }
