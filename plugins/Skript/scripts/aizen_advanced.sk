@@ -14,11 +14,18 @@ options:
 on damage:
     if attacker is a player:
         if victim is a player:
-            # Combat is created only by an actual player-vs-player hit.
-            # It is intentionally infinite and ends only when the duel ends/death clears it.
+            # Combat starts only from a real player-vs-player hit.
+            # Duel combat is infinite. Normal-world combat keeps the normal 15-second timer.
             if {az.duel.%uuid of attacker%} is victim:
                 set {az.combat.%uuid of attacker%} to true
                 set {az.combat.%uuid of victim%} to true
+                delete {az.combat.time.%uuid of attacker%}
+                delete {az.combat.time.%uuid of victim%}
+            else:
+                set {az.combat.%uuid of attacker%} to true
+                set {az.combat.%uuid of victim%} to true
+                set {az.combat.time.%uuid of attacker%} to 15 seconds
+                set {az.combat.time.%uuid of victim%} to 15 seconds
 
 on quit:
     if {az.combat.%uuid of player%} is set:
