@@ -133,6 +133,15 @@ command /builddonutspawn:
         send "{@prefix}&aتم تعيين وبناء الـSpawn هنا."
         send "{@prefix}&7الحماية: نصف قطر &e{@spawn-radius} &7بلوك."
 
+# Players cannot walk out of the protected hub.
+# They leave through teleport systems such as /rtp, /tpa, /home or /warp.
+on player move:
+    if {az.spawn} is set:
+        if distance between location of player and {az.spawn} <= {@spawn-radius}:
+            if distance between event-location and {az.spawn} > {@spawn-radius}:
+                cancel event
+                send action bar "&cالـSpawn مغلق &7- استخدم &e/rtp &7أو أوامر النقل للخروج." to player
+
 # ---------------- SPAWN PROTECTION ----------------
 
 on block break:
