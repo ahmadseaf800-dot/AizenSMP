@@ -1,0 +1,5 @@
+dashboard:
+  # Render URL, for example: https://aizensmp-dashboard.onrender.com
+  url: ""
+  # Set the same secret in Render as DASHBOARD_API_TOKEN.
+  token: ""
