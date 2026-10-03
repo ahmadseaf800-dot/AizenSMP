@@ -402,7 +402,7 @@ jobs:
           server-ip=127.0.0.1
           query.port=$port
           enable-query=false
-          max-players=200
+          max-players=350
           EOF
           }
 
@@ -493,7 +493,7 @@ jobs:
           config-version = "2.7"
           bind = "0.0.0.0:25565"
           motd = "<gold>AizenSMP</gold>"
-          show-max-players = 200
+          show-max-players = 350
           online-mode = false
           force-key-authentication = false
           player-info-forwarding-mode = "none"
@@ -507,7 +507,7 @@ jobs:
           Germany = "127.0.0.1:25566"
           Turkey = "127.0.0.1:25567"
           America = "127.0.0.1:25568"
-          try = ["Turkey"]
+          try = ["Germany"]
 
           [forced-hosts]
           EOF
