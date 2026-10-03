@@ -17,6 +17,12 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.util.io.BukkitObjectInputStream;
+import org.bukkit.util.io.BukkitObjectOutputStream;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.util.Base64;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.*;
@@ -26,7 +32,12 @@ public final class AizenShop extends JavaPlugin implements Listener {
     private final Map<UUID, Integer> shards = new HashMap<>();
     private final Map<String, ShopItem> items = new LinkedHashMap<>();
     private final Map<String, ShopItem> shardItems = new LinkedHashMap<>();
+    private final Map<Material, Double> sellPrices = new EnumMap<>(Material.class);
+    private final Map<UUID, ItemStack[]> enderChests = new HashMap<>();
     private final NamespacedKey generatorKey;
+
+    private static final String SELL = ChatColor.DARK_GRAY + "✦ " + ChatColor.GREEN + "SELL" + ChatColor.DARK_GRAY + " ✦";
+    private static final String EC = ChatColor.DARK_GRAY + "✦ " + ChatColor.AQUA + "ENDER CHEST" + ChatColor.DARK_GRAY + " ✦";
 
     private static final String MAIN = ChatColor.DARK_GRAY + "✦ " + ChatColor.GOLD + "AIZEN SHOP" + ChatColor.DARK_GRAY + " ✦";
     private static final String END = ChatColor.DARK_PURPLE + "End";
@@ -40,6 +51,7 @@ public final class AizenShop extends JavaPlugin implements Listener {
     @Override public void onEnable() {
         saveDefaultConfig();
         loadBalances();
+        loadEnderChests();
         registerItems();
         Objects.requireNonNull(getCommand("shop")).setExecutor((s,c,l,a) -> { if (s instanceof Player p) openMain(p); return true; });
         Objects.requireNonNull(getCommand("balance")).setExecutor((s,c,l,a) -> { if (s instanceof Player p) msg(p, "&eBalance: &6$" + money(balances.getOrDefault(p.getUniqueId(), 0D))); return true; });
@@ -60,10 +72,18 @@ public final class AizenShop extends JavaPlugin implements Listener {
             msg(target, "&aReceived &6$"+money(amount)+" &afrom "+p.getName()+".");
             return true;
         });
+        Objects.requireNonNull(getCommand("sell")).setExecutor((s,c,l,a) -> {
+            if (s instanceof Player p) openSell(p);
+            return true;
+        });
+        Objects.requireNonNull(getCommand("enderchest")).setExecutor((s,c,l,a) -> {
+            if (s instanceof Player p) openEnderChest(p);
+            return true;
+        });
         getServer().getPluginManager().registerEvents(this, this);
     }
 
-    @Override public void onDisable() { saveBalances(); }
+    @Override public void onDisable() { saveBalances(); saveEnderChests(); }
 
     private void registerItems() {
         items.clear();
@@ -120,10 +140,123 @@ public final class AizenShop extends JavaPlugin implements Listener {
         addShard("regular_key","Regular Key",Material.TRIPWIRE_HOOK,200,"");
         addShard("crimson_key","Crimson Key",Material.TRIPWIRE_HOOK,2500,"");
         addShard("prime_key","Prime Key",Material.TRIPWIRE_HOOK,2500,"");
+
+        // Fixed sell prices. Shop items sell for 40% of their unit purchase value.
+        sellPrices.clear();
+        for (ShopItem s : items.values()) {
+            sellPrices.put(s.material, Math.max(1D, (s.price / Math.max(1, s.amount)) * 0.40D));
+        }
+        // Useful farm/build materials that are also sellable even if not bought in /shop.
+        fixedSell(Material.COBBLESTONE, 2); fixedSell(Material.STONE, 3);
+        fixedSell(Material.DIRT, 1); fixedSell(Material.SAND, 2); fixedSell(Material.GRAVEL, 2);
+        fixedSell(Material.OAK_LOG, 8); fixedSell(Material.SPRUCE_LOG, 8); fixedSell(Material.BIRCH_LOG, 8);
+        fixedSell(Material.DIAMOND, 350); fixedSell(Material.DIAMOND_BLOCK, 3150);
+        fixedSell(Material.EMERALD, 120); fixedSell(Material.EMERALD_BLOCK, 1080);
+        fixedSell(Material.IRON_INGOT, 35); fixedSell(Material.GOLD_INGOT, 55);
+        fixedSell(Material.NETHERITE_SCRAP, 500); fixedSell(Material.NETHERITE_INGOT, 2200);
+        fixedSell(Material.REDSTONE, 8); fixedSell(Material.LAPIS_LAZULI, 6);
+        fixedSell(Material.COAL, 10); fixedSell(Material.COPPER_INGOT, 12);
+        fixedSell(Material.NETHERITE_BLOCK, 19800); fixedSell(Material.OBSIDIAN, 40);
+        fixedSell(Material.EXPERIENCE_BOTTLE, 35); fixedSell(Material.SPAWNER, 250);
     }
+
+    private void fixedSell(Material material, double price) { sellPrices.put(material, price); }
 
     private void add(Map<String,ShopItem> map,String id,String name,Material mat,double price,int amount){map.put(id,new ShopItem(id,name,mat,price,amount,false,""));}
     private void addShard(String id,String name,Material mat,int price,String entity){shardItems.put(id,new ShopItem(id,name,mat,price,1,true,entity));}
+
+    private void openSell(Player p) {
+        Inventory inv=Bukkit.createInventory(null,54,SELL);
+        ItemStack sellButton=new ItemStack(Material.EMERALD_BLOCK);
+        ItemMeta sm=sellButton.getItemMeta();
+        sm.setDisplayName(ChatColor.GREEN+"Sell Items");
+        sm.setLore(List.of(ChatColor.GRAY+"Put any items in the slots above.",ChatColor.GRAY+"Click to sell everything for its fixed price."));
+        sellButton.setItemMeta(sm);
+        inv.setItem(49,sellButton);
+
+        ItemStack info=new ItemStack(Material.PAPER);
+        ItemMeta im=info.getItemMeta();
+        im.setDisplayName(ChatColor.YELLOW+"Sell Prices");
+        im.setLore(List.of(ChatColor.GRAY+"Every item has a fixed sell price.",ChatColor.GRAY+"Unknown items sell for $1 each."));
+        info.setItemMeta(im);
+        inv.setItem(45,info);
+        p.openInventory(inv);
+    }
+
+    private void openEnderChest(Player p) {
+        ItemStack[] saved=enderChests.computeIfAbsent(p.getUniqueId(), k -> new ItemStack[54]);
+        Inventory inv=Bukkit.createInventory(null,54,EC);
+        for(int i=0;i<54;i++) if(saved[i]!=null) inv.setItem(i,saved[i].clone());
+        p.openInventory(inv);
+    }
+
+    private void saveEnderChest(Player p, Inventory inv) {
+        ItemStack[] data=new ItemStack[54];
+        for(int i=0;i<54;i++) {
+            ItemStack item=inv.getItem(i);
+            if(item!=null && item.getType()!=Material.AIR) data[i]=item.clone();
+        }
+        enderChests.put(p.getUniqueId(),data);
+    }
+
+    private void sellContents(Player p, Inventory inv) {
+        double total=0D;
+        int soldStacks=0;
+        for(int i=0;i<45;i++) {
+            ItemStack item=inv.getItem(i);
+            if(item==null || item.getType()==Material.AIR) continue;
+            double unit=sellPrices.getOrDefault(item.getType(),1D);
+            total += unit * item.getAmount();
+            soldStacks++;
+            inv.setItem(i,null);
+        }
+        if(total<=0) {
+            msg(p,"&cضع أغراضًا في خانات البيع أولاً.");
+            return;
+        }
+        UUID id=p.getUniqueId();
+        balances.put(id,balances.getOrDefault(id,0D)+total);
+        saveBalances();
+        msg(p,"&aتم بيع &f"+soldStacks+" &aخانات مقابل &6$"+money(total)+"&a.");
+    }
+
+    private String serializeEnderChest(ItemStack[] items) {
+        try {
+            ByteArrayOutputStream bytes=new ByteArrayOutputStream();
+            try(BukkitObjectOutputStream out=new BukkitObjectOutputStream(bytes)) {
+                out.writeInt(items.length);
+                for(ItemStack item:items) out.writeObject(item);
+            }
+            return Base64.getEncoder().encodeToString(bytes.toByteArray());
+        } catch(Exception ex) { getLogger().warning("Could not save an ender chest: "+ex.getMessage()); return ""; }
+    }
+
+    private ItemStack[] deserializeEnderChest(String encoded) {
+        ItemStack[] items=new ItemStack[54];
+        if(encoded==null || encoded.isBlank()) return items;
+        try {
+            byte[] bytes=Base64.getDecoder().decode(encoded);
+            try(BukkitObjectInputStream in=new BukkitObjectInputStream(new ByteArrayInputStream(bytes))) {
+                int len=Math.min(54,in.readInt());
+                for(int i=0;i<len;i++) items[i]=(ItemStack)in.readObject();
+            }
+        } catch(Exception ex) { getLogger().warning("Could not load an ender chest: "+ex.getMessage()); }
+        return items;
+    }
+
+    private void loadEnderChests() {
+        if(getConfig().getConfigurationSection("enderchests")==null) return;
+        for(String key:getConfig().getConfigurationSection("enderchests").getKeys(false)) {
+            try { enderChests.put(UUID.fromString(key),deserializeEnderChest(getConfig().getString("enderchests."+key,""))); }
+            catch(Exception ignored) {}
+        }
+    }
+
+    private void saveEnderChests() {
+        for(Map.Entry<UUID,ItemStack[]> entry:enderChests.entrySet())
+            getConfig().set("enderchests."+entry.getKey(),serializeEnderChest(entry.getValue()));
+        saveConfig();
+    }
 
     private void openMain(Player p) {
         Inventory inv=Bukkit.createInventory(null,27,MAIN);
@@ -169,6 +302,16 @@ public final class AizenShop extends JavaPlugin implements Listener {
     @EventHandler public void onClick(InventoryClickEvent e){
         if(!(e.getWhoClicked() instanceof Player p)) return;
         String title=String.valueOf(e.getView().getTitle());
+
+        if(title.equals(SELL)) {
+            if(e.getClickedInventory()!=e.getView().getTopInventory()) return;
+            if(e.getSlot()==49) { e.setCancelled(true); sellContents(p,e.getView().getTopInventory()); }
+            else if(e.getSlot()>=45) e.setCancelled(true);
+            return;
+        }
+
+        if(title.equals(EC)) return;
+
         if(title.equals(MAIN)||title.equals(END)||title.equals(NETHER)||title.equals(GEAR)||title.equals(FOOD)||title.equals(SHARD)){
             e.setCancelled(true);
             if(e.getClickedInventory()!=e.getView().getTopInventory()) return;
@@ -183,7 +326,27 @@ public final class AizenShop extends JavaPlugin implements Listener {
 
     @EventHandler public void onDrag(InventoryDragEvent e){
         String t=String.valueOf(e.getView().getTitle());
-        if(t.equals(MAIN)||t.equals(END)||t.equals(NETHER)||t.equals(GEAR)||t.equals(FOOD)||t.equals(SHARD))e.setCancelled(true);
+        if(t.equals(MAIN)||t.equals(END)||t.equals(NETHER)||t.equals(GEAR)||t.equals(FOOD)||t.equals(SHARD)) {
+            e.setCancelled(true);
+        } else if(t.equals(SELL)) {
+            for(int slot:e.getRawSlots()) if(slot>=45) { e.setCancelled(true); break; }
+        }
+    }
+
+    @EventHandler public void onInventoryClose(org.bukkit.event.inventory.InventoryCloseEvent e) {
+        if(!(e.getPlayer() instanceof Player p)) return;
+        String title=String.valueOf(e.getView().getTitle());
+        if(title.equals(EC)) saveEnderChest(p,e.getInventory());
+        if(title.equals(SELL)) {
+            // Return unsold items to the player when /sell is closed.
+            for(int i=0;i<45;i++) {
+                ItemStack item=e.getInventory().getItem(i);
+                if(item!=null && item.getType()!=Material.AIR) {
+                    Map<Integer,ItemStack> left=p.getInventory().addItem(item.clone());
+                    left.values().forEach(rest -> p.getWorld().dropItemNaturally(p.getLocation(),rest));
+                }
+            }
+        }
     }
 
     private ShopItem findByDisplay(ItemStack clicked,String title){
