@@ -35,14 +35,6 @@ command /buildzones:
         send "&7AFK: &f%{az.afk}%" to player
         send "&7Duels: &f%{az.duel}%" to player
 
-command /duels:
-    trigger:
-        if {az.duel} is not set:
-            send "{@prefix} &cDuels area is not set." to player
-            stop
-        teleport player to {az.duel}
-        send "{@prefix} &aTeleported to the &eDuels &aarea." to player
-
 # ---------------- CORE / SPAWN / AFK ----------------
 
 command /setspawn:
