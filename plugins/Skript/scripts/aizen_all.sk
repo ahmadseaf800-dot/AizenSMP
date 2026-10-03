@@ -537,13 +537,6 @@ on inventory click:
 options:
     duel-radius: 25
 
-command /setduel:
-    permission: aizensmp.admin
-    trigger:
-        set {az.duel.arena} to location of player
-        send "{@prefix} &aDuel arena center set here." to player
-        send "{@prefix} &7Radius: &e{@duel-radius} blocks &7| &7No time limit."
-
 command /duels:
     trigger:
         if {az.duel.arena} is not set:
