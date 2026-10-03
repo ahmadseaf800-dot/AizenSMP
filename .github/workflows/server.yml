@@ -75,37 +75,63 @@ jobs:
       - name: Install backend plugins
         shell: bash
         run: |
-          set -e
-          GITHUB_API="https://api.github.com"
-          GITHUB_UA="AizenSMP/1.0 (GitHub Actions)"
+          set -euo pipefail
 
-          # Use official GitHub releases instead of fragile Modrinth version URLs.
-          SVC_URL=$(curl -fsSL --retry 5 --retry-delay 2 -H "User-Agent: $GITHUB_UA" \
-            "$GITHUB_API/repos/henkelmax/simple-voice-chat/releases/latest" \
-            | jq -r '.assets[] | select(.name | test("(?i)(bukkit|paper).*(\\.jar)$")) | .browser_download_url' | head -n 1)
+          # Resolve plugin files from Modrinth's project-version API.
+          # Do not pin a Minecraft version here: the newest Paper/Purpur build
+          # is selected, which avoids 404s when a plugin has not yet published
+          # a build tagged exactly 1.21.11.
+          MODRINTH_API="https://api.modrinth.com/v2"
+          MODRINTH_UA="AizenSMP/1.0 (GitHub Actions)"
 
-          WE_URL=$(curl -fsSL --retry 5 --retry-delay 2 -H "User-Agent: $GITHUB_UA" \
-            "$GITHUB_API/repos/EngineHub/WorldEdit/releases/latest" \
-            | jq -r '.assets[] | select(.name | test("(?i)(bukkit|paper).*(\\.jar)$")) | .browser_download_url' | head -n 1)
+          modrinth_file() {
+            local project="$1"
+            local loader="$2"
+            local url
 
-          VIAVERSION_URL=$(curl -fsSL --retry 5 --retry-delay 2 -H "User-Agent: $GITHUB_UA" \
-            "$GITHUB_API/repos/ViaVersion/ViaVersion/releases/latest" \
-            | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
-          VIABACKWARDS_URL=$(curl -fsSL --retry 5 --retry-delay 2 -H "User-Agent: $GITHUB_UA" \
-            "$GITHUB_API/repos/ViaVersion/ViaBackwards/releases/latest" \
-            | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
+            url=$(curl -fsSL --retry 5 --retry-delay 2 \
+              -H "User-Agent: $MODRINTH_UA" \
+              --get "$MODRINTH_API/project/$project/version" \
+              --data-urlencode "loaders=[\"$loader\"]" \
+              | jq -r '[.[].files[] | select(.primary == true) | .url][0] // empty')
 
-          test -n "$SVC_URL" && test "$SVC_URL" != "null"
-          test -n "$WE_URL" && test "$WE_URL" != "null"
-          test -n "$VIAVERSION_URL" && test "$VIAVERSION_URL" != "null"
-          test -n "$VIABACKWARDS_URL" && test "$VIABACKWARDS_URL" != "null"
+            test -n "$url"
+            test "$url" != "null"
+            printf '%s' "$url"
+          }
+
+          SVC_URL=$(modrinth_file "simple-voice-chat" "paper")
+          WE_URL=$(modrinth_file "worldedit" "paper")
+
+          VIAVERSION_URL=$(curl -fsSL --retry 5 --retry-delay 2 \
+            -H "User-Agent: $MODRINTH_UA" \
+            --get "$MODRINTH_API/project/viaversion/version" \
+            --data-urlencode 'loaders=["paper"]' \
+            | jq -r '[.[].files[] | select(.primary == true) | .url][0] // empty')
+
+          VIABACKWARDS_URL=$(curl -fsSL --retry 5 --retry-delay 2 \
+            -H "User-Agent: $MODRINTH_UA" \
+            --get "$MODRINTH_API/project/viabackwards/version" \
+            --data-urlencode 'loaders=["paper"]' \
+            | jq -r '[.[].files[] | select(.primary == true) | .url][0] // empty')
+
+          for var in SVC_URL WE_URL VIAVERSION_URL VIABACKWARDS_URL; do
+            value="${!var}"
+            test -n "$value" && test "$value" != "null"
+          done
+
+          echo "Simple Voice Chat: $SVC_URL"
+          echo "WorldEdit: $WE_URL"
+          echo "ViaVersion: $VIAVERSION_URL"
+          echo "ViaBackwards: $VIABACKWARDS_URL"
 
           for name in germany turkey america; do
-            curl -L --fail -o "network/$name/plugins/Skript.jar" "https://github.com/SkriptLang/Skript/releases/latest/download/Skript.jar"
-            curl -L --fail -o "network/$name/plugins/ViaVersion.jar" "$VIAVERSION_URL"
-            curl -L --fail -o "network/$name/plugins/ViaBackwards.jar" "$VIABACKWARDS_URL"
-            curl -L --fail -o "network/$name/plugins/WorldEdit.jar" "$WE_URL"
-            curl -L --fail -o "network/$name/plugins/voicechat.jar" "$SVC_URL"
+            curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/Skript.jar" \
+              "https://github.com/SkriptLang/Skript/releases/latest/download/Skript.jar"
+            curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/ViaVersion.jar" "$VIAVERSION_URL"
+            curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/ViaBackwards.jar" "$VIABACKWARDS_URL"
+            curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/WorldEdit.jar" "$WE_URL"
+            curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/voicechat.jar" "$SVC_URL"
             mkdir -p "network/$name/plugins/Skript/scripts"
             cp -f plugins/Skript/scripts/*.sk "network/$name/plugins/Skript/scripts/" 2>/dev/null || true
           done
