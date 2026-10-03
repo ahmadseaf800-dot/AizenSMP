@@ -73,6 +73,18 @@ command /suicide:
 
 
 # =========================================================
+# SPAWN MOVEMENT LOCK
+# Players can leave the spawn only by teleport/command systems.
+# =========================================================
+
+on player move:
+    if {az.donutspawn} is set:
+        if distance between location of player and {az.donutspawn} <= 100:
+            if distance between event-location and {az.donutspawn} > 100:
+                cancel event
+                send action bar "&cالسبون مغلق &7- استخدم &e/rtp &7أو أوامر النقل للخروج." to player
+
+# =========================================================
 # DONUT-STYLE SPAWN BUILDER + PROTECTION
 # Run /builddonutspawn once at the desired spawn location.
 # =========================================================
@@ -80,9 +92,17 @@ command /suicide:
 command /builddonutspawn:
     permission: aizensmp.admin
     trigger:
-        set {az.donutspawn} to location of player
-        set {az.spawn} to location of player
-        send "{@prefix} &eBuilding Donut-style spawn... &7Do not move."
+        set {_w} to world of player
+        set {_base} to location at 100000, 0, 100000 in {_w}
+        set {_top} to highest block at {_base}
+        add 2 to y-coordinate of {_top}
+        teleport player to {_top}
+        set {az.donutspawn} to {_top}
+        set {az.spawn} to {_top}
+        set {az.afk} to {_top}
+        send "{@prefix} &eتم نقل السبون إلى منطقة بعيدة جداً عند &f100000, 100000&e." to player
+        send "{@prefix} &7اللاعبون لن يستطيعوا مغادرة منطقة السبون بالمشي." to player
+        wait 2 seconds
         execute console command "execute at %player% run fill ~-35 ~-1 ~-35 ~35 ~-1 ~35 polished_deepslate"
         execute console command "execute at %player% run fill ~-31 ~0 ~-31 ~31 ~0 ~31 stone_bricks"
         execute console command "execute at %player% run fill ~-27 ~1 ~-27 ~27 ~1 ~27 smooth_quartz"
@@ -100,8 +120,9 @@ command /builddonutspawn:
         execute console command "execute at %player% run fill ~-2 ~2 ~-35 ~2 ~2 ~35 gold_block"
         execute console command "execute at %player% run fill ~-35 ~3 ~-1 ~35 ~3 ~1 quartz_block"
         execute console command "execute at %player% run fill ~-1 ~3 ~-35 ~1 ~3 ~35 quartz_block"
-        send "{@prefix} &aDonut-style spawn built."
-        send "{@prefix} &7Spawn protection: &c100 blocks &7around this point."
+        send "{@prefix} &aتم بناء السبون البعيد بنجاح."
+        send "{@prefix} &cلا يمكن الخروج منه بالمشي أو الجري."
+        send "{@prefix} &eالخروج يكون عبر أوامر النقل مثل /rtp و /tpa و /home و /warp."
 
 on block break:
     if {az.donutspawn} is set:
