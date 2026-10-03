@@ -239,20 +239,6 @@ on teleport:
             # Normal plugin/command teleports are allowed.
             stop
 
-command /spawn:
-    trigger:
-        set {az.spawn.lock.%uuid of player%} to true
-        teleport player to {az.spawn}
-        wait 1 tick
-        delete {az.spawn.lock.%uuid of player%}
-
-command /rtp:
-    trigger:
-        set {az.spawn.lock.%uuid of player%} to true
-        make player execute command "/rtp"
-        wait 2 ticks
-        delete {az.spawn.lock.%uuid of player%}
-
 on quit:
     delete {az.spawn.lock.%uuid of player%}
 
