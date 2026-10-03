@@ -1,0 +1,198 @@
+# =========================================================
+# AizenSMP - Spawn Command Bots
+# Clickable NPC-style villagers. No external NPC plugin required.
+# =========================================================
+
+options:
+    prefix: &6[&eAizenSMP&6] &r
+
+# ---------------- BOT SETUP ----------------
+
+function azBotSpawn(label: text, loc: location):
+    spawn a villager at {_loc}
+    set name of last spawned entity to {_label}
+    set name visibility of last spawned entity to true
+    set invulnerability of last spawned entity to true
+    set AI of last spawned entity to false
+    set silent state of last spawned entity to true
+
+function azRemoveOldBots():
+    if {az.spawn} is not set:
+        stop
+    loop all entities in radius 35 around {az.spawn}:
+        if loop-entity is a villager:
+            if name of loop-entity is set:
+                if name of loop-entity contains "AIZEN BOT":
+                    kill loop-entity
+
+function azSetupBots():
+    if {az.spawn} is not set:
+        stop
+    if {az.bots.ready} is true:
+        stop
+    if {az.bots.building} is true:
+        stop
+    set {az.bots.building} to true
+
+    azRemoveOldBots()
+
+    set {_s} to {az.spawn}
+
+    # Main row
+    set {_l} to {_s}
+    add 0.5 to x-coordinate of {_l}
+    add 1 to y-coordinate of {_l}
+    add -10 to z-coordinate of {_l}
+    azBotSpawn("&6&lAIZEN BOT &b&lRTP", {_l})
+
+    set {_l} to {_s}
+    add 10 to x-coordinate of {_l}
+    add 1 to y-coordinate of {_l}
+    azBotSpawn("&6&lAIZEN BOT &e&lSHOP", {_l})
+
+    set {_l} to {_s}
+    add -10 to x-coordinate of {_l}
+    add 1 to y-coordinate of {_l}
+    azBotSpawn("&6&lAIZEN BOT &d&lTPA", {_l})
+
+    set {_l} to {_s}
+    add 10 to x-coordinate of {_l}
+    add 1 to y-coordinate of {_l}
+    add 10 to z-coordinate of {_l}
+    azBotSpawn("&6&lAIZEN BOT &a&lAH", {_l})
+
+    # Front utility row
+    set {_l} to {_s}
+    add 0.5 to x-coordinate of {_l}
+    add 1 to y-coordinate of {_l}
+    add 10 to z-coordinate of {_l}
+    azBotSpawn("&6&lAIZEN BOT &c&lDUELS", {_l})
+
+    set {_l} to {_s}
+    add -10 to x-coordinate of {_l}
+    add 1 to y-coordinate of {_l}
+    add 10 to z-coordinate of {_l}
+    azBotSpawn("&6&lAIZEN BOT &e&lKITS", {_l})
+
+    # Side utility row
+    set {_l} to {_s}
+    add 15 to x-coordinate of {_l}
+    add 1 to y-coordinate of {_l}
+    azBotSpawn("&6&lAIZEN BOT &f&lRULES", {_l})
+
+    set {_l} to {_s}
+    add -15 to x-coordinate of {_l}
+    add 1 to y-coordinate of {_l}
+    azBotSpawn("&6&lAIZEN BOT &6&lSPAWN", {_l})
+
+    set {_l} to {_s}
+    add 15 to x-coordinate of {_l}
+    add 1 to y-coordinate of {_l}
+    add 10 to z-coordinate of {_l}
+    azBotSpawn("&6&lAIZEN BOT &5&lSELL", {_l})
+
+    set {_l} to {_s}
+    add -15 to x-coordinate of {_l}
+    add 1 to y-coordinate of {_l}
+    add 10 to z-coordinate of {_l}
+    azBotSpawn("&6&lAIZEN BOT &b&lRTPQ", {_l})
+
+    set {az.bots.ready} to true
+    delete {az.bots.building}
+
+# Automatically install bots after the spawn exists.
+on join:
+    if {az.spawn} is set:
+        wait 3 seconds
+        if player is online:
+            azSetupBots()
+
+command /setupbots:
+    permission: aizensmp.admin
+    aliases: /buildbots
+    trigger:
+        delete {az.bots.ready}
+        azSetupBots()
+        send "{@prefix}&aتم إنشاء Command Bots داخل الـSpawn."
+
+# ---------------- CLICK ACTIONS ----------------
+
+on right click on villager:
+    set {_n} to name of clicked entity
+
+    if {_n} contains "AIZEN BOT":
+        cancel event
+
+    if {_n} contains "RTP":
+        make player execute command "/rtp"
+        stop
+
+    if {_n} contains "SHOP":
+        make player execute command "/shop"
+        stop
+
+    if {_n} contains "TPA":
+        set {az.bot.tpa.await.%uuid of player%} to true
+        send "&6[&eAizenSMP&6] &eاكتب اسم اللاعب الذي تريد إرسال TPA له في الشات."
+        send "&7اكتب &ccancel &7للإلغاء."
+        stop
+
+    if {_n} contains "AH":
+        make player execute command "/ah"
+        stop
+
+    if {_n} contains "DUELS":
+        make player execute command "/duels"
+        stop
+
+    if {_n} contains "KITS":
+        make player execute command "/kit"
+        stop
+
+    if {_n} contains "RULES":
+        make player execute command "/rules"
+        stop
+
+    if {_n} contains "SPAWN":
+        make player execute command "/spawn"
+        stop
+
+    if {_n} contains "SELL":
+        make player execute command "/sell"
+        stop
+
+    if {_n} contains "RTPQ":
+        make player execute command "/rtpq"
+        stop
+
+# TPA bot chat input.
+on chat:
+    if {az.bot.tpa.await.%uuid of player%} is not true:
+        stop
+
+    cancel event
+    delete {az.bot.tpa.await.%uuid of player%}
+
+    if lowercase(message) is "cancel":
+        send "&6[&eAizenSMP&6] &cتم إلغاء طلب TPA."
+        stop
+
+    set {_target} to none
+    loop all players:
+        if lowercase(name of loop-player) is lowercase(message):
+            set {_target} to loop-player
+            stop
+
+    if {_target} is not set:
+        send "&6[&eAizenSMP&6] &cاللاعب غير موجود أو غير متصل."
+        stop
+
+    if {_target} is player:
+        send "&6[&eAizenSMP&6] &cلا يمكنك إرسال TPA لنفسك."
+        stop
+
+    make player execute command "/tpa %{_target}%"
+    send "&6[&eAizenSMP&6] &aتم إرسال طلب TPA إلى &e%{_target}%&a."
+
+on quit:
+    delete {az.bot.tpa.await.%uuid of player%}
