@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Java 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
@@ -50,12 +50,12 @@ jobs:
           done
 
           mkdir -p network/velocity
-          # Download Velocity from the official PaperMC Maven repository.
-          # The Paper API download endpoint can return HTTP 410 after a build is retired.
-          VELOCITY_VERSION=$(curl -fsSL https://api.papermc.io/v2/projects/velocity | jq -r '.versions[-1]')
-          VELOCITY_BUILD=$(curl -fsSL "https://api.papermc.io/v2/projects/velocity/versions/$VELOCITY_VERSION/builds" | jq -r '.builds | map(select(.channel == "default")) | max_by(.id) | .id')
-          echo "Downloading Velocity $VELOCITY_VERSION build $VELOCITY_BUILD"
-          curl -L --fail -o network/velocity/velocity.jar "https://repo.papermc.io/repository/maven-public/com/velocitypowered/velocity-proxy/$VELOCITY_VERSION-$VELOCITY_BUILD.jar"
+          # Download the latest stable Velocity release from the official GitHub releases.
+          # This avoids retired Paper API/Maven build URLs that can return HTTP 410.
+          VELOCITY_URL=$(curl -fsSL https://api.github.com/repos/PaperMC/Velocity/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
+          test -n "$VELOCITY_URL"
+          echo "Downloading Velocity from: $VELOCITY_URL"
+          curl -L --fail --retry 3 --retry-delay 2 -o network/velocity/velocity.jar "$VELOCITY_URL"
 
       - name: Install backend plugins
         shell: bash
