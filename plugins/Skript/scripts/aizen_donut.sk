@@ -98,6 +98,20 @@ function azBuildDonutSpawn():
     execute console command "execute at %player% run fill ~-29 ~2 ~25 ~-25 ~12 ~29 polished_blackstone_bricks"
     execute console command "execute at %player% run fill ~25 ~2 ~25 ~29 ~12 ~29 polished_blackstone_bricks"
 
+    # Spawn entrance markers and raised platform.
+    execute console command "execute at %player% run fill ~-8 ~3 ~-34 ~8 ~3 ~-31 quartz_block"
+    execute console command "execute at %player% run fill ~-6 ~4 ~-34 ~6 ~6 ~-32 gold_block"
+    execute console command "execute at %player% run fill ~-4 ~7 ~-34 ~4 ~7 ~-32 beacon"
+    execute console command "execute at %player% run fill ~-8 ~3 ~31 ~8 ~3 ~34 quartz_block"
+    execute console command "execute at %player% run fill ~-6 ~4 ~32 ~6 ~6 ~34 gold_block"
+    execute console command "execute at %player% run fill ~-4 ~7 ~32 ~4 ~7 ~34 beacon"
+
+    # Low walls around the 70x70 hub boundary.
+    execute console command "execute at %player% run fill ~-35 ~1 ~-35 ~35 ~4 ~-34 blackstone"
+    execute console command "execute at %player% run fill ~-35 ~1 ~34 ~35 ~4 ~35 blackstone"
+    execute console command "execute at %player% run fill ~-35 ~1 ~-34 ~-34 ~4 ~34 blackstone"
+    execute console command "execute at %player% run fill ~34 ~1 ~-34 ~35 ~4 ~34 blackstone"
+
     # Make the center visibly safe and open.
     execute console command "execute at %player% run fill ~-10 ~6 ~-10 ~10 ~6 ~10 air"
     set {az.spawn.built} to true
