@@ -11,10 +11,8 @@ options:
 function azBotSpawn(label: text, loc: location):
     spawn a villager at {_loc}
     set name of last spawned entity to {_label}
-    set name visibility of last spawned entity to true
     set invulnerability of last spawned entity to true
     set AI of last spawned entity to false
-    set silent state of last spawned entity to true
 
 function azRemoveOldBots():
     if {az.spawn} is not set:
