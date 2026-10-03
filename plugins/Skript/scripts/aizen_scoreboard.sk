@@ -17,7 +17,7 @@ on join:
         set line 7 of player's scoreboard to "&eالرصيد: &a$%{_money}%"
         set line 6 of player's scoreboard to ""
 
-        # Homes are not currently implemented in AizenSMP.
+        # Show the number of saved Homes.
         set {_home_count} to size of {az.home.%uuid of player%::*}
         if {_home_count} is not set:
             set {_home_count} to 0
