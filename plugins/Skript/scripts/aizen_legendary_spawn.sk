@@ -34,6 +34,22 @@ function azBuildLegendarySpawn(p: player):
     execute console command "execute at %{_p}% run fill ~-5 ~4 ~-5 ~5 ~4 ~5 gold_block"
     execute console command "execute at %{_p}% run fill ~-3 ~5 ~-3 ~3 ~5 ~3 beacon"
 
+    # Enclosed spawn perimeter: tall protected blackstone walls with four controlled entrances.
+    execute console command "execute at %{_p}% run fill ~-60 ~0 ~-60 ~60 ~10 ~-60 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~-60 ~0 ~60 ~60 ~10 ~60 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~-60 ~0 ~-60 ~-60 ~10 ~60 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~60 ~0 ~-60 ~60 ~10 ~60 polished_blackstone_bricks"
+    # Four entrance openings.
+    execute console command "execute at %{_p}% run fill ~-5 ~0 ~-61 ~5 ~6 ~-59 air"
+    execute console command "execute at %{_p}% run fill ~-5 ~0 ~59 ~5 ~6 ~61 air"
+    execute console command "execute at %{_p}% run fill ~-61 ~0 ~-5 ~-59 ~6 ~5 air"
+    execute console command "execute at %{_p}% run fill ~59 ~0 ~-5 ~61 ~6 ~5 air"
+    # Gold gate frames.
+    execute console command "execute at %{_p}% run fill ~-7 ~0 ~-62 ~7 ~7 ~-62 gold_block outline"
+    execute console command "execute at %{_p}% run fill ~-7 ~0 ~62 ~7 ~7 ~62 gold_block outline"
+    execute console command "execute at %{_p}% run fill ~62 ~0 ~-7 ~62 ~7 ~7 gold_block outline"
+    execute console command "execute at %{_p}% run fill ~-62 ~0 ~-7 ~-62 ~7 ~7 gold_block outline"
+
     # Four giant corner towers.
     execute console command "execute at %{_p}% run fill ~-48 ~0 ~-48 ~-38 ~18 ~-38 polished_blackstone_bricks"
     execute console command "execute at %{_p}% run fill ~38 ~0 ~-48 ~48 ~18 ~-38 polished_blackstone_bricks"
