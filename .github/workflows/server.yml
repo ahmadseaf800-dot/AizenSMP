@@ -206,8 +206,8 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/AuthMe/AuthMeReloaded/releases/latest" \
             | jq -r '[.assets[]
-              | select(.name | test("(?i)^AuthMe.*\\.jar$"))
-              | select((.name | test("(?i)(Bungee|Velocity)")) | not)
+              | select(.name | test("(?i)^AuthMe-[0-9].*\\.jar$"))
+              | select((.name | test("(?i)(Bungee|Velocity|Folia)")) | not)
               | .browser_download_url][0] // empty')
           test -n "$AUTHME_URL" && test "$AUTHME_URL" != "null"
 
