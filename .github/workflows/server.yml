@@ -203,14 +203,68 @@ jobs:
 
           # Build the Aizen authentication guard against the exact Purpur API and AuthMe jar.
           rm -rf backend/build
-          mkdir -p backend/build/classes
-          "$JAVA21_HOME/bin/javac" -cp "network/germany/server.jar:network/germany/plugins/AuthMe.jar" \
-            -d backend/build/classes backend/src/main/java/com/aizensmp/auth/AizenAuthGuard.java
-          jar --create --file backend/build/AizenAuthGuard.jar \
-            -C backend/build/classes . \
-            -C backend/src/main/resources plugin.yml
+          mkdir -p backend/build
+          cat > backend/build/pom.xml <<'EOF'
+          <project xmlns="http://maven.apache.org/POM/4.0.0"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+            <modelVersion>4.0.0</modelVersion>
+            <groupId>com.aizensmp</groupId>
+            <artifactId>aizen-auth-guard-build</artifactId>
+            <version>1.0.0</version>
+            <properties>
+              <maven.compiler.release>21</maven.compiler.release>
+              <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+            </properties>
+            <repositories>
+              <repository>
+                <id>papermc</id>
+                <url>https://repo.papermc.io/repository/maven-public/</url>
+              </repository>
+            </repositories>
+            <dependencies>
+              <dependency>
+                <groupId>io.papermc.paper</groupId>
+                <artifactId>paper-api</artifactId>
+                <version>1.21.11-R0.1-SNAPSHOT</version>
+                <scope>provided</scope>
+              </dependency>
+              <dependency>
+                <groupId>fr.xephi.authme</groupId>
+                <artifactId>authme</artifactId>
+                <version>1.0</version>
+                <scope>system</scope>
+                <systemPath>${project.basedir}/../network/germany/plugins/AuthMe.jar</systemPath>
+              </dependency>
+              <dependency>
+                <groupId>com.google.code.gson</groupId>
+                <artifactId>gson</artifactId>
+                <version>2.13.2</version>
+                <scope>provided</scope>
+              </dependency>
+            </dependencies>
+            <build>
+              <sourceDirectory>${project.basedir}/../src/main/java</sourceDirectory>
+              <resources>
+                <resource>
+                  <directory>${project.basedir}/../src/main/resources</directory>
+              </resources>
+              <plugins>
+                <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-compiler-plugin</artifactId>
+                  <version>3.14.0</version>
+                </plugin>
+              </plugins>
+            </build>
+          </project>
+          EOF
+
+          mvn -q -f backend/build/pom.xml package -DskipTests
+          test -s backend/build/target/aizen-auth-guard-build-1.0.0.jar
+          cp backend/build/target/aizen-auth-guard-build-1.0.0.jar backend/build/AizenAuthGuard.jar
           test -s backend/build/AizenAuthGuard.jar
-          echo "AizenAuthGuard built successfully."
+          echo "AizenAuthGuard built successfully with Paper API, AuthMe API, and Gson."
 
           for name in germany turkey america; do
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/Skript.jar" "$SKRIPT_URL"
