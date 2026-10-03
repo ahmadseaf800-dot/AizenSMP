@@ -30,6 +30,8 @@ jobs:
           cd server
           curl -fL "https://api.purpurmc.org/v2/purpur/${{ inputs.server_version }}/latest/download" -o purpur.jar
           echo "eula=true" > eula.txt
+          echo "online-mode=false" > server.properties
+          echo "enforce-secure-profile=false" >> server.properties
           mkdir -p plugins/Skript/scripts
           if [ -d "../plugins/Skript/scripts" ]; then
             cp -r ../plugins/Skript/scripts/* plugins/Skript/scripts/ || true
