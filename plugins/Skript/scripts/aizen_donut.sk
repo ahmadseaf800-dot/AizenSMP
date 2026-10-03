@@ -5,7 +5,7 @@
 
 options:
     prefix: &6[&eAizenSMP&6] &r
-    spawn-radius: 100
+    spawn-radius: 150
 
 # ---------------- QUICK COMMANDS ----------------
 
@@ -106,7 +106,33 @@ function azBuildDonutSpawn():
     execute console command "execute at %player% run fill ~-6 ~4 ~32 ~6 ~6 ~34 gold_block"
     execute console command "execute at %player% run fill ~-4 ~7 ~32 ~4 ~7 ~34 beacon"
 
-    # Raised entrance towers and decorative roof rings.
+    # Large Donut-style expansion: 150x150 hub with multiple rings, roads and towers.
+    execute console command "execute at %player% run fill ~-75 ~-2 ~-75 ~75 ~-2 ~75 polished_blackstone"
+    execute console command "execute at %player% run fill ~-70 ~-1 ~-70 ~70 ~-1 ~70 blackstone"
+    execute console command "execute at %player% run fill ~-64 ~0 ~-64 ~64 ~0 ~64 smooth_quartz"
+    execute console command "execute at %player% run fill ~-58 ~1 ~-58 ~58 ~1 ~58 black_concrete"
+    execute console command "execute at %player% run fill ~-3 ~2 ~-70 ~3 ~2 ~70 gold_block"
+    execute console command "execute at %player% run fill ~-70 ~2 ~-3 ~70 ~2 ~3 gold_block"
+    execute console command "execute at %player% run fill ~-55 ~2 ~-2 ~55 ~2 ~2 quartz_block"
+    execute console command "execute at %player% run fill ~-2 ~2 ~-55 ~2 ~2 ~55 quartz_block"
+    # Four large outer entrances.
+    execute console command "execute at %player% run fill ~-14 ~2 ~-70 ~14 ~2 ~-62 quartz_block"
+    execute console command "execute at %player% run fill ~-10 ~3 ~-70 ~10 ~7 ~-66 gold_block"
+    execute console command "execute at %player% run fill ~-14 ~2 ~62 ~14 ~2 ~70 quartz_block"
+    execute console command "execute at %player% run fill ~-10 ~3 ~66 ~10 ~7 ~70 gold_block"
+    execute console command "execute at %player% run fill ~-70 ~2 ~-14 ~-62 ~2 ~14 quartz_block"
+    execute console command "execute at %player% run fill ~-70 ~3 ~-10 ~-66 ~7 ~10 gold_block"
+    execute console command "execute at %player% run fill ~62 ~2 ~-14 ~70 ~2 ~14 quartz_block"
+    execute console command "execute at %player% run fill ~66 ~3 ~-10 ~70 ~7 ~10 gold_block"
+    # Outer corner towers.
+    execute console command "execute at %player% run fill ~-65 ~2 ~-65 ~-57 ~18 ~-57 polished_blackstone_bricks"
+    execute console command "execute at %player% run fill ~57 ~2 ~-65 ~65 ~18 ~-57 polished_blackstone_bricks"
+    execute console command "execute at %player% run fill ~-65 ~2 ~57 ~-57 ~18 ~65 polished_blackstone_bricks"
+    execute console command "execute at %player% run fill ~57 ~2 ~57 ~65 ~18 ~65 polished_blackstone_bricks"
+    execute console command "execute at %player% run fill ~-67 ~18 ~-67 ~-55 ~20 ~-55 gold_block"
+    execute console command "execute at %player% run fill ~55 ~18 ~-67 ~67 ~20 ~-55 gold_block"
+    execute console command "execute at %player% run fill ~-67 ~18 ~55 ~-55 ~20 ~67 gold_block"
+    execute console command "execute at %player% run fill ~55 ~18 ~55 ~67 ~20 ~67 gold_block
     execute console command "execute at %player% run fill ~-18 ~6 ~-18 ~-15 ~16 ~-15 polished_blackstone_bricks"
     execute console command "execute at %player% run fill ~15 ~6 ~-18 ~18 ~16 ~-15 polished_blackstone_bricks"
     execute console command "execute at %player% run fill ~-18 ~6 ~15 ~-15 ~16 ~18 polished_blackstone_bricks"
@@ -117,7 +143,13 @@ function azBuildDonutSpawn():
     execute console command "execute at %player% run fill ~-8 ~19 ~-8 ~8 ~19 ~8 quartz_block"
     execute console command "execute at %player% run fill ~-4 ~20 ~-4 ~4 ~20 ~4 beacon"
 
-    # Low walls around the 70x70 hub boundary.
+    # Decorative outer ring.
+    execute console command "execute at %player% run fill ~-75 ~2 ~-75 ~75 ~5 ~-73 blackstone"
+    execute console command "execute at %player% run fill ~-75 ~2 ~73 ~75 ~5 ~75 blackstone"
+    execute console command "execute at %player% run fill ~-75 ~2 ~-73 ~-73 ~5 ~73 blackstone"
+    execute console command "execute at %player% run fill ~73 ~2 ~-73 ~75 ~5 ~73 blackstone"
+
+    # Low walls around the 150x150 hub boundary.
     execute console command "execute at %player% run fill ~-35 ~1 ~-35 ~35 ~4 ~-34 blackstone"
     execute console command "execute at %player% run fill ~-35 ~1 ~34 ~35 ~4 ~35 blackstone"
     execute console command "execute at %player% run fill ~-35 ~1 ~-34 ~-34 ~4 ~34 blackstone"
