@@ -1,0 +1,429 @@
+# =========================================================
+# AizenSMP - Advanced Donut Style Systems
+# Combat Tag / Leaderboards / Trade / Orders / Crates / Party
+# =========================================================
+
+options:
+    aas-prefix: &6[&eAizenSMP&6] &r
+    combat-time: 15 seconds
+    trade-timeout: 60 seconds
+    order-timeout: 24 hours
+
+# ---------------- COMBAT TAG ----------------
+
+on damage:
+    if attacker is a player:
+        if victim is a player:
+            set {az.combat.%uuid of attacker%} to true
+            set {az.combat.%uuid of victim%} to true
+            set {az.combat.time.%uuid of attacker%} to {@combat-time}
+            set {az.combat.time.%uuid of victim%} to {@combat-time}
+
+every 1 second:
+    loop all players:
+        if {az.combat.%uuid of loop-player%} is set:
+            if {az.combat.time.%uuid of loop-player%} is set:
+                remove 1 second from {az.combat.time.%uuid of loop-player%}
+                if {az.combat.time.%uuid of loop-player%} <= 0 seconds:
+                    delete {az.combat.%uuid of loop-player%}
+                    delete {az.combat.time.%uuid of loop-player%}
+                    send "{@aas-prefix}&aCombat Tag انتهى." to loop-player
+
+on quit:
+    if {az.combat.%uuid of player%} is set:
+        set {az.combat.logout.%uuid of player%} to true
+        kill player
+
+command /combat:
+    trigger:
+        if {az.combat.%uuid of player%} is set:
+            send "{@aas-prefix}&cأنت في القتال. الوقت المتبقي: &e%{az.combat.time.%uuid of player%}%"
+        else:
+            send "{@aas-prefix}&aلست في Combat Tag."
+
+# Block unsafe teleport commands while tagged.
+on command:
+    if {az.combat.%uuid of player%} is set:
+        if command is "spawn" or command is "home" or command is "homes" or command is "rtp" or command is "tpa":
+            cancel event
+            send "{@aas-prefix}&cلا يمكنك استخدام هذا الأمر أثناء القتال." to player
+
+# ---------------- KILL STREAK + AUTOMATIC BOUNTY ----------------
+# Existing AizenSMP bounty variables are used. Bounty is server-generated.
+
+on death of player:
+    if attacker is a player:
+        add 1 to {az.advanced.kills.%uuid of attacker%}
+        set {_streak} to {az.streak.%uuid of attacker%}
+        if {_streak} is not set:
+            set {_streak} to 0
+        # Keep the existing server bounty system as the source of truth.
+        set {_bounty} to {az.bounty.%uuid of attacker%}
+        if {_bounty} is not set:
+            set {_bounty} to 0
+        if {_streak} >= 5:
+            broadcast "{@aas-prefix}&c🔥 &e%attacker% &7وصل إلى Kill Streak &c%{_streak}% &7وباونتيه الآن &6$%{_bounty}%&7!"
+    set {az.advanced.deaths.%uuid of victim%} to {az.advanced.deaths.%uuid of victim%} + 1
+
+# ---------------- LEADERBOARDS ----------------
+
+command /top:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &6AIZEN TOP &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to diamond sword named "&c&lTop Kills" with lore "&7Use &e/topkills"
+        set slot 12 of player's current inventory to gold block named "&6&lTop Money" with lore "&7Use &e/topmoney"
+        set slot 14 of player's current inventory to diamond named "&b&lTop Bounty" with lore "&7Use &e/topbounty"
+        set slot 16 of player's current inventory to clock named "&e&lTop Playtime" with lore "&7Use &e/topplaytime"
+
+command /topkills:
+    trigger:
+        send "&8&m--------------------------------"
+        send "&c&lTOP KILLS"
+        set {_n} to 0
+        loop {az.advanced.kills::*}:
+            add 1 to {_n}
+            send "&e%{_n}%. &f%{az.name.%loop-index%}% &7- &c%loop-value%"
+            if {_n} >= 10:
+                stop
+        send "&8&m--------------------------------"
+
+command /topmoney:
+    trigger:
+        send "&8&m--------------------------------"
+        send "&6&lTOP MONEY"
+        set {_n} to 0
+        loop {az.money::*}:
+            add 1 to {_n}
+            send "&e%{_n}%. &f%{az.name.%loop-index%}% &7- &6$%loop-value%"
+            if {_n} >= 10:
+                stop
+        send "&8&m--------------------------------"
+
+command /topbounty:
+    trigger:
+        send "&8&m--------------------------------"
+        send "&c&lTOP BOUNTY"
+        set {_n} to 0
+        loop {az.bounty::*}:
+            add 1 to {_n}
+            send "&e%{_n}%. &f%{az.name.%loop-index%}% &7- &6$%loop-value%"
+            if {_n} >= 10:
+                stop
+        send "&8&m--------------------------------"
+
+command /topplaytime:
+    trigger:
+        send "&8&m--------------------------------"
+        send "&e&lTOP PLAYTIME"
+        set {_n} to 0
+        loop {az.playtime::*}:
+            add 1 to {_n}
+            send "&e%{_n}%. &f%{az.name.%loop-index%}% &7- &f%loop-value% minutes"
+            if {_n} >= 10:
+                stop
+        send "&8&m--------------------------------"
+
+# ---------------- TRADE REQUESTS ----------------
+
+command /trade <player>:
+    trigger:
+        if arg-1 is player:
+            send "{@aas-prefix}&cلا يمكنك عمل Trade مع نفسك."
+            stop
+        if {az.trade.%uuid of player%} is set or {az.trade.%uuid of arg-1%} is set:
+            send "{@aas-prefix}&cأحد اللاعبين داخل Trade بالفعل."
+            stop
+        set {az.trade.request.%uuid of arg-1%} to player
+        send "{@aas-prefix}&aتم إرسال Trade إلى &e%arg-1%&a."
+        send "{@aas-prefix}&e%player% &7يريد التداول معك. اكتب &a/tradeaccept" to arg-1
+        wait {@trade-timeout}
+        if {az.trade.request.%uuid of arg-1%} is player:
+            delete {az.trade.request.%uuid of arg-1%}
+
+command /tradeaccept:
+    trigger:
+        if {az.trade.request.%uuid of player%} is not set:
+            send "{@aas-prefix}&cلا يوجد Trade معلق."
+            stop
+        set {_p} to {az.trade.request.%uuid of player%}
+        delete {az.trade.request.%uuid of player%}
+        if {_p} is not online:
+            send "{@aas-prefix}&cاللاعب غير متصل."
+            stop
+        set {az.trade.%uuid of player%} to {_p}
+        set {az.trade.%uuid of {_p}%} to player
+        set {az.trade.ready.%uuid of player%} to false
+        set {az.trade.ready.%uuid of {_p}%} to false
+        open chest inventory with 3 rows named "&8✦ &6TRADE &8✦" to player
+        open chest inventory with 3 rows named "&8✦ &6TRADE &8✦" to {_p}
+        send "{@aas-prefix}&aTrade بدأ. استخدم &e/tradeoffer <amount> &aلإضافة المال، والعناصر يمكن وضعها في واجهة Trade."
+
+command /tradeoffer <number>:
+    trigger:
+        if {az.trade.%uuid of player%} is not set:
+            send "{@aas-prefix}&cأنت لست داخل Trade."
+            stop
+        if arg-1 < 0:
+            stop
+        set {az.trade.money.%uuid of player%} to arg-1
+        set {az.trade.ready.%uuid of player%} to false
+        set {_p} to {az.trade.%uuid of player%}
+        if {_p} is online:
+            set {az.trade.ready.%uuid of {_p}%} to false
+            send "{@aas-prefix}&e%player% &7غيّر عرض المال إلى &6$%arg-1%&7." to {_p}
+        send "{@aas-prefix}&aعرضك المالي: &6$%arg-1%"
+
+command /tradeready:
+    trigger:
+        if {az.trade.%uuid of player%} is not set:
+            send "{@aas-prefix}&cأنت لست داخل Trade."
+            stop
+        set {az.trade.ready.%uuid of player%} to true
+        set {_p} to {az.trade.%uuid of player%}
+        if {_p} is online:
+            send "{@aas-prefix}&a%player% جاهز للتبادل." to {_p}
+        if {az.trade.ready.%uuid of {_p}%} is true:
+            send "{@aas-prefix}&aTrade confirmed."
+            # Money is transferred only after both players are ready.
+            set {_m1} to {az.trade.money.%uuid of player%}
+            set {_m2} to {az.trade.money.%uuid of {_p}%}
+            if {_m1} is not set:
+                set {_m1} to 0
+            if {_m2} is not set:
+                set {_m2} to 0
+            if {az.money.%uuid of player%} >= {_m1}:
+                if {az.money.%uuid of {_p}%} >= {_m2}:
+                    subtract {_m1} from {az.money.%uuid of player%}
+                    subtract {_m2} from {az.money.%uuid of {_p}%}
+                    add {_m2} to {az.money.%uuid of player%}
+                    add {_m1} to {az.money.%uuid of {_p}%}
+                    send "{@aas-prefix}&aتم إتمام تحويل الأموال في Trade." to player
+                    send "{@aas-prefix}&aتم إتمام تحويل الأموال في Trade." to {_p}
+                else:
+                    send "{@aas-prefix}&cفشل Trade: رصيد اللاعب الآخر غير كافٍ." to player
+                    send "{@aas-prefix}&cفشل Trade: رصيدك غير كافٍ." to {_p}
+            else:
+                send "{@aas-prefix}&cفشل Trade: رصيدك غير كافٍ." to player
+                send "{@aas-prefix}&cفشل Trade: رصيد اللاعب الآخر غير كافٍ." to {_p}
+            delete {az.trade.%uuid of player%}
+            delete {az.trade.%uuid of {_p}%}
+            delete {az.trade.money.%uuid of player%}
+            delete {az.trade.money.%uuid of {_p}%}
+            delete {az.trade.ready.%uuid of player%}
+            delete {az.trade.ready.%uuid of {_p}%}
+
+command /tradecancel:
+    trigger:
+        if {az.trade.%uuid of player%} is not set:
+            send "{@aas-prefix}&cأنت لست داخل Trade."
+            stop
+        set {_p} to {az.trade.%uuid of player%}
+        delete {az.trade.%uuid of player%}
+        delete {az.trade.%uuid of {_p}%}
+        delete {az.trade.money.%uuid of player%}
+        delete {az.trade.money.%uuid of {_p}%}
+        delete {az.trade.ready.%uuid of player%}
+        delete {az.trade.ready.%uuid of {_p}%}
+        send "{@aas-prefix}&cتم إلغاء Trade." to player
+        if {_p} is online:
+            send "{@aas-prefix}&cتم إلغاء Trade." to {_p}
+
+# ---------------- BUY ORDERS ----------------
+
+command /order <text>:
+    trigger:
+        if arg-1 is "create":
+            if player's tool is air:
+                send "{@aas-prefix}&cأمسك العنصر الذي تريد شراءه أولاً."
+                stop
+            send "{@aas-prefix}&eالصيغة: &f/order create <amount> <total-price>"
+            stop
+        if arg-1 is "list":
+            send "&8&m--------------------------------"
+            send "&6&lBUY ORDERS"
+            loop {az.order.item::*}:
+                send "&e#%loop-index% &f%{az.order.item.%loop-index%}% &7x &f%{az.order.amount.%loop-index%}% &7- &6$%{az.order.price.%loop-index%}%"
+            send "&8&m--------------------------------"
+        else if arg-1 is "cancel":
+            send "{@aas-prefix}&eلإلغاء طلبك استخدم &f/ordercancel <id>"
+        else:
+            send "{@aas-prefix}&7/order list"
+            send "{@aas-prefix}&7/order create"
+            send "{@aas-prefix}&7/ordercancel <id>"
+
+command /ordercreate <number> <number>:
+    trigger:
+        if player's tool is air:
+            send "{@aas-prefix}&cأمسك العنصر المطلوب."
+            stop
+        if arg-1 <= 0 or arg-2 <= 0:
+            stop
+        set {az.order.next} to {az.order.next} + 1
+        set {_id} to {az.order.next}
+        set {az.order.item.%{_id}%} to type of player's tool
+        set {az.order.amount.%{_id}%} to arg-1
+        set {az.order.price.%{_id}%} to arg-2
+        set {az.order.owner.%{_id}%} to uuid of player
+        set {az.order.ownername.%{_id}%} to name of player
+        send "{@aas-prefix}&aتم إنشاء Buy Order #%{_id}%."
+
+command /ordercancel <number>:
+    trigger:
+        set {_id} to arg-1
+        if {az.order.owner.%{_id}%} is not uuid of player:
+            send "{@aas-prefix}&cهذا الطلب ليس لك."
+            stop
+        delete {az.order.item.%{_id}%}
+        delete {az.order.amount.%{_id}%}
+        delete {az.order.price.%{_id}%}
+        delete {az.order.owner.%{_id}%}
+        delete {az.order.ownername.%{_id}%}
+        send "{@aas-prefix}&aتم إلغاء الطلب."
+
+command /ordersell <number>:
+    trigger:
+        set {_id} to arg-1
+        if {az.order.item.%{_id}%} is not set:
+            send "{@aas-prefix}&cالطلب غير موجود."
+            stop
+        if player's tool is air:
+            send "{@aas-prefix}&cأمسك العنصر المطلوب للبيع."
+            stop
+        if type of player's tool is not {az.order.item.%{_id}%}:
+            send "{@aas-prefix}&cهذا ليس العنصر المطلوب."
+            stop
+        set {_amount} to item amount of player's tool
+        if {_amount} > {az.order.amount.%{_id}%}:
+            set {_amount} to {az.order.amount.%{_id}%}
+        set {_unit} to {az.order.price.%{_id}%} / {az.order.amount.%{_id}%}
+        set {_pay} to {_unit} * {_amount}
+        if {az.money.%{az.order.owner.%{_id}%}%} < {_pay}:
+            send "{@aas-prefix}&cرصيد صاحب الطلب لم يعد كافياً."
+            stop
+        remove {_amount} of player's tool from player
+        subtract {_pay} from {az.money.%{az.order.owner.%{_id}%}%}
+        add {_pay} to {az.money.%uuid of player%}
+        subtract {_amount} from {az.order.amount.%{_id}%}
+        send "{@aas-prefix}&aتم بيع &e%{_amount}% &aمن العنصر مقابل &6$%{_pay}%&a."
+        if {az.order.amount.%{_id}%} <= 0:
+            delete {az.order.item.%{_id}%}
+            delete {az.order.amount.%{_id}%}
+            delete {az.order.price.%{_id}%}
+            delete {az.order.owner.%{_id}%}
+            delete {az.order.ownername.%{_id}%}
+
+# ---------------- CRATES & KEYS ----------------
+
+command /crate:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &6AIZEN CRATES &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to tripwire hook named "&f&lCOMMON CRATE" with lore "&7Key: Common Key"
+        set slot 13 of player's current inventory to tripwire hook named "&b&lRARE CRATE" with lore "&7Key: Rare Key"
+        set slot 16 of player's current inventory to tripwire hook named "&5&lEPIC CRATE" with lore "&7Key: Epic Key"
+
+command /cratekey <text> [<player>] [<number>]:
+    permission: aizensmp.admin
+    trigger:
+        if arg-1 is "common":
+            set {_key} to tripwire hook named "&f&lCommon Key"
+        else if arg-1 is "rare":
+            set {_key} to tripwire hook named "&b&lRare Key"
+        else if arg-1 is "epic":
+            set {_key} to tripwire hook named "&5&lEpic Key"
+        else:
+            send "{@aas-prefix}&cKey types: common, rare, epic"
+            stop
+        if arg-2 is not set:
+            set {_target} to player
+        else:
+            set {_target} to arg-2
+        set {_amount} to 1
+        if arg-3 is set:
+            set {_amount} to arg-3
+        give {_amount} of {_key} to {_target}
+        send "{@aas-prefix}&aتم إعطاء &e%{_amount}% &aKey إلى &e%{_target}%&a."
+
+command /crateopen <text>:
+    trigger:
+        set {_keyname} to lowercase arg-1
+        if {_keyname} is "common":
+            set {_key} to tripwire hook named "&f&lCommon Key"
+            set {_reward} to 500
+        else if {_keyname} is "rare":
+            set {_key} to tripwire hook named "&b&lRare Key"
+            set {_reward} to 1500
+        else if {_keyname} is "epic":
+            set {_key} to tripwire hook named "&5&lEpic Key"
+            set {_reward} to 5000
+        else:
+            send "{@aas-prefix}&cCommon / Rare / Epic فقط."
+            stop
+        if player does not have {_key}:
+            send "{@aas-prefix}&cلا تملك المفتاح."
+            stop
+        remove 1 {_key} from player
+        add {_reward} to {az.money.%uuid of player%}
+        send "{@aas-prefix}&6🎁 حصلت على $%{_reward}% من Crate!"
+
+# ---------------- PARTY ----------------
+
+command /party <text> [<player>]:
+    trigger:
+        if arg-1 is "create":
+            if {az.party.%uuid of player%} is set:
+                send "{@aas-prefix}&cأنت داخل Party بالفعل."
+                stop
+            set {az.party.%uuid of player%} to uuid of player
+            set {az.party.leader.%uuid of player%} to player
+            send "{@aas-prefix}&aتم إنشاء Party."
+            stop
+        if arg-1 is "invite":
+            if arg-2 is not set:
+                send "{@aas-prefix}&c/party invite <player>"
+                stop
+            if {az.party.%uuid of player%} is not set:
+                set {az.party.%uuid of player%} to uuid of player
+                set {az.party.leader.%uuid of player%} to player
+            set {az.party.invite.%uuid of arg-2%} to player
+            send "{@aas-prefix}&aتم إرسال دعوة Party إلى &e%arg-2%&a."
+            send "{@aas-prefix}&e%player% &7دعاك إلى Party. استخدم &a/party accept" to arg-2
+            stop
+        if arg-1 is "accept":
+            if {az.party.invite.%uuid of player%} is not set:
+                send "{@aas-prefix}&cلا توجد دعوة."
+                stop
+            set {_leader} to {az.party.invite.%uuid of player%}
+            if {_leader} is not online:
+                delete {az.party.invite.%uuid of player%}
+                send "{@aas-prefix}&cقائد الـParty غير متصل."
+                stop
+            set {az.party.%uuid of player%} to {az.party.%uuid of {_leader}%}
+            delete {az.party.invite.%uuid of player%}
+            send "{@aas-prefix}&aانضممت إلى Party."
+            stop
+        if arg-1 is "leave":
+            delete {az.party.%uuid of player%}
+            send "{@aas-prefix}&aغادرت الـParty."
+            stop
+        if arg-1 is "list":
+            if {az.party.%uuid of player%} is not set:
+                send "{@aas-prefix}&cلست داخل Party."
+                stop
+            set {_id} to {az.party.%uuid of player%}
+            send "&8&m--------------------------------"
+            send "&6&lPARTY"
+            loop all players:
+                if {az.party.%uuid of loop-player%} is {_id}:
+                    send "&e• &f%loop-player%"
+            send "&8&m--------------------------------"
+            stop
+        send "{@aas-prefix}&7/party create"
+        send "{@aas-prefix}&7/party invite <player>"
+        send "{@aas-prefix}&7/party accept"
+        send "{@aas-prefix}&7/party leave"
+        send "{@aas-prefix}&7/party list"
+
+on quit:
+    delete {az.party.invite.%uuid of player%}
