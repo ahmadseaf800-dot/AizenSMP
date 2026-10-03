@@ -418,7 +418,10 @@ jobs:
             local pid
             for attempt in 1 2 3; do
               echo "eula=true" > "network/$name/eula.txt"
-              "$JAVA21_HOME/bin/java" -Xms512M -Xmx1024M -jar "$jar" --nogui > "$log" 2>&1 &
+              (
+                cd "network/$name"
+                "$JAVA21_HOME/bin/java" -Xms512M -Xmx1024M -jar server.jar --nogui
+              ) > "$log" 2>&1 &
               pid=$!
               sleep 8
               if kill -0 "$pid" 2>/dev/null; then
