@@ -295,15 +295,15 @@ jobs:
           # This is Minecraft's deterministic offline UUID for the cracked-mode username Aizenx.
           for name in germany turkey america; do
             cat > "network/$name/ops.json" <<'EOF'
-[
-  {
-    "uuid": "fb0d4a3b-54a0-360f-afc3-649c15b979ff",
-    "name": "Aizenx",
-    "level": 4,
-    "bypassesPlayerLimit": true
-  }
-]
-EOF
+          [
+            {
+              "uuid": "fb0d4a3b-54a0-360f-afc3-649c15b979ff",
+              "name": "Aizenx",
+              "level": 4,
+              "bypassesPlayerLimit": true
+            }
+          ]
+          EOF
           done
 
           mkdir -p network/germany/plugins/voicechat
