@@ -125,9 +125,12 @@ jobs:
           echo "ViaVersion: $VIAVERSION_URL"
           echo "ViaBackwards: $VIABACKWARDS_URL"
 
+          SKRIPT_URL=$(modrinth_file "skript" "paper")
+
+          echo "Skript: $SKRIPT_URL"
+
           for name in germany turkey america; do
-            curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/Skript.jar" \
-              "https://github.com/SkriptLang/Skript/releases/latest/download/Skript.jar"
+            curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/Skript.jar" "$SKRIPT_URL"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/ViaVersion.jar" "$VIAVERSION_URL"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/ViaBackwards.jar" "$VIABACKWARDS_URL"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/WorldEdit.jar" "$WE_URL"
