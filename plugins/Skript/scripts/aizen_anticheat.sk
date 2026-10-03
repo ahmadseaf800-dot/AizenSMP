@@ -15,6 +15,7 @@ options:
 function azACFlag(p: player, reason: text):
     add 1 to {az.ac.vl.%uuid of {_p}%}
     set {az.ac.last.%uuid of {_p}%} to {_reason}
+    execute console command "aizenac flag %{_p}% %{az.ac.vl.%uuid of {_p}%}% %{_reason}%"
     if {az.ac.vl.%uuid of {_p}%} >= {@violation-limit}:
         if {_p} is not op:
             send "{@prefix}&cتم إيقاف اللاعب مؤقتاً بسبب مخالفات Anti-Cheat: &e%{_reason}%" to console
