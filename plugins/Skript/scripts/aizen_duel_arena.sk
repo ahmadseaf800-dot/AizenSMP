@@ -18,8 +18,8 @@ function azBuildDuelArena(p: player):
     add 2 to y-coordinate of {az.duel.spawn2}
     set {_s} to {az.duel.arena}
     # Clear the 75x75 playable arena volume.
-    execute console command "execute at %{_p}% run fill ~-37 ~-1 ~-37 ~37 ~15 ~37 air"
-    # Main floor.
+    execute console command "execute at %{_p}% run fill ~-37 ~-1 ~-37 ~37 ~18 ~37 air"
+    # Main floor.\n    # Arena height is 20 blocks from Y-1 through Y18.
     execute console command "execute at %{_p}% run fill ~-37 ~-2 ~-37 ~37 ~-2 ~37 polished_blackstone"
     execute console command "execute at %{_p}% run fill ~-34 ~-1 ~-34 ~34 ~-1 ~34 black_concrete"
     # Gold cross and center.
