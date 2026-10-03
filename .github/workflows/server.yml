@@ -16,11 +16,13 @@ jobs:
       - name: Checkout AizenSMP
         uses: actions/checkout@v4
 
-      - name: Setup Java 21
+      - name: Setup Java 21 and 25
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: |
+            21
+            25
 
       - name: Restore persistent data
         env:
@@ -382,14 +384,41 @@ jobs:
           }
           trap cleanup EXIT INT TERM
 
-          java -Xms512M -Xmx1024M -jar network/velocity/velocity.jar > velocity.log 2>&1 &
+          JAVA21_HOME="$JAVA_HOME"
+          JAVA25_HOME="$(dirname "$(dirname "$(find /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/25* -type f -path '*/bin/java' | head -n1)")")"
+          test -x "$JAVA21_HOME/bin/java"
+          test -x "$JAVA25_HOME/bin/java"
+
+          echo "Java 21: $("$JAVA21_HOME/bin/java" -version 2>&1 | head -n1)"
+          echo "Java 25: $("$JAVA25_HOME/bin/java" -version 2>&1 | head -n1)"
+
+          "$JAVA25_HOME/bin/java" -Xms256M -Xmx768M -jar network/velocity/velocity.jar > velocity.log 2>&1 &
           VELOCITY_PID=$!
-          java -Xms512M -Xmx1024M -jar network/germany/server.jar --nogui > germany.log 2>&1 &
-          GERMANY_PID=$!
-          java -Xms512M -Xmx1024M -jar network/turkey/server.jar --nogui > turkey.log 2>&1 &
-          TURKEY_PID=$!
-          java -Xms512M -Xmx1024M -jar network/america/server.jar --nogui > america.log 2>&1 &
-          AMERICA_PID=$!
+
+          start_backend() {
+            local name="$1"
+            local jar="network/$name/server.jar"
+            local log="$name.log"
+            local pid
+            for attempt in 1 2 3; do
+              "$JAVA21_HOME/bin/java" -Xms512M -Xmx1024M -jar "$jar" --nogui > "$log" 2>&1 &
+              pid=$!
+              sleep 8
+              if kill -0 "$pid" 2>/dev/null; then
+                echo "$name backend is running (attempt $attempt)."
+                printf '%s' "$pid"
+                return 0
+              fi
+              echo "::warning::$name backend exited during startup; retrying ($attempt/3)."
+              rm -rf "network/$name/libraries"
+              sleep 2
+            done
+            return 1
+          }
+
+          GERMANY_PID=$(start_backend germany) || { echo "::error::Germany backend failed after 3 attempts."; exit 1; }
+          TURKEY_PID=$(start_backend turkey) || { echo "::error::Turkey backend failed after 3 attempts."; exit 1; }
+          AMERICA_PID=$(start_backend america) || { echo "::error::America backend failed after 3 attempts."; exit 1; }
 
           sleep 12
 
