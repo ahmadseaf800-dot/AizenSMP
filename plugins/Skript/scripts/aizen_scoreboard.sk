@@ -1,38 +1,42 @@
 # =========================================================
-# AizenSMP - Live Sidebar Statistics
+# AizenSMP - Live Sidebar
+# Generated for each regional server by GitHub Actions.
 # =========================================================
 
-on join:
-    while player is online:
-        set title of player's scoreboard to "&6&lAIZEN SMP"
-        set line 12 of player's scoreboard to "&8&m--------------------"
-        set line 11 of player's scoreboard to "&e&lPLAYER &f%name of player%"
-        set line 10 of player's scoreboard to "&7Server: &fAIZEN SMP"
-        set line 9 of player's scoreboard to ""
-        set {_money} to {az.money.%uuid of player%}
-        if {_money} is not set:
-            set {_money} to 0
-        set {_shards} to {az.shards.%uuid of player%}
-        if {_shards} is not set:
-            set {_shards} to 0
-        set {_kills} to {az.kills.%uuid of player%}
-        if {_kills} is not set:
-            set {_kills} to 0
-        set {_deaths} to {az.deaths.%uuid of player%}
-        if {_deaths} is not set:
-            set {_deaths} to 0
-        set {_streak} to {az.streak.%uuid of player%}
-        if {_streak} is not set:
-            set {_streak} to 0
-        set line 8 of player's scoreboard to "&6$ &f%{_money}%"
-        set line 7 of player's scoreboard to "&b✦ &f%{_shards}% Shards"
-        set line 6 of player's scoreboard to "&c⚔ &f%{_kills}% Kills"
-        set line 5 of player's scoreboard to "&7☠ &f%{_deaths}% Deaths"
-        set line 4 of player's scoreboard to "&e⚡ &f%{_streak}% Streak"
-        set line 3 of player's scoreboard to ""
-        set line 2 of player's scoreboard to "&aPlayers: &f%number of all players%&7/200"
-        set line 1 of player's scoreboard to "&6&lAIZEN SMP"
-        wait 1 second
+function azUpdateSidebar(p: player):
+    set {_money} to {az.money.%uuid of {_p}%}
+    if {_money} is not set:
+        set {_money} to 0
+    set {_shards} to {az.shards.%uuid of {_p}%}
+    if {_shards} is not set:
+        set {_shards} to 0
+    set {_kills} to {az.kills.%uuid of {_p}%}
+    if {_kills} is not set:
+        set {_kills} to 0
+    set {_deaths} to {az.deaths.%uuid of {_p}%}
+    if {_deaths} is not set:
+        set {_deaths} to 0
+    set {_streak} to {az.streak.%uuid of {_p}%}
+    if {_streak} is not set:
+        set {_streak} to 0
+
+    set title of {_p}'s scoreboard to "&6&lAIZEN SMP"
+    set line 12 of {_p}'s scoreboard to "&8&m------------------"
+    set line 11 of {_p}'s scoreboard to "&e&lPLAYER &f%name of {_p}%"
+    set line 10 of {_p}'s scoreboard to "&7Server: &fSERVER_NAME"
+    set line 9 of {_p}'s scoreboard to "&8&m------------------"
+    set line 8 of {_p}'s scoreboard to "&6$ &f%{_money}%"
+    set line 7 of {_p}'s scoreboard to "&b✦ &f%{_shards}% Shards"
+    set line 6 of {_p}'s scoreboard to "&c⚔ &f%{_kills}% Kills"
+    set line 5 of {_p}'s scoreboard to "&7☠ &f%{_deaths}% Deaths"
+    set line 4 of {_p}'s scoreboard to "&e⚡ &f%{_streak}% Streak"
+    set line 3 of {_p}'s scoreboard to "&8&m-----------------"
+    set line 2 of {_p}'s scoreboard to "&aPlayers: &f%number of all players%&7/MAX_PLAYERS"
+    set line 1 of {_p}'s scoreboard to "&6&lAIZEN SMP"
+
+every 1 second:
+    loop all players:
+        azUpdateSidebar(loop-player)
 
 on death of player:
     add 1 to {az.deaths.%uuid of victim%}
