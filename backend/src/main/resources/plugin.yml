@@ -1,0 +1,7 @@
+name: AizenAuthGuard
+version: 1.0.0
+main: com.aizensmp.auth.AizenAuthGuard
+api-version: '1.21'
+depend: [AuthMe]
+authors: [Aizen]
+description: Locks unauthenticated players until AuthMe login or registration.
