@@ -264,33 +264,39 @@ jobs:
           mkdir -p "$HOME/.config/playit_gg"
           PLAYIT_SOCKET="$HOME/.config/playit_gg/playit.sock"
           PLAYIT_SECRET="$HOME/.config/playit_gg/playit.toml"
+          API="https://api.playit.gg"
 
-          # First-run bootstrap: a short-lived Playit setup code can provision
-          # the agent secret after browser approval.
-          if [ ! -s "$PLAYIT_SECRET" ] && [ -n "${PLAYIT_SETUP_CODE:-}" ]; then
-            echo "Playit agent secret is missing; bootstrapping from setup code."
-            API="https://api.playit.gg"
-            VERSION="AizenSMP-GitHubActions/1.0"
+          # A Playit claim code is exactly 10 hexadecimal characters.
+          # Ignore an old/invalid secret value and create a fresh code automatically.
+          if [ ! -s "$PLAYIT_SECRET" ]; then
+            CLAIM_CODE="${PLAYIT_SETUP_CODE:-}"
+            if ! printf '%s' "$CLAIM_CODE" | grep -Eq '^[0-9a-fA-F]{10}$'; then
+              CLAIM_CODE=$(openssl rand -hex 5)
+              echo "Generated a fresh Playit claim code."
+            else
+              echo "Using PLAYIT_SETUP_CODE as the Playit claim code."
+            fi
 
-            for i in {1..90}; do
-              SETUP=$(curl -fsSL --retry 3 --retry-delay 1 \
-                -H "Content-Type: application/json" \
-                -d "$(jq -cn --arg code "$PLAYIT_SETUP_CODE" --arg version "$VERSION" '{code:$code,agent_type:"self-managed",version:$version}')" \
-                "$API/claim/setup")
+            echo "::notice::Open https://playit.gg/claim/$CLAIM_CODE and approve the new AizenSMP agent."
+            echo "PLAYIT CLAIM URL: https://playit.gg/claim/$CLAIM_CODE"
 
-              STATE=$(echo "$SETUP" | jq -r '.status // .state // empty')
-              echo "Playit setup state: $STATE"
-              echo "Approve the agent here if Playit asks for browser approval: https://playit.gg/claim/$PLAYIT_SETUP_CODE"
+            for i in {1..300}; do
+              SETUP_RAW=$(curl -sS --retry 3 --retry-delay 1                 -H "Content-Type: application/json"                 -d "$(jq -cn --arg code "$CLAIM_CODE" --arg version "AizenSMP-GitHubActions/1.0"                   '{code:$code,agent_type:"self-managed",version:$version}')"                 "$API/claim/setup" || true)
 
-              if [ "$STATE" = "UserRejected" ] || [ "$STATE" = "user_rejected" ]; then
-                echo "::error::Playit setup was rejected in the browser."
+              if echo "$SETUP_RAW" | jq -e '.error' >/dev/null 2>&1; then
+                echo "::error::Playit claim setup rejected: $(echo "$SETUP_RAW" | jq -c '.error')"
                 exit 1
               fi
 
-              EXCHANGE=$(curl -sS \
-                -H "Content-Type: application/json" \
-                -d "$(jq -cn --arg code "$PLAYIT_SETUP_CODE" '{code:$code}')" \
-                "$API/claim/exchange" || true)
+              STATE=$(echo "$SETUP_RAW" | jq -r '.status // .state // empty')
+              echo "Playit claim state: $STATE"
+
+              if [ "$STATE" = "UserRejected" ] || [ "$STATE" = "user_rejected" ]; then
+                echo "::error::Playit agent claim was rejected."
+                exit 1
+              fi
+
+              EXCHANGE=$(curl -sS                 -H "Content-Type: application/json"                 -d "$(jq -cn --arg code "$CLAIM_CODE" '{code:$code}')"                 "$API/claim/exchange" || true)
 
               SECRET=$(echo "$EXCHANGE" | jq -r '.secret_key // empty')
               if [ -n "$SECRET" ]; then
@@ -299,20 +305,20 @@ jobs:
                 echo "Playit agent secret provisioned successfully."
                 break
               fi
+
               sleep 2
             done
           fi
 
           if [ ! -s "$PLAYIT_SECRET" ]; then
-            echo "::error::Playit agent secret is missing."
-            echo "::error::Add PLAYIT_CONFIG_BASE64 for an existing agent secret, or PLAYIT_SETUP_CODE for a fresh Playit agent claim."
+            echo "::error::Playit agent secret is missing after claim."
             exit 1
           fi
 
-          curl -L --fail --retry 5 --retry-delay 2 -o playitd "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
+          curl -L --fail --retry 5 --retry-delay 2 -o playitd             "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
           chmod +x playitd
           rm -f "$PLAYIT_SOCKET"
-          nohup ./playitd --socket-path "$PLAYIT_SOCKET" --secret-path "$PLAYIT_SECRET" > playitd.log 2>&1 &
+          nohup ./playitd --socket-path "$PLAYIT_SOCKET" --secret-path "$PLAYIT_SECRET"             > playitd.log 2>&1 &
           echo $! > playitd.pid
 
           for i in {1..30}; do
