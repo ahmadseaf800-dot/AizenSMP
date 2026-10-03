@@ -885,7 +885,7 @@ command /ah [<text>] [<text>]:
     trigger:
         if arg-1 is "sell":
             if arg-2 is not set:
-                send "{@prefix} &cUsage: /ah sell <price> &7(example: 10m)"
+                send "{@prefix} &cUsage: /ah sell <price> &7(example: /ah sell 10m)"
                 stop
             set {_price} to azParsePrice(arg-2)
             if {_price} <= 0:
@@ -898,26 +898,20 @@ command /ah [<text>] [<text>]:
                 send "{@prefix} &cYou already have the maximum of &e45 &clistings."
                 stop
 
-            set {_listed} to 0
-            loop 45 times:
-                if {_listed} >= {@ah-max-listings}:
-                    stop
-                set {_slot} to loop-number - 1
-                set {_item} to {az.sellbasket.%uuid of player%.%{_slot}%}
-                if {_item} is set:
-                    if {_item} is not air:
-                        set {az.ah.next} to {az.ah.next} + 1
-                        set {_id} to {az.ah.next}
-                        set {az.ah.item.%{_id}%} to {_item}
-                        set {az.ah.price.%{_id}%} to {_price}
-                        set {az.ah.seller.%{_id}%} to uuid of player
-                        set {az.ah.sellername.%{_id}%} to name of player
-                        delete {az.sellbasket.%uuid of player%.%{_slot}%}
-                        add 1 to {_listed}
-            if {_listed} is 0:
-                send "{@prefix} &cYour sell basket is empty."
+            set {_item} to player's tool
+            if {_item} is air:
+                send "{@prefix} &cHold the item you want to sell in your hand."
                 stop
-            send "{@prefix} &aListed &e%{_listed}% &aitem stack(s) for &6$%{_price}% &aeach."
+
+            set {az.ah.next} to {az.ah.next} + 1
+            set {_id} to {az.ah.next}
+            set {az.ah.item.%{_id}%} to {_item}
+            set {az.ah.price.%{_id}%} to {_price}
+            set {az.ah.seller.%{_id}%} to uuid of player
+            set {az.ah.sellername.%{_id}%} to name of player
+            set player's tool to air
+
+            send "{@prefix} &aListed &e%amount of {_item}% &f%name of {_item}% &afor &6$%{_price}%&a."
             stop
 
         if arg-1 is "my":
