@@ -1,0 +1,138 @@
+# =========================================================
+# AIZEN SMP - SERVER ANTI-CHEAT LAYER
+# Purpur 1.21.11 / Skript
+# This is a server-side heuristic layer; it does not replace
+# packet-level anti-cheat software.
+# =========================================================
+
+options:
+    prefix: &6[&eAizenSMP&6] &r
+    max-reach: 5.0
+    max-horizontal-move: 1.25
+    max-air-time: 7 seconds
+    violation-limit: 5
+
+function azACFlag(p: player, reason: text):
+    add 1 to {az.ac.vl.%uuid of {_p}%}
+    set {az.ac.last.%uuid of {_p}%} to {_reason}
+    if {az.ac.vl.%uuid of {_p}%} >= {@violation-limit}:
+        if {_p} is not op:
+            send "{@prefix}&cتم إيقاف اللاعب مؤقتاً بسبب مخالفات Anti-Cheat: &e%{_reason}%" to console
+            kick {_p} due to "&cAizenSMP Anti-Cheat\n&7Suspicious movement detected."
+        delete {az.ac.vl.%uuid of {_p}%}
+    else:
+        send "{@prefix}&cAnti-Cheat &7%{_p}% &8» &e%{_reason}% &7(VL: %{az.ac.vl.%uuid of {_p}%}%)" to console
+
+# Decay violations so one accidental check does not permanently punish a player.
+every 15 seconds:
+    loop all players:
+        if {az.ac.vl.%uuid of loop-player%} is set:
+            remove 1 from {az.ac.vl.%uuid of loop-player%}
+            if {az.ac.vl.%uuid of loop-player%} <= 0:
+                delete {az.ac.vl.%uuid of loop-player%}
+
+# Reach protection for normal player-vs-player combat.
+on damage:
+    if attacker is a player:
+        if victim is a player:
+            if attacker is not victim:
+                set {_d} to distance between location of attacker and location of victim
+                if {_d} > {@max-reach}:
+                    cancel event
+                    azACFlag(attacker, "Reach")
+                    stop
+
+# Basic impossible horizontal movement check.
+# Ignore teleporting, vehicles, flight, elytra and normal knockback situations.
+on player move:
+    if player is op:
+        stop
+    if player's gamemode is creative:
+        stop
+    if player's gamemode is spectator:
+        stop
+    if player is flying:
+        stop
+    if player is gliding:
+        stop
+    if player is riding:
+        stop
+    if {az.ac.teleport.%uuid of player%} is true:
+        stop
+    set {_from} to event-location
+    set {_to} to location of player
+    if world of {_from} is not world of {_to}:
+        stop
+    set {_dx} to x-coordinate of {_to} - x-coordinate of {_from}
+    set {_dz} to z-coordinate of {_to} - z-coordinate of {_from}
+    set {_horizontal} to sqrt(({_dx} * {_dx}) + ({_dz} * {_dz}))
+    if {_horizontal} > {@max-horizontal-move}:
+        if player is sprinting:
+            if {_horizontal} <= 1.65:
+                stop
+        cancel event
+        azACFlag(player, "Speed/Move")
+        stop
+
+# Basic anti-fly heuristic: a player cannot remain in the air for too long
+# without a legitimate movement state.
+on player move:
+    if player is op:
+        stop
+    if player's gamemode is creative:
+        stop
+    if player's gamemode is spectator:
+        stop
+    if player is flying:
+        delete {az.ac.air.%uuid of player%}
+        stop
+    if player is gliding:
+        delete {az.ac.air.%uuid of player%}
+        stop
+    if player is on ground:
+        delete {az.ac.air.%uuid of player%}
+        stop
+    if {az.ac.air.%uuid of player%} is not set:
+        set {az.ac.air.%uuid of player%} to now
+        stop
+    if difference between now and {az.ac.air.%uuid of player%} > {@max-air-time}:
+        cancel event
+        azACFlag(player, "Fly")
+        delete {az.ac.air.%uuid of player%}
+
+# Break-speed sanity check for blocks that normally take time to mine.
+on break:
+    if player is op:
+        stop
+    set {_now} to now
+    if {az.ac.lastbreak.%uuid of player%} is set:
+        set {_gap} to difference between {_now} and {az.ac.lastbreak.%uuid of player%}
+        if {_gap} < 2 ticks:
+            if event-block is not instant break:
+                cancel event
+                azACFlag(player, "FastBreak")
+                stop
+    set {az.ac.lastbreak.%uuid of player%} to {_now}
+
+# Clean state on quit.
+on quit:
+    delete {az.ac.vl.%uuid of player%}
+    delete {az.ac.last.%uuid of player%}
+    delete {az.ac.air.%uuid of player%}
+    delete {az.ac.lastbreak.%uuid of player%}
+    delete {az.ac.teleport.%uuid of player%}
+
+command /acstatus:
+    permission: aizensmp.admin
+    trigger:
+        send "{@prefix}&aAnti-Cheat layer: &2ACTIVE"
+        send "&7VL: &e%{az.ac.vl.%uuid of player%}%"
+        if {az.ac.last.%uuid of player%} is set:
+            send "&7Last flag: &e%{az.ac.last.%uuid of player%}%"
+
+command /acreset:
+    permission: aizensmp.admin
+    trigger:
+        delete {az.ac.vl.%uuid of player%}
+        delete {az.ac.last.%uuid of player%}
+        send "{@prefix}&aتم تصفير مخالفات Anti-Cheat الخاصة بك."
