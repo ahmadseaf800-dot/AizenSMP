@@ -287,7 +287,7 @@ jobs:
         with:
           name: aizensmp-playit-config
           path: /home/runner/.config/playit_gg/playit.toml
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
           overwrite: true
 
