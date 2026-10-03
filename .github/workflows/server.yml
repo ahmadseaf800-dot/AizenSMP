@@ -52,8 +52,9 @@ jobs:
           mkdir -p network/velocity
           VELOCITY_VERSION=$(curl -fsSL https://api.papermc.io/v2/projects/velocity | jq -r '.versions[-1]')
           VELOCITY_BUILD=$(curl -fsSL "https://api.papermc.io/v2/projects/velocity/versions/$VELOCITY_VERSION/builds" | jq -r '.builds | map(select(.channel == "default")) | max_by(.id) | .id')
-          VELOCITY_FILE="velocity-$VELOCITY_VERSION-$VELOCITY_BUILD.jar"
-          echo "Downloading Velocity $VELOCITY_VERSION build $VELOCITY_BUILD"
+          VELOCITY_FILE=$(curl -fsSL "https://api.papermc.io/v2/projects/velocity/versions/$VELOCITY_VERSION/builds/$VELOCITY_BUILD" | jq -r '.downloads.application.name')
+          test -n "$VELOCITY_FILE" && test "$VELOCITY_FILE" != "null"
+          echo "Downloading Velocity $VELOCITY_VERSION build $VELOCITY_BUILD file $VELOCITY_FILE"
           curl -L --fail -o network/velocity/velocity.jar "https://api.papermc.io/v2/projects/velocity/versions/$VELOCITY_VERSION/builds/$VELOCITY_BUILD/downloads/$VELOCITY_FILE"
 
       - name: Install backend plugins
@@ -209,7 +210,12 @@ jobs:
             done
 
             rm -f network/persistent-data.tar.zst
-            tar --zstd -cf network/persistent-data.tar.zst               network/germany/world network/germany/world_nether network/germany/world_the_end               network/turkey/world network/turkey/world_nether network/turkey/world_the_end               network/america/world network/america/world_nether network/america/world_the_end               network/germany/plugins/Skript network/turkey/plugins/Skript network/america/plugins/Skript               2>/dev/null || true
+            tar --zstd -cf network/persistent-data.tar.zst \
+              network/germany/world network/germany/world_nether network/germany/world_the_end \
+              network/turkey/world network/turkey/world_nether network/turkey/world_the_end \
+              network/america/world network/america/world_nether network/america/world_the_end \
+              network/germany/plugins/Skript network/turkey/plugins/Skript network/america/plugins/Skript \
+              2>/dev/null || true
 
             if [ -d "$HOME/.config/playit_gg" ]; then
               tar --zstd -rf network/persistent-data.tar.zst -C "$HOME/.config" playit_gg 2>/dev/null || true
@@ -239,4 +245,3 @@ jobs:
           echo "America Voice: stamina-lightning.tun.ply.gg:12323 -> UDP 25572"
 
           wait $VELOCITY_PID
-          
