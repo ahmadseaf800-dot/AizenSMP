@@ -1,5 +1,8 @@
 package com.aizensmp.auth;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import fr.xephi.authme.api.v3.AuthMeApi;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -22,7 +25,9 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -133,13 +138,15 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
         List<String> admins = new ArrayList<>();
         for (Player p : Bukkit.getOnlinePlayers()) {
             String name = json(p.getName());
-            players.add("{"player":"" + name + "","status":"Online","op":" + p.isOp() + ","violations":0,"lastDetection":""}");
+            players.add("{\"player\":\"" + name + "\",\"status\":\"Online\",\"op\":" + p.isOp() + ",\"violations\":0,\"lastDetection\":\"\"}");
             if (p.isOp() || hasRolePermission(p)) {
-                admins.add("{"player":"" + name + "","op":" + p.isOp() + ","role":"" + json(roleOf(p)) + "","permissions":" + permissionsJson(p) + "}");
+                admins.add("{\"player\":\"" + name + "\",\"op\":" + p.isOp()
+                        + ",\"role\":\"" + json(roleOf(p)) + "\",\"permissions\":" + permissionsJson(p) + "}");
             }
         }
-        String body = "{"type":"stats","server":"" + json(serverName) + "","online":" + Bukkit.getOnlinePlayers().size()
-                + ","players":[" + String.join(",", players) + "],"admins":[" + String.join(",", admins) + "],"time":"" + json(java.time.Instant.now().toString()) + ""}";
+        String body = "{\"type\":\"stats\",\"server\":\"" + json(serverName) + "\",\"online\":"
+                + Bukkit.getOnlinePlayers().size() + ",\"players\":[" + String.join(",", players)
+                + "],\"admins\":[" + String.join(",", admins) + "],\"time\":\"" + json(Instant.now().toString()) + "\"}";
         post("/api/event", body);
     }
 
@@ -165,20 +172,28 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
     }
 
     private void pollCommands() {
-        String url = dashboardUrl.replaceAll("/+$", "") + "/api/commands?server=" + java.net.URLEncoder.encode(serverName, java.nio.charset.StandardCharsets.UTF_8);
+        String url = dashboardUrl.replaceAll("/+$", "") + "/api/commands?server="
+                + java.net.URLEncoder.encode(serverName, StandardCharsets.UTF_8);
         try {
             HttpRequest req = HttpRequest.newBuilder(URI.create(url))
                     .timeout(Duration.ofSeconds(10))
                     .header("Authorization", "Bearer " + dashboardToken)
                     .header("Accept", "application/json")
                     .GET().build();
+
             HttpResponse<String> response = http.send(req, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) return;
-            String raw = response.body();
-            java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\\{\\"id\\":\\"([^\\"]+)\\"[^}]*?\\"command\\":\\"((?:\\\\.|[^\\"])*)\\"[^}]*?\\}").matcher(raw);
-            while (matcher.find()) {
-                String id = matcher.group(1);
-                String command = unescape(matcher.group(2));
+
+            JsonObject payload = JsonParser.parseString(response.body()).getAsJsonObject();
+            JsonArray commands = payload.has("commands") && payload.get("commands").isJsonArray()
+                    ? payload.getAsJsonArray("commands") : new JsonArray();
+
+            for (var element : commands) {
+                if (!element.isJsonObject()) continue;
+                JsonObject item = element.getAsJsonObject();
+                String id = item.has("id") ? item.get("id").getAsString() : "";
+                String command = item.has("command") ? item.get("command").getAsString() : "";
+                if (id.isBlank() || command.isBlank()) continue;
                 Bukkit.getScheduler().runTask(this, () -> executeQueuedCommand(id, command));
             }
         } catch (Exception ignored) {
@@ -192,9 +207,14 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
         } catch (Throwable error) {
             getLogger().warning("Dashboard command failed: " + error.getMessage());
         }
-        String result = "{"id":"" + json(id) + "","success":" + success + ","server":"" + json(serverName) + "","command":"" + json(command) + ""}";
+
+        String result = "{\"id\":\"" + json(id) + "\",\"success\":" + success
+                + ",\"server\":\"" + json(serverName) + "\",\"command\":\"" + json(command) + "\"}";
         post("/api/command-result", result);
-        post("/api/event", "{"type":"command","server":"" + json(serverName) + "","action":"" + (success ? "completed" : "failed") + "","reason":"Dashboard AI command","time":"" + json(java.time.Instant.now().toString()) + ""}");
+
+        post("/api/event", "{\"type\":\"command\",\"server\":\"" + json(serverName)
+                + "\",\"action\":\"" + (success ? "completed" : "failed")
+                + "\",\"reason\":\"Dashboard AI command\",\"time\":\"" + json(Instant.now().toString()) + "\"}");
     }
 
     private void post(String endpoint, String body) {
@@ -210,13 +230,11 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
         }
     }
 
-    private String unescape(String value) {
-        return value.replace("\\"", """).replace("\\\\", "\\");
-    }
-
     private String json(String value) {
         return String.valueOf(value == null ? "" : value)
-                .replace("\\", "\\\\").replace(""", "\\"")
-                .replace("\r", "").replace("\n", "\\n");
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "")
+                .replace("\n", "\\n");
     }
 }
