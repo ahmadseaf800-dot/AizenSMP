@@ -30,8 +30,6 @@ public final class AizenProxy {
 
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
-        proxy.getCommandManager().register("rtp", new RtpCommand(proxy));
-        proxy.getCommandManager().register("region", new RtpCommand(proxy));
     }
 
     @Subscribe
