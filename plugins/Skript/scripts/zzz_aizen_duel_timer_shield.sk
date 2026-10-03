@@ -1,0 +1,22 @@
+# AizenSMP - Duel timer shield
+# Neutralizes the old base 2-minute duel timeout without changing duel duration.
+
+every 1 second:
+    loop all players:
+        if {az.duel.%uuid of loop-player%} is set:
+            if {az.duel.start.%uuid of loop-player%} is set:
+                if difference between now and {az.duel.start.%uuid of loop-player%} >= 100 seconds:
+                    if difference between now and {az.duel.start.%uuid of loop-player%} <= 130 seconds:
+                        set {_opp} to {az.duel.%uuid of loop-player%}
+                        if {_opp} is a player:
+                            if {_opp} is online:
+                                set {az.duel.keep2.%uuid of loop-player%} to {_opp}
+                                set {az.duel.%uuid of loop-player%} to loop-player
+        if {az.duel.keep2.%uuid of loop-player%} is set:
+            if {az.duel.start.%uuid of loop-player%} is set:
+                if difference between now and {az.duel.start.%uuid of loop-player%} > 130 seconds:
+                    set {_opp2} to {az.duel.keep2.%uuid of loop-player%}
+                    if {_opp2} is player:
+                        if {_opp2} is online:
+                            set {az.duel.%uuid of loop-player%} to {_opp2}
+                    delete {az.duel.keep2.%uuid of loop-player%}
