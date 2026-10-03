@@ -90,41 +90,31 @@ jobs:
             test -s "network/$name/server.jar"
             jar tf "network/$name/server.jar" >/dev/null
             echo "eula=true" > "network/$name/eula.txt"
-            # Purpur/Paper can recreate or reject EULA state during bootstrap;
-            # keep it explicitly enabled immediately before every launch.
           done
 
           mkdir -p network/velocity
           PAPERMC_UA="AizenSMP/1.0 (GitHub Actions)"
 
-          VELOCITY_VERSION=$(curl -fsSL -H "User-Agent: $PAPERMC_UA"             https://fill.papermc.io/v3/projects/velocity             | jq -r '.versions | to_entries[0].value[0]')
+          VELOCITY_VERSION=$(curl -fsSL -H "User-Agent: $PAPERMC_UA" https://fill.papermc.io/v3/projects/velocity | jq -r '.versions | to_entries[0].value[0]')
           test -n "$VELOCITY_VERSION" && test "$VELOCITY_VERSION" != "null"
 
-          VELOCITY_BUILD=$(curl -fsSL -H "User-Agent: $PAPERMC_UA"             "https://fill.papermc.io/v3/projects/velocity/versions/$VELOCITY_VERSION"             | jq -r '.builds[0]')
+          VELOCITY_BUILD=$(curl -fsSL -H "User-Agent: $PAPERMC_UA" "https://fill.papermc.io/v3/projects/velocity/versions/$VELOCITY_VERSION" | jq -r '.builds[0]')
           test -n "$VELOCITY_BUILD" && test "$VELOCITY_BUILD" != "null"
 
-          VELOCITY_META=$(curl -fsSL -H "User-Agent: $PAPERMC_UA"             "https://fill.papermc.io/v3/projects/velocity/versions/$VELOCITY_VERSION/builds/$VELOCITY_BUILD")
-
+          VELOCITY_META=$(curl -fsSL -H "User-Agent: $PAPERMC_UA" "https://fill.papermc.io/v3/projects/velocity/versions/$VELOCITY_VERSION/builds/$VELOCITY_BUILD")
           VELOCITY_URL=$(echo "$VELOCITY_META" | jq -r '.downloads."server:default".url // empty')
           test -n "$VELOCITY_URL"
 
           echo "Downloading Velocity $VELOCITY_VERSION build $VELOCITY_BUILD"
           curl -fsSL --retry 5 --retry-delay 2 -o network/velocity/velocity.jar "$VELOCITY_URL"
-
           test -s network/velocity/velocity.jar
           jar tf network/velocity/velocity.jar >/dev/null
           echo "Velocity JAR verified successfully."
 
-          # Build the lightweight Velocity router used by /rtp and automatic
-          # Europe/Germany entry. It is compiled against the exact Velocity
-          # JAR downloaded above, so the proxy and plugin API stay in sync.
           rm -rf proxy/build
           mkdir -p proxy/build/classes network/velocity/plugins
-          "$JAVA25_HOME/bin/javac" -cp network/velocity/velocity.jar -d proxy/build/classes \
-            proxy/src/main/java/com/aizensmp/proxy/AizenProxy.java
-          jar --create --file network/velocity/plugins/AizenProxy.jar \
-            -C proxy/build/classes . \
-            -C proxy/src/main/resources velocity-plugin.json
+          "$JAVA25_HOME/bin/javac" -cp network/velocity/velocity.jar -d proxy/build/classes proxy/src/main/java/com/aizensmp/proxy/AizenProxy.java
+          jar --create --file network/velocity/plugins/AizenProxy.jar -C proxy/build/classes . -C proxy/src/main/resources velocity-plugin.json
           test -s network/velocity/plugins/AizenProxy.jar
           echo "AizenProxy built successfully."
 
@@ -133,10 +123,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Resolve plugin files from Modrinth's project-version API.
-          # Do not pin a Minecraft version here: the newest Paper/Purpur build
-          # is selected, which avoids 404s when a plugin has not yet published
-          # a build tagged exactly 1.21.11.
           MODRINTH_API="https://api.modrinth.com/v2"
           MODRINTH_UA="AizenSMP/1.0 (GitHub Actions)"
 
@@ -144,13 +130,7 @@ jobs:
             local project="$1"
             local loader="$2"
             local url
-
-            url=$(curl -fsSL --retry 5 --retry-delay 2 \
-              -H "User-Agent: $MODRINTH_UA" \
-              --get "$MODRINTH_API/project/$project/version" \
-              --data-urlencode "loaders=[\"$loader\"]" \
-              | jq -r '[.[].files[] | select(.primary == true) | .url][0] // empty')
-
+            url=$(curl -fsSL --retry 5 --retry-delay 2               -H "User-Agent: $MODRINTH_UA"               --get "$MODRINTH_API/project/$project/version"               --data-urlencode "loaders=[\"$loader\"]"               | jq -r '[.[].files[] | select(.primary == true) | .url][0] // empty')
             test -n "$url"
             test "$url" != "null"
             printf '%s' "$url"
@@ -159,17 +139,9 @@ jobs:
           SVC_URL=$(modrinth_file "simple-voice-chat" "paper")
           WE_URL=$(modrinth_file "worldedit" "paper")
 
-          VIAVERSION_URL=$(curl -fsSL --retry 5 --retry-delay 2 \
-            -H "User-Agent: $MODRINTH_UA" \
-            --get "$MODRINTH_API/project/viaversion/version" \
-            --data-urlencode 'loaders=["paper"]' \
-            | jq -r '[.[].files[] | select(.primary == true) | .url][0] // empty')
+          VIAVERSION_URL=$(curl -fsSL --retry 5 --retry-delay 2             -H "User-Agent: $MODRINTH_UA"             --get "$MODRINTH_API/project/viaversion/version"             --data-urlencode 'loaders=["paper"]'             | jq -r '[.[].files[] | select(.primary == true) | .url][0] // empty')
 
-          VIABACKWARDS_URL=$(curl -fsSL --retry 5 --retry-delay 2 \
-            -H "User-Agent: $MODRINTH_UA" \
-            --get "$MODRINTH_API/project/viabackwards/version" \
-            --data-urlencode 'loaders=["paper"]' \
-            | jq -r '[.[].files[] | select(.primary == true) | .url][0] // empty')
+          VIABACKWARDS_URL=$(curl -fsSL --retry 5 --retry-delay 2             -H "User-Agent: $MODRINTH_UA"             --get "$MODRINTH_API/project/viabackwards/version"             --data-urlencode 'loaders=["paper"]'             | jq -r '[.[].files[] | select(.primary == true) | .url][0] // empty')
 
           for var in SVC_URL WE_URL VIAVERSION_URL VIABACKWARDS_URL; do
             value="${!var}"
@@ -183,25 +155,21 @@ jobs:
 
           SKRIPT_URL=$(modrinth_file "skript" "paper")
 
-          # AuthMeReloaded: cracked-mode authentication with /register and /login.
-          AUTHME_URL=$(curl -fsSL --retry 5 --retry-delay 2 \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/AuthMe/AuthMeReloaded/releases/latest" \
-            | jq -r '[.assets[] | select(.name | test("(?i)^AuthMe.*\\.jar$")) | select(.name | test("(?i)(Bungee|Velocity)")) | not | .browser_download_url][0] // empty')
+          # AuthMeReloaded: select the normal Bukkit/Paper jar only; exclude Bungee/Velocity variants.
+          AUTHME_URL=$(curl -fsSL --retry 5 --retry-delay 2             -H "Accept: application/vnd.github+json"             "https://api.github.com/repos/AuthMe/AuthMeReloaded/releases/latest"             | jq -r '[.assets[]
+              | select(.name | test("(?i)^AuthMe.*\\.jar$"))
+              | select(.name | test("(?i)(Bungee|Velocity)") | not)
+              | .browser_download_url][0] // empty')
           test -n "$AUTHME_URL" && test "$AUTHME_URL" != "null"
 
           echo "Skript: $SKRIPT_URL"
           echo "AuthMe: $AUTHME_URL"
 
-          # Download AuthMe before compiling AizenAuthGuard: the guard depends on AuthMe's API classes.
-          # The previous workflow tried to compile against network/germany/plugins/AuthMe.jar
-          # before that file existed, which caused every run to fail at javac.
           mkdir -p network/germany/plugins
           curl -L --fail --retry 5 --retry-delay 2 -o "network/germany/plugins/AuthMe.jar" "$AUTHME_URL"
           test -s network/germany/plugins/AuthMe.jar
           jar tf network/germany/plugins/AuthMe.jar >/dev/null
 
-          # Build the Aizen authentication guard against the exact Purpur API and AuthMe jar.
           rm -rf backend/build
           mkdir -p backend/build
           cat > backend/build/pom.xml <<'EOF'
@@ -278,7 +246,6 @@ jobs:
             mkdir -p "network/$name/plugins/Skript/scripts"
             cp -f plugins/Skript/scripts/*.sk "network/$name/plugins/Skript/scripts/" 2>/dev/null || true
 
-            # AuthMe configuration: cracked-mode authentication with /register and /login.
             mkdir -p "network/$name/plugins/AuthMe"
             cat > "network/$name/plugins/AuthMe/config.yml" <<'EOF'
           DataSource:
@@ -307,347 +274,3 @@ jobs:
             enableProtection: true
           EOF
           done
-
-      - name: Configure backend servers and voice chat
-        shell: bash
-        run: |
-          set -e
-
-          configure_server() {
-            local name="$1"
-            local port="$2"
-            mkdir -p "network/$name/plugins"
-            cat > "network/$name/server.properties" <<EOF
-          motd=AizenSMP - $name
-          online-mode=false
-          enforce-secure-profile=false
-          server-port=$port
-          server-ip=127.0.0.1
-          query.port=$port
-          enable-query=false
-          EOF
-          }
-
-          configure_server germany 25566
-          configure_server turkey 25567
-          configure_server america 25568
-
-          # One shared AuthMe SQLite database for all three regional backends.
-          # This prevents /register from being required again after /server switching.
-          if [ -f network/authme.db ]; then
-            echo "Using persistent shared AuthMe database."
-          elif [ -f network/germany/plugins/AuthMe/authme.db ]; then
-            cp -f network/germany/plugins/AuthMe/authme.db network/authme.db
-          else
-            touch network/authme.db
-          fi
-          for name in germany turkey america; do
-            rm -f "network/$name/plugins/AuthMe/authme.db"
-            ln -sf "$(realpath network/authme.db)" "network/$name/plugins/AuthMe/authme.db"
-          done
-
-          # Make Aizenx an operator on every backend.
-          # This is Minecraft's deterministic offline UUID for the cracked-mode username Aizenx.
-          for name in germany turkey america; do
-            cat > "network/$name/ops.json" <<'EOF'
-          [
-            {
-              "uuid": "fb0d4a3b-54a0-360f-afc3-649c15b979ff",
-              "name": "Aizenx",
-              "level": 4,
-              "bypassesPlayerLimit": true
-            }
-          ]
-          EOF
-          done
-
-          mkdir -p network/germany/plugins/voicechat
-          cat > network/germany/plugins/voicechat/voicechat-server.properties <<'EOF'
-          port=25570
-          bind_address=0.0.0.0
-          voice_host=stamina-trailside.tun.ply.gg:12304
-          enable_groups=true
-          max_voice_distance=48
-          crouch_distance=24
-          whisper_distance=24
-          spectator_interaction=true
-          hide_icons=false
-          enable_recording=false
-          allow_pings=true
-          EOF
-
-          mkdir -p network/turkey/plugins/voicechat
-          cat > network/turkey/plugins/voicechat/voicechat-server.properties <<'EOF'
-          port=25571
-          bind_address=0.0.0.0
-          voice_host=stamina-tolerance.tun.ply.gg:12317
-          enable_groups=true
-          max_voice_distance=48
-          crouch_distance=24
-          whisper_distance=24
-          spectator_interaction=true
-          hide_icons=false
-          enable_recording=false
-          allow_pings=true
-          EOF
-
-          mkdir -p network/america/plugins/voicechat
-          cat > network/america/plugins/voicechat/voicechat-server.properties <<'EOF'
-          port=25572
-          bind_address=0.0.0.0
-          voice_host=stamina-lightning.tun.ply.gg:12323
-          enable_groups=true
-          max_voice_distance=48
-          crouch_distance=24
-          whisper_distance=24
-          spectator_interaction=true
-          hide_icons=false
-          enable_recording=false
-          allow_pings=true
-          EOF
-
-      - name: Configure Velocity
-        shell: bash
-        run: |
-          set -e
-          cd network/velocity
-          cat > velocity.toml <<'EOF'
-          config-version = "2.7"
-          bind = "0.0.0.0:25565"
-          motd = "<gold>AizenSMP</gold>"
-          show-max-players = 100
-          online-mode = false
-          force-key-authentication = false
-          player-info-forwarding-mode = "none"
-          announce-forge = false
-          kick-existing-players = false
-          ping-passthrough = "mods"
-          sample-players-in-ping = true
-          enable-player-address-logging = true
-
-          [servers]
-          Germany = "127.0.0.1:25566"
-          Turkey = "127.0.0.1:25567"
-          America = "127.0.0.1:25568"
-          try = ["Germany"]
-
-          [forced-hosts]
-          EOF
-
-      - name: Start Playit agent
-        env:
-          PLAYIT_SETUP_CODE: ${{ secrets.PLAYIT_SETUP_CODE }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$HOME/.config/playit_gg"
-          PLAYIT_SOCKET="$HOME/.config/playit_gg/playit.sock"
-          PLAYIT_SECRET="$HOME/.config/playit_gg/playit.toml"
-          API="https://api.playit.gg"
-
-          # A Playit claim code is exactly 10 hexadecimal characters.
-          # Ignore an old/invalid secret value and create a fresh code automatically.
-          if [ ! -s "$PLAYIT_SECRET" ]; then
-            CLAIM_CODE="${PLAYIT_SETUP_CODE:-}"
-            if ! printf '%s' "$CLAIM_CODE" | grep -Eq '^[0-9a-fA-F]{10}$'; then
-              CLAIM_CODE=$(openssl rand -hex 5)
-              echo "Generated a fresh Playit claim code."
-            else
-              echo "Using PLAYIT_SETUP_CODE as the Playit claim code."
-            fi
-
-            echo "::notice::Open https://playit.gg/claim/$CLAIM_CODE and approve the new AizenSMP agent."
-            echo "PLAYIT CLAIM URL: https://playit.gg/claim/$CLAIM_CODE"
-
-            for i in {1..300}; do
-              SETUP_RAW=$(curl -sS --retry 3 --retry-delay 1                 -H "Content-Type: application/json"                 -d "$(jq -cn --arg code "$CLAIM_CODE" --arg version "AizenSMP-GitHubActions/1.0"                   '{code:$code,agent_type:"self-managed",version:$version}')"                 "$API/claim/setup" || true)
-
-              if echo "$SETUP_RAW" | jq -e '.error' >/dev/null 2>&1; then
-                echo "::error::Playit claim setup rejected: $(echo "$SETUP_RAW" | jq -c '.error')"
-                exit 1
-              fi
-
-              # The API response contains an outer HTTP status (often "success")
-              # and the actual claim state may be nested or represented as an enum.
-              # Only exchange the code after the claim has actually been accepted.
-              STATE=$(echo "$SETUP_RAW" | jq -r '
-                .. | strings
-                | select(test("^(WaitingForUserVisit|WaitingForUser|UserAccepted|UserRejected|NotAccepted|NotSetup|CodeExpired|CodeNotFound|waiting_for_user_visit|waiting_for_user|user_accepted|user_rejected|not_accepted|not_setup|code_expired|code_not_found)$"))
-              ' | tail -n1)
-
-              if [ -z "$STATE" ]; then
-                STATE=$(echo "$SETUP_RAW" | jq -r '.data.state // .data.status // .state // empty')
-              fi
-
-              if [ "$STATE" = "UserRejected" ] || [ "$STATE" = "user_rejected" ]; then
-                echo "::error::Playit agent claim was rejected."
-                exit 1
-              fi
-
-              if [ "$STATE" = "CodeExpired" ] || [ "$STATE" = "code_expired" ] || [ "$STATE" = "CodeNotFound" ] || [ "$STATE" = "code_not_found" ]; then
-                echo "::error::Playit claim code expired or was not found."
-                exit 1
-              fi
-
-              # Do not spam the log with the outer API status on every poll.
-              if [ $((i % 10)) -eq 0 ] || [ "$STATE" = "UserAccepted" ] || [ "$STATE" = "user_accepted" ]; then
-                echo "Playit claim state: $STATE"
-              fi
-
-              if [ "$STATE" = "UserAccepted" ] || [ "$STATE" = "user_accepted" ]; then
-                EXCHANGE=$(curl -sS --retry 3 --retry-delay 1 \
-                  -H "Content-Type: application/json" \
-                  -d "$(jq -cn --arg code "$CLAIM_CODE" '{code:$code}')" \
-                  "$API/claim/exchange" || true)
-
-                SECRET=$(echo "$EXCHANGE" | jq -r '.secret_key // .data.secret_key // empty')
-                if [ -n "$SECRET" ]; then
-                  printf '%s' "$SECRET" > "$PLAYIT_SECRET"
-                  chmod 600 "$PLAYIT_SECRET"
-                  echo "Playit agent secret provisioned successfully."
-                  break
-                fi
-
-                echo "::warning::Claim was accepted, but Playit did not return an agent secret yet. Retrying exchange..."
-              fi
-
-              sleep 2
-            done
-          fi
-
-          if [ ! -s "$PLAYIT_SECRET" ]; then
-            echo "::error::Playit agent secret is missing after claim."
-            exit 1
-          fi
-
-          curl -L --fail --retry 5 --retry-delay 2 -o playitd             "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
-          chmod +x playitd
-          rm -f "$PLAYIT_SOCKET"
-          nohup ./playitd --socket-path "$PLAYIT_SOCKET" --secret-path "$PLAYIT_SECRET"             > playitd.log 2>&1 &
-          echo $! > playitd.pid
-
-          for i in {1..30}; do
-            [ -S "$PLAYIT_SOCKET" ] && break
-            sleep 1
-          done
-
-          [ -S "$PLAYIT_SOCKET" ] || { cat playitd.log; exit 1; }
-
-      - name: Persist Playit config
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: aizensmp-playit-config
-          path: /home/runner/.config/playit_gg/playit.toml
-          if-no-files-found: warn
-          retention-days: 30
-          overwrite: true
-
-      - name: Start AizenSMP network
-        env:
-          DASHBOARD_URL: ${{ secrets.DASHBOARD_URL }}
-          DASHBOARD_API_TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}
-        shell: bash
-        run: |
-          set -u
-          cleanup() {
-            for pid in ${GERMANY_PID:-} ${TURKEY_PID:-} ${AMERICA_PID:-} ${VELOCITY_PID:-}; do
-              [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
-            done
-            rm -f network/persistent-data.tar.zst
-            tar --zstd -cf network/persistent-data.tar.zst \
-              network/germany/world network/germany/world_nether network/germany/world_the_end \
-              network/turkey/world network/turkey/world_nether network/turkey/world_the_end \
-              network/america/world network/america/world_nether network/america/world_the_end \
-              network/germany/plugins/Skript network/turkey/plugins/Skript network/america/plugins/Skript \
-              network/authme.db \
-              network/germany/plugins/AuthMe network/turkey/plugins/AuthMe network/america/plugins/AuthMe \
-              2>/dev/null || true
-          }
-          trap cleanup EXIT INT TERM
-
-          test -x "$JAVA21_HOME/bin/java"
-          test -x "$JAVA25_HOME/bin/java"
-
-          echo "Java 21: $("$JAVA21_HOME/bin/java" -version 2>&1 | head -n1)"
-          echo "Java 25: $("$JAVA25_HOME/bin/java" -version 2>&1 | head -n1)"
-
-          "$JAVA25_HOME/bin/java" -Xms256M -Xmx768M -jar network/velocity/velocity.jar > velocity.log 2>&1 &
-          VELOCITY_PID=$!
-          sleep 3
-          if ! kill -0 "$VELOCITY_PID" 2>/dev/null; then
-            echo "::error::Velocity exited during startup."
-            cat velocity.log 2>/dev/null || true
-            exit 1
-          fi
-
-          start_backend() {
-            local name="$1"
-            local jar="network/$name/server.jar"
-            local log="$name.log"
-            local pid
-            for attempt in 1 2 3; do
-              echo "eula=true" > "network/$name/eula.txt"
-              (
-                cd "network/$name"
-                AIZEN_SERVER_NAME="$name" DASHBOARD_URL="$DASHBOARD_URL" DASHBOARD_API_TOKEN="$DASHBOARD_API_TOKEN" "$JAVA21_HOME/bin/java" -Xms512M -Xmx1024M -jar server.jar --nogui
-              ) > "$log" 2>&1 &
-              pid=$!
-              sleep 8
-              if kill -0 "$pid" 2>/dev/null; then
-                echo "$name backend is running (attempt $attempt)." >&2
-                printf '%s\n' "$pid"
-                return 0
-              fi
-              echo "::warning::$name backend exited during startup; retrying ($attempt/3)."
-              rm -rf "network/$name/libraries"
-              sleep 2
-            done
-            return 1
-          }
-
-          GERMANY_PID=$(start_backend germany) || { echo "::error::Germany backend failed after 3 attempts."; exit 1; }
-          TURKEY_PID=$(start_backend turkey) || { echo "::error::Turkey backend failed after 3 attempts."; exit 1; }
-          AMERICA_PID=$(start_backend america) || { echo "::error::America backend failed after 3 attempts."; exit 1; }
-
-          sleep 12
-
-          echo "===== PROCESS STATUS ====="
-          ps -o pid,stat,etime,cmd -p "$VELOCITY_PID,$GERMANY_PID,$TURKEY_PID,$AMERICA_PID" || true
-          echo "===== VELOCITY LOG ====="
-          cat velocity.log 2>/dev/null || true
-          echo "===== GERMANY LOG ====="
-          tail -80 germany.log 2>/dev/null || true
-          echo "===== TURKEY LOG ====="
-          tail -80 turkey.log 2>/dev/null || true
-          echo "===== AMERICA LOG ====="
-          tail -80 america.log 2>/dev/null || true
-
-          for pid in "$VELOCITY_PID" "$GERMANY_PID" "$TURKEY_PID" "$AMERICA_PID"; do
-            if ! kill -0 "$pid" 2>/dev/null; then
-              echo "::error::AizenSMP server process $pid exited during startup."
-              exit 1
-            fi
-          done
-
-          echo "AizenSMP network is healthy and running."
-          echo "Velocity: 25565"
-          echo "Germany: 25566"
-          echo "Turkey: 25567"
-          echo "America: 25568"
-          echo "Germany Voice: stamina-trailside.tun.ply.gg:12304 -> UDP 25570"
-          echo "Turkey Voice: stamina-tolerance.tun.ply.gg:12317 -> UDP 25571"
-          echo "America Voice: stamina-lightning.tun.ply.gg:12323 -> UDP 25572"
-          echo "===== PLAYIT AGENT LOG ====="
-          tail -80 playitd.log 2>/dev/null || true
-          wait "$VELOCITY_PID"
-
-      - name: Upload persistent server data
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: aizensmp-persistent-data
-          path: network/persistent-data.tar.zst
-          if-no-files-found: warn
-          retention-days: 30
-          overwrite: true
