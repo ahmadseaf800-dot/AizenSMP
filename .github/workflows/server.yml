@@ -226,31 +226,31 @@ jobs:
             # AuthMe configuration: cracked-mode authentication with /register and /login.
             mkdir -p "network/$name/plugins/AuthMe"
             cat > "network/$name/plugins/AuthMe/config.yml" <<'EOF'
-DataSource:
-  backend: SQLITE
-settings:
-  sessions:
-    enabled: false
-  restrictions:
-    allowChat: false
-    allowCommands: false
-    allowedCommands:
-      - /login
-      - /l
-      - /register
-      - /reg
-      - /captcha
-    allowMovement: false
-    teleportUnAuthedToSpawn: true
-  security:
-    passwordHash: SHA256
-registration:
-  enabled: true
-  force: true
-  enablePasswordVerifier: true
-protection:
-  enableProtection: true
-EOF
+          DataSource:
+            backend: SQLITE
+          settings:
+            sessions:
+              enabled: false
+            restrictions:
+              allowChat: false
+              allowCommands: false
+              allowedCommands:
+                - /login
+                - /l
+                - /register
+                - /reg
+                - /captcha
+              allowMovement: false
+              teleportUnAuthedToSpawn: true
+            security:
+              passwordHash: SHA256
+          registration:
+            enabled: true
+            force: true
+            enablePasswordVerifier: true
+          protection:
+            enableProtection: true
+          EOF
           done
 
       - name: Configure backend servers and voice chat
