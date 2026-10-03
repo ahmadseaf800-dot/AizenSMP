@@ -288,22 +288,48 @@ jobs:
                 exit 1
               fi
 
-              STATE=$(echo "$SETUP_RAW" | jq -r '.status // .state // empty')
-              echo "Playit claim state: $STATE"
+              # The API response contains an outer HTTP status (often "success")
+              # and the actual claim state may be nested or represented as an enum.
+              # Only exchange the code after the claim has actually been accepted.
+              STATE=$(echo "$SETUP_RAW" | jq -r '
+                .. | strings
+                | select(test("^(WaitingForUserVisit|WaitingForUser|UserAccepted|UserRejected|NotAccepted|NotSetup|CodeExpired|CodeNotFound|waiting_for_user_visit|waiting_for_user|user_accepted|user_rejected|not_accepted|not_setup|code_expired|code_not_found)$"))
+              ' | tail -n1)
+
+              if [ -z "$STATE" ]; then
+                STATE=$(echo "$SETUP_RAW" | jq -r '.data.state // .data.status // .state // empty')
+              fi
 
               if [ "$STATE" = "UserRejected" ] || [ "$STATE" = "user_rejected" ]; then
                 echo "::error::Playit agent claim was rejected."
                 exit 1
               fi
 
-              EXCHANGE=$(curl -sS                 -H "Content-Type: application/json"                 -d "$(jq -cn --arg code "$CLAIM_CODE" '{code:$code}')"                 "$API/claim/exchange" || true)
+              if [ "$STATE" = "CodeExpired" ] || [ "$STATE" = "code_expired" ] || [ "$STATE" = "CodeNotFound" ] || [ "$STATE" = "code_not_found" ]; then
+                echo "::error::Playit claim code expired or was not found."
+                exit 1
+              fi
 
-              SECRET=$(echo "$EXCHANGE" | jq -r '.secret_key // empty')
-              if [ -n "$SECRET" ]; then
-                printf '%s' "$SECRET" > "$PLAYIT_SECRET"
-                chmod 600 "$PLAYIT_SECRET"
-                echo "Playit agent secret provisioned successfully."
-                break
+              # Do not spam the log with the outer API status on every poll.
+              if [ $((i % 10)) -eq 0 ] || [ "$STATE" = "UserAccepted" ] || [ "$STATE" = "user_accepted" ]; then
+                echo "Playit claim state: $STATE"
+              fi
+
+              if [ "$STATE" = "UserAccepted" ] || [ "$STATE" = "user_accepted" ]; then
+                EXCHANGE=$(curl -sS --retry 3 --retry-delay 1 \
+                  -H "Content-Type: application/json" \
+                  -d "$(jq -cn --arg code "$CLAIM_CODE" '{code:$code}')" \
+                  "$API/claim/exchange" || true)
+
+                SECRET=$(echo "$EXCHANGE" | jq -r '.secret_key // .data.secret_key // empty')
+                if [ -n "$SECRET" ]; then
+                  printf '%s' "$SECRET" > "$PLAYIT_SECRET"
+                  chmod 600 "$PLAYIT_SECRET"
+                  echo "Playit agent secret provisioned successfully."
+                  break
+                fi
+
+                echo "::warning::Claim was accepted, but Playit did not return an agent secret yet. Retrying exchange..."
               fi
 
               sleep 2
