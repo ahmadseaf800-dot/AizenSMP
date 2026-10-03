@@ -722,42 +722,18 @@ on death of player:
             delete {az.duel.%uuid of {_opponent}%}
             send "{@prefix} &aDuel ended." to {_opponent}
 
-# ---------------- SELL / ORDERS ----------------
-
-# /sell opens a double-chest selling basket.
-# Put the items you want to sell in it, close it, then use /ah sell <price>.
-# The basket is saved per player.
-
-command /sell:
-    trigger:
-        open chest inventory with 6 rows named "&8✦ &6Sell Basket &8✦" to player
-        wait 1 tick
-        loop 54 times:
-            set {_slot} to loop-number - 1
-            if {az.sellbasket.%uuid of player%.%{_slot}%} is set:
-                set slot {_slot} of player's current inventory to {az.sellbasket.%uuid of player%.%{_slot}%}
-        set slot 49 of player's current inventory to barrier named "&cClose"
-        set slot 50 of player's current inventory to paper named "&eHow to sell" with lore "&7Put items here | &7Close the menu | &7Then use &e/ah sell <price>"
-
-on inventory close:
-    if name of event-inventory is "&8✦ &6AH Sell Basket &8✦":
-        loop 54 times:
-            set {_slot} to loop-number - 1
-            if {_slot} is 49:
-                next loop
-            if {_slot} is 50:
-                next loop
-                next loop
-            set {_it} to item in slot {_slot} of event-inventory
-            if {_it} is air:
-                delete {az.sellbasket.%uuid of player%.%{_slot}%}
-            else:
-                set {az.sellbasket.%uuid of player%.%{_slot}%} to {_it}
-
-# ---------------- AUCTION HOUSE ----------------
+# ---------------- SELL / AUCTION HOUSE ----------------
+#
+# Anti-dupe rules:
+# - Sell basket owns the items while it is open; items are saved and cleared on close.
+# - A listing is deleted atomically before the item is paid out.
+# - Purchase/list/cancel operations use a per-listing lock.
+# - Money is always checked against the AizenSMP economy variable.
+# - Players cannot buy their own listings.
 
 options:
     ah-max-price: 1000000000
+    ah-max-listings: 45
 
 function azParsePrice(s: text) :: number:
     set {_v} to lowercase {_s}
@@ -773,9 +749,6 @@ function azParsePrice(s: text) :: number:
         return (converted {_v} to number) * 1000000000
     return converted {_v} to number
 
-function azAHName(i: item) :: text:
-    return "%type of {_i}%"
-
 function azAHMatches(i: item, q: text) :: boolean:
     set {_name} to lowercase "%type of {_i}%"
     set {_query} to lowercase {_q}
@@ -784,6 +757,56 @@ function azAHMatches(i: item, q: text) :: boolean:
     if {_name} contains {_query}:
         return true
     return false
+
+function azAHCleanup(id: number):
+    delete {az.ah.item.%{_id}%}
+    delete {az.ah.price.%{_id}%}
+    delete {az.ah.seller.%{_id}%}
+    delete {az.ah.sellername.%{_id}%}
+    delete {az.ah.lock.%{_id}%}
+
+function azAHCountSeller(u: text) :: number:
+    set {_n} to 0
+    loop {az.ah.seller::*}:
+        if "%loop-value%" is {_u}:
+            add 1 to {_n}
+    return {_n}
+
+command /sell:
+    trigger:
+        open chest inventory with 6 rows named "&8✦ &6AH Sell Basket &8✦" to player
+        wait 1 tick
+        loop 45 times:
+            set {_slot} to loop-number - 1
+            if {az.sellbasket.%uuid of player%.%{_slot}%} is set:
+                set slot {_slot} of player's current inventory to {az.sellbasket.%uuid of player%.%{_slot}%}
+        set slot 45 of player's current inventory to barrier named "&cClose"
+        set slot 46 of player's current inventory to emerald named "&aList for sale" with lore "&7After adding items, close the menu", "&7then use &e/ah sell <price>"
+        set slot 49 of player's current inventory to paper named "&eHow to sell" with lore "&71. Put items in the basket", "&72. Close it", "&73. Use &e/ah sell 10k"
+        set slot 50 of player's current inventory to barrier named "&cClose"
+
+on inventory click:
+    if name of event-inventory is "&8✦ &6AH Sell Basket &8✦":
+        if clicked slot >= 45:
+            cancel event
+            if clicked slot is 46:
+                close player's inventory
+                send "{@prefix} &eUse &f/ah sell <price> &7after placing your items."
+            else:
+                close player's inventory
+            stop
+        # Only the first 45 slots are item storage.
+
+on inventory close:
+    if name of event-inventory is "&8✦ &6AH Sell Basket &8✦":
+        loop 45 times:
+            set {_slot} to loop-number - 1
+            set {_it} to item in slot {_slot} of event-inventory
+            if {_it} is air:
+                delete {az.sellbasket.%uuid of player%.%{_slot}%}
+            else:
+                set {az.sellbasket.%uuid of player%.%{_slot}%} to {_it}
+                set slot {_slot} of event-inventory to air
 
 command /ah [<text>] [<text>]:
     aliases: /auctionhouse, /auction
@@ -799,19 +822,18 @@ command /ah [<text>] [<text>]:
             if {_price} > {@ah-max-price}:
                 send "{@prefix} &cMaximum AH price is &6$1,000,000,000&c."
                 stop
+            if azAHCountSeller("%uuid of player%") >= {@ah-max-listings}:
+                send "{@prefix} &cYou already have the maximum of &e45 &clistings."
+                stop
 
             set {_listed} to 0
-            loop 54 times:
+            loop 45 times:
+                if {_listed} >= {@ah-max-listings}:
+                    stop
                 set {_slot} to loop-number - 1
-                if {_slot} is 49:
-                next loop
-            if {_slot} is 50:
-                next loop
-                    next loop
-                if {az.sellbasket.%uuid of player%.%{_slot}%} is set:
-                    set {_item} to {az.sellbasket.%uuid of player%.%{_slot}%}
+                set {_item} to {az.sellbasket.%uuid of player%.%{_slot}%}
+                if {_item} is set:
                     if {_item} is not air:
-                        add 1 to {_listed}
                         set {az.ah.next} to {az.ah.next} + 1
                         set {_id} to {az.ah.next}
                         set {az.ah.item.%{_id}%} to {_item}
@@ -819,22 +841,15 @@ command /ah [<text>] [<text>]:
                         set {az.ah.seller.%{_id}%} to uuid of player
                         set {az.ah.sellername.%{_id}%} to name of player
                         delete {az.sellbasket.%uuid of player%.%{_slot}%}
+                        add 1 to {_listed}
             if {_listed} is 0:
-                # Also support selling the held item directly.
-                if player's tool is not air:
-                    set {_item} to player's tool
-                    set {az.ah.next} to {az.ah.next} + 1
-                    set {_id} to {az.ah.next}
-                    set {az.ah.item.%{_id}%} to {_item}
-                    set {az.ah.price.%{_id}%} to {_price}
-                    set {az.ah.seller.%{_id}%} to uuid of player
-                    set {az.ah.sellername.%{_id}%} to name of player
-                    remove {_item} from player
-                    set {_listed} to 1
-            if {_listed} is 0:
-                send "{@prefix} &cYour /sell basket is empty."
+                send "{@prefix} &cYour sell basket is empty."
                 stop
-            send "{@prefix} &aListed &e%{_listed}% &aitem stack(s) in the AH for &6$%{_price}% &aeach."
+            send "{@prefix} &aListed &e%{_listed}% &aitem stack(s) for &6$%{_price}% &aeach."
+            stop
+
+        if arg-1 is "my":
+            azOpenAHMy(player)
             stop
 
         set {_query} to "all"
@@ -843,110 +858,78 @@ command /ah [<text>] [<text>]:
         set {_sort} to "new"
         if arg-2 is set:
             set {_sort} to lowercase arg-2
+        if {_sort} is not "new" and {_sort} is not "cheap" and {_sort} is not "expensive":
+            set {_sort} to "new"
         azOpenAH(player, {_query}, {_sort})
 
 function azOpenAH(p: player, q: text, sort: text):
     open chest inventory with 6 rows named "&8✦ &6Aizen Auction House &8✦" to {_p}
     wait 1 tick
+    loop 54 times:
+        set {_s} to loop-number - 1
+        delete {az.ah.gui.%uuid of {_p}%.%{_s}%}
     set {_slot} to 0
     set {_count} to 0
-    set {_bestPrice} to 999999999999
-    set {_worstPrice} to 0
-
     loop {az.ah.item::*}:
+        if {_slot} >= 45:
+            stop
         set {_id} to loop-index parsed as integer
         set {_item} to loop-value
         if {_item} is not air:
             if azAHMatches({_item}, {_q}) is true:
+                set {_display} to {_item}
                 set {_price} to {az.ah.price.%{_id}%}
-                if {_price} is set:
-                    if {_sort} is "cheap":
-                        if {_price} < {_bestPrice}:
-                            set {_bestPrice} to {_price}
-                            set {_bestId} to {_id}
-                    else if {_sort} is "expensive":
-                        if {_price} > {_worstPrice}:
-                            set {_worstPrice} to {_price}
-                            set {_bestId} to {_id}
-
-    # Cheap/expensive sorting: rebuild visible order from the lowest/highest price.
-    if {_sort} is "cheap" or {_sort} is "expensive":
-        set {_used::*} to none
-        loop 45 times:
-            set {_pickId} to 0
-            set {_pickPrice} to 999999999999
-            if {_sort} is "expensive":
-                set {_pickPrice} to 0
-            loop {az.ah.item::*}:
-                set {_id} to loop-index parsed as integer
-                if {_id} is not in {_used::*}:
-                    set {_item} to loop-value
-                    if {_item} is not air:
-                        if azAHMatches({_item}, {_q}) is true:
-                            set {_price} to {az.ah.price.%{_id}%}
-                            if {_sort} is "cheap":
-                                if {_price} < {_pickPrice}:
-                                    set {_pickPrice} to {_price}
-                                    set {_pickId} to {_id}
-                            else:
-                                if {_price} > {_pickPrice}:
-                                    set {_pickPrice} to {_price}
-                                    set {_pickId} to {_id}
-            if {_pickId} > 0:
-                add {_pickId} to {_used::*}
-                set {_display} to {az.ah.item.%{_pickId}%}
-                set {_seller} to {az.ah.sellername.%{_pickId}%}
-                set {_p} to {az.ah.price.%{_pickId}%}
-                set lore of {_display} to "&7Seller: &f%{_seller}%", "&7Price: &6$%{_p}%", "&eClick to buy"
+                set lore of {_display} to "&7Seller: &f%{az.ah.sellername.%{_id}%}%", "&7Price: &6$%{_price}%", "&eClick to buy"
                 set slot {_slot} of {_p}'s current inventory to {_display}
-                set {az.ah.gui.%uuid of {_p}%.%{_slot}%} to {_pickId}
+                set {az.ah.gui.%uuid of {_p}%.%{_slot}%} to {_id}
                 add 1 to {_slot}
                 add 1 to {_count}
-            if {_count} >= 45:
-                stop
-    else:
-        loop {az.ah.item::*}:
-            if {_slot} >= 45:
-                stop
-            set {_id} to loop-index parsed as integer
-            set {_item} to loop-value
-            if {_item} is not air:
-                if azAHMatches({_item}, {_q}) is true:
-                    set {_display} to {_item}
-                    set lore of {_display} to "&7Seller: &f%{az.ah.sellername.%{_id}%}%", "&7Price: &6$%{az.ah.price.%{_id}%}%", "&eClick to buy"
-                    set slot {_slot} of {_p}'s current inventory to {_display}
-                    set {az.ah.gui.%uuid of {_p}%.%{_slot}%} to {_id}
-                    add 1 to {_slot}
-                    add 1 to {_count}
-        # Save visible IDs for normal listing order.
-        loop 45 times:
-            set {_s} to loop-number - 1
-            # IDs are also rebuilt below for every opened GUI.
-    # Control buttons.
-    set slot 45 of {_p}'s current inventory to hopper named "&eCheapest" with lore "&7Show cheapest first"
-    set slot 46 of {_p}'s current inventory to gold block named "&6Most Expensive" with lore "&7Show highest price first"
-    set slot 47 of {_p}'s current inventory to compass named "&bRefresh" with lore "&7Refresh AH"
+    set slot 45 of {_p}'s current inventory to hopper named "&eCheapest" with lore "&7Use /ah all cheap"
+    set slot 46 of {_p}'s current inventory to gold block named "&6Most Expensive" with lore "&7Use /ah all expensive"
+    set slot 47 of {_p}'s current inventory to compass named "&bRefresh"
     set slot 48 of {_p}'s current inventory to paper named "&fSearch" with lore "&7Use /ah <item>"
-    set slot 49 of {_p}'s current inventory to chest named "&aSell Basket" with lore "&7Use /sell then /ah sell <price>"
+    set slot 49 of {_p}'s current inventory to chest named "&aSell Basket" with lore "&7Open /sell"
     set slot 50 of {_p}'s current inventory to barrier named "&cClose"
-    set slot 51 of {_p}'s current inventory to emerald named "&aMy Listings" with lore "&7Use /ah my"
-    set slot 52 of {_p}'s current inventory to nether star named "&bAll" with lore "&7Show all listings"
+    set slot 51 of {_p}'s current inventory to emerald named "&aMy Listings" with lore "&7Click to manage your listings"
+    set slot 52 of {_p}'s current inventory to nether star named "&bAll Listings"
     set slot 53 of {_p}'s current inventory to paper named "&e%{_count}% Listings"
     set {az.ah.search.%uuid of {_p}%} to {_q}
     set {az.ah.sort.%uuid of {_p}%} to {_sort}
 
+function azOpenAHMy(p: player):
+    open chest inventory with 6 rows named "&8✦ &aMy AH Listings &8✦" to {_p}
+    wait 1 tick
+    loop 54 times:
+        set {_s} to loop-number - 1
+        delete {az.ah.my.%uuid of {_p}%.%{_s}%}
+    set {_slot} to 0
+    set {_count} to 0
+    loop {az.ah.seller::*}:
+        if {_slot} >= 45:
+            stop
+        set {_id} to loop-index parsed as integer
+        if "%loop-value%" is "%uuid of {_p}%":
+            if {az.ah.item.%{_id}%} is set:
+                set {_display} to {az.ah.item.%{_id}%}
+                set lore of {_display} to "&7Price: &6$%{az.ah.price.%{_id}%}%", "&cClick to cancel and return"
+                set slot {_slot} of {_p}'s current inventory to {_display}
+                set {az.ah.my.%uuid of {_p}%.%{_slot}%} to {_id}
+                add 1 to {_slot}
+                add 1 to {_count}
+    set slot 45 of {_p}'s current inventory to arrow named "&cBack"
+    set slot 53 of {_p}'s current inventory to paper named "&e%{_count}% Active Listings"
+
 on inventory click:
     if name of event-inventory is "&8✦ &6Aizen Auction House &8✦":
         cancel event
-        set {_p} to player
         if clicked slot is 45:
-            azOpenAH({_p}, {az.ah.search.%uuid of {_p}%}, "cheap")
+            make player execute command "/ah all cheap"
             stop
         if clicked slot is 46:
-            azOpenAH({_p}, {az.ah.search.%uuid of {_p}%}, "expensive")
+            make player execute command "/ah all expensive"
             stop
         if clicked slot is 47:
-            azOpenAH({_p}, {az.ah.search.%uuid of {_p}%}, {az.ah.sort.%uuid of {_p}%})
+            azOpenAH(player, {az.ah.search.%uuid of player%}, {az.ah.sort.%uuid of player%})
             stop
         if clicked slot is 48:
             send "{@prefix} &eUse &f/ah <item> &7for search."
@@ -959,53 +942,382 @@ on inventory click:
             close player's inventory
             stop
         if clicked slot is 51:
-            close player's inventory
-            make player execute command "/ah my"
+            azOpenAHMy(player)
             stop
         if clicked slot is 52:
-            azOpenAH({_p}, "all", {az.ah.sort.%uuid of {_p}%})
+            azOpenAH(player, "all", {az.ah.sort.%uuid of player%})
             stop
         if clicked slot < 45:
             set {_id} to {az.ah.gui.%uuid of player%.%clicked slot%}
-            if {_id} is set:
-                if {az.ah.item.%{_id}%} is not set:
-                    send "{@prefix} &cThis listing is no longer available."
-                    stop
-                set {_price} to {az.ah.price.%{_id}%}
-                set {_seller} to {az.ah.seller.%{_id}%}
-                if {_seller} is uuid of player:
-                    send "{@prefix} &cYou cannot buy your own listing."
-                    stop
-                if {az.money.%uuid of player%} < {_price}:
-                    send "{@prefix} &cNot enough money."
-                    stop
-                set {_item} to {az.ah.item.%{_id}%}
-                remove {_price} from {az.money.%uuid of player%}
-                add {_price} to {az.money.%{_seller}%}
-                give {_item} to player
-                delete {az.ah.item.%{_id}%}
-                delete {az.ah.price.%{_id}%}
-                delete {az.ah.seller.%{_id}%}
-                delete {az.ah.sellername.%{_id}%}
-                send "{@prefix} &aPurchased for &6$%{_price}%&a."
-                azOpenAH({_p}, {az.ah.search.%uuid of {_p}%}, {az.ah.sort.%uuid of {_p}%})
+            if {_id} is not set:
                 stop
+            if {az.ah.lock.%{_id}%} is set:
+                send "{@prefix} &cThis listing is being processed."
+                stop
+            if {az.ah.item.%{_id}%} is not set:
+                send "{@prefix} &cThis listing is no longer available."
+                stop
+            set {_seller} to {az.ah.seller.%{_id}%}
+            if "%{_seller}%" is "%uuid of player%":
+                send "{@prefix} &cYou cannot buy your own listing."
+                stop
+            set {_price} to {az.ah.price.%{_id}%}
+            if {_price} is not set or {_price} <= 0:
+                send "{@prefix} &cInvalid listing."
+                stop
+            if {az.money.%uuid of player%} < {_price}:
+                send "{@prefix} &cNot enough money. Need &6$%{_price}%&c."
+                stop
+            set {_azItem} to {az.ah.item.%{_id}%}
+            if {_azItem} is not set or {_azItem} is air:
+                send "{@prefix} &cThis listing is no longer available."
+                stop
+
+            set {az.ah.lock.%{_id}%} to true
+            # Re-check everything after taking the lock.
+            if {az.ah.item.%{_id}%} is not set:
+                delete {az.ah.lock.%{_id}%}
+                send "{@prefix} &cThis listing is no longer available."
+                stop
+            if {az.money.%uuid of player%} < {_price}:
+                delete {az.ah.lock.%{_id}%}
+                send "{@prefix} &cNot enough money."
+                stop
+
+            remove {_price} from {az.money.%uuid of player%}
+            add {_price} to {az.money.%{_seller}%}
+            delete {az.ah.item.%{_id}%}
+            delete {az.ah.price.%{_id}%}
+            delete {az.ah.seller.%{_id}%}
+            delete {az.ah.sellername.%{_id}%}
+            delete {az.ah.lock.%{_id}%}
+            give {_azItem} to player
+            send "{@prefix} &aPurchased &e%type of {_azItem}% &afor &6$%{_price}%&a."
+            azOpenAH(player, {az.ah.search.%uuid of player%}, {az.ah.sort.%uuid of player%})
+            stop
+
+    if name of event-inventory is "&8✦ &aMy AH Listings &8✦":
+        cancel event
+        if clicked slot is 45:
+            azOpenAH(player, "all", "new")
+            stop
+        if clicked slot < 45:
+            set {_id} to {az.ah.my.%uuid of player%.%clicked slot%}
+            if {_id} is not set:
+                stop
+            if {az.ah.lock.%{_id}%} is set:
+                send "{@prefix} &cThis listing is being processed."
+                stop
+            if {az.ah.item.%{_id}%} is not set:
+                send "{@prefix} &cListing already sold or removed."
+                stop
+            if "%{az.ah.seller.%{_id}%}%" is not "%uuid of player%":
+                send "{@prefix} &cYou do not own this listing."
+                stop
+            set {az.ah.lock.%{_id}%} to true
+            set {_returnItem} to {az.ah.item.%{_id}%}
+            delete {az.ah.item.%{_id}%}
+            delete {az.ah.price.%{_id}%}
+            delete {az.ah.seller.%{_id}%}
+            delete {az.ah.sellername.%{_id}%}
+            delete {az.ah.lock.%{_id}%}
+            give {_returnItem} to player
+            send "{@prefix} &aListing cancelled and item returned."
+            azOpenAHMy(player)
+            stop
 
 command /ahcancel <number>:
     trigger:
         set {_id} to arg-1
-        if {az.ah.seller.%{_id}%} is not uuid of player:
-            send "{@prefix} &cThat is not your listing."
-            stop
         if {az.ah.item.%{_id}%} is not set:
             send "{@prefix} &cListing not found."
             stop
-        give {az.ah.item.%{_id}%} to player
+        if "%{az.ah.seller.%{_id}%}%" is not "%uuid of player%":
+            send "{@prefix} &cThat is not your listing."
+            stop
+        if {az.ah.lock.%{_id}%} is set:
+            send "{@prefix} &cListing is busy."
+            stop
+        set {az.ah.lock.%{_id}%} to true
+        set {_returnItem} to {az.ah.item.%{_id}%}
         delete {az.ah.item.%{_id}%}
         delete {az.ah.price.%{_id}%}
         delete {az.ah.seller.%{_id}%}
         delete {az.ah.sellername.%{_id}%}
+        delete {az.ah.lock.%{_id}%}
+        give {_returnItem} to player
         send "{@prefix} &aListing cancelled and item returned."
+
+# ---------------- DONUT-STYLE OLD SHOP ----------------
+
+function azShopBuy(p: player, item: item, price: number, amount: number, label: text):
+    if {az.shop.lock.%uuid of {_p}%} is set:
+        send "{@prefix} &cPlease wait a moment." to {_p}
+        stop
+    if {_price} <= 0:
+        stop
+    if {az.money.%uuid of {_p}%} < {_price}:
+        send "{@prefix} &cNot enough money. Price: &6$%{_price}%" to {_p}
+        stop
+    set {az.shop.lock.%uuid of {_p}%} to true
+    # Re-check under the transaction lock.
+    if {az.money.%uuid of {_p}%} < {_price}:
+        delete {az.shop.lock.%uuid of {_p}%}
+        send "{@prefix} &cNot enough money." to {_p}
+        stop
+    remove {_price} from {az.money.%uuid of {_p}%}
+    give {_amount} of {_item} to {_p}
+    delete {az.shop.lock.%uuid of {_p}%}
+    send "{@prefix} &aBought &e%{_label}% &afor &6$%{_price}%&a." to {_p}
+
+command /shop:
+    aliases: /store
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &6&lAIZEN SHOP &8✦" to player
+        wait 1 tick
+        set {_glass} to black stained glass pane named " "
+        loop 27 times:
+            set slot (loop-number - 1) of player's current inventory to {_glass}
+        set slot 4 of player's current inventory to gold block named "&6&lAIZEN SHOP" with lore "&7DonutSMP old prices", "&8Click a category"
+        set slot 10 of player's current inventory to ender chest named "&5&lEND SHOP" with lore "&7Old shop prices", "&eClick to open"
+        set slot 12 of player's current inventory to netherrack named "&c&lNETHER SHOP" with lore "&7Old shop prices", "&eClick to open"
+        set slot 14 of player's current inventory to diamond sword named "&4&lGEAR & COMBAT" with lore "&7Old shop prices", "&eClick to open"
+        set slot 16 of player's current inventory to cooked beef named "&6&lFOOD SHOP" with lore "&7Old shop prices", "&eClick to open"
+        set slot 22 of player's current inventory to prismarine shard named "&b&lSHARD SHOP" with lore "&7Buy special keys & spawners", "&eClick to open"
+        set slot 26 of player's current inventory to barrier named "&c&lCLOSE"
+
+command /endshop:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &5END SHOP &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to ender chest named "&5Ender Chest &7[$2,500]"
+        set slot 11 of player's current inventory to shulker box named "&dShulker Box &7[$800]"
+        set slot 12 of player's current inventory to arrow named "&bArrow of Slow Falling &7[$500]"
+        set slot 13 of player's current inventory to end crystal named "&dEnd Crystal &7[$350]"
+        set slot 14 of player's current inventory to shulker shell named "&dShulker Shell &7[$350]"
+        set slot 15 of player's current inventory to dragon breath named "&5Dragon Breath &7[$1,000]"
+        set slot 16 of player's current inventory to end stone named "&fEnd Stone &7[$128]"
+        set slot 17 of player's current inventory to chorus fruit named "&dChorus Fruit &7[$108]"
+        set slot 18 of player's current inventory to end rod named "&fEnd Rod &7[$100]"
+        set slot 19 of player's current inventory to ender pearl named "&bEnder Pearl &7[$75]"
+        set slot 20 of player's current inventory to popped chorus fruit named "&dPopped Chorus Fruit &7[$24]"
+        set slot 22 of player's current inventory to barrier named "&cBack"
+
+command /netherShop:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &cNETHER SHOP &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to ghast tear named "&fGhast Tear &7[$350]"
+        set slot 11 of player's current inventory to crying obsidian named "&5Crying Obsidian &7[$150]"
+        set slot 12 of player's current inventory to blaze rod named "&6Blaze Rod &7[$150]"
+        set slot 13 of player's current inventory to nether wart named "&cNether Wart &7[$96]"
+        set slot 14 of player's current inventory to magma cream named "&6Magma Cream &7[$96]"
+        set slot 15 of player's current inventory to soul sand named "&8Soul Sand &7[$50]"
+        set slot 16 of player's current inventory to magma block named "&6Magma Block &7[$35]"
+        set slot 17 of player's current inventory to quartz named "&fNether Quartz &7[$30]"
+        set slot 18 of player's current inventory to glowstone dust named "&eGlowstone Dust &7[$15]"
+        set slot 22 of player's current inventory to barrier named "&cBack"
+
+command /gearshop:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &4GEAR & COMBAT &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to totem of undying named "&eTotem of Undying &7[$1,500]"
+        set slot 11 of player's current inventory to respawn anchor named "&5Respawn Anchor &7[$1,000]"
+        set slot 12 of player's current inventory to end crystal named "&dEnd Crystal &7[$350]"
+        set slot 13 of player's current inventory to golden apple named "&6Golden Apple &7[$250]"
+        set slot 14 of player's current inventory to golden carrot named "&6Golden Carrot &7[$120]"
+        set slot 15 of player's current inventory to obsidian named "&8Obsidian &7[$100]"
+        set slot 16 of player's current inventory to glowstone named "&eGlowstone &7[$100]"
+        set slot 17 of player's current inventory to experience bottle named "&aBottle o' Enchanting &7[$100]"
+        set slot 18 of player's current inventory to tipped arrow named "&fTipped Arrow &7[$500]"
+        set slot 22 of player's current inventory to barrier named "&cBack"
+
+command /foodshop:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &6FOOD SHOP &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to potato named "&ePotato &7[$96]"
+        set slot 11 of player's current inventory to carrot named "&6Carrot &7[$96]"
+        set slot 12 of player's current inventory to sweet berries named "&dSweet Berries &7[$50]"
+        set slot 13 of player's current inventory to cooked chicken named "&eCooked Chicken &7[$48]"
+        set slot 14 of player's current inventory to melon slice named "&aMelon Slice &7[$36]"
+        set slot 15 of player's current inventory to cooked beef named "&6Steak &7[$35]"
+        set slot 16 of player's current inventory to apple named "&cApple &7[$25]"
+        set slot 17 of player's current inventory to golden carrot named "&6Golden Carrot &7[$120]"
+        set slot 18 of player's current inventory to golden apple named "&6Golden Apple &7[$250]"
+        set slot 22 of player's current inventory to barrier named "&cBack"
+
+command /shardshop:
+    trigger:
+        open chest inventory with 3 rows named "&8✦ &bSHARD SHOP &8✦" to player
+        wait 1 tick
+        set slot 10 of player's current inventory to tripwire hook named "&cCrimson Key &7[2,500 Shards]"
+        set slot 12 of player's current inventory to tripwire hook named "&6Prime Key &7[2,500 Shards]"
+        set slot 14 of player's current inventory to spawner named "&5All Spawners &7[1,500 Shards]"
+        set slot 16 of player's current inventory to tripwire hook named "&fCommon Key &7[200 Shards]"
+        set slot 22 of player's current inventory to barrier named "&cBack"
+
+on inventory click:
+    if name of event-inventory is "&8✦ &6&lAIZEN SHOP &8✦":
+        cancel event
+        if clicked slot is 10:
+            make player execute command "/endshop"
+        else if clicked slot is 12:
+            make player execute command "/netherShop"
+        else if clicked slot is 14:
+            make player execute command "/gearshop"
+        else if clicked slot is 16:
+            make player execute command "/foodshop"
+        else if clicked slot is 22:
+            make player execute command "/shardshop"
+        else if clicked slot is 26:
+            close player's inventory
+        stop
+
+on inventory click:
+    if name of event-inventory is "&8✦ &5END SHOP &8✦":
+        cancel event
+        if clicked slot is 22:
+            make player execute command "/shop"
+            stop
+        if clicked slot is 10:
+            azShopBuy(player, ender chest, 2500, 1, "Ender Chest")
+        else if clicked slot is 11:
+            azShopBuy(player, shulker box, 800, 1, "Shulker Box")
+        else if clicked slot is 12:
+            azShopBuy(player, arrow, 500, 1, "Arrow of Slow Falling")
+        else if clicked slot is 13:
+            azShopBuy(player, end crystal, 350, 1, "End Crystal")
+        else if clicked slot is 14:
+            azShopBuy(player, shulker shell, 350, 1, "Shulker Shell")
+        else if clicked slot is 15:
+            azShopBuy(player, dragon breath, 1000, 1, "Dragon Breath")
+        else if clicked slot is 16:
+            azShopBuy(player, end stone, 128, 1, "End Stone")
+        else if clicked slot is 17:
+            azShopBuy(player, chorus fruit, 108, 1, "Chorus Fruit")
+        else if clicked slot is 18:
+            azShopBuy(player, end rod, 100, 1, "End Rod")
+        else if clicked slot is 19:
+            azShopBuy(player, ender pearl, 75, 1, "Ender Pearl")
+        else if clicked slot is 20:
+            azShopBuy(player, popped chorus fruit, 24, 1, "Popped Chorus Fruit")
+        stop
+
+on inventory click:
+    if name of event-inventory is "&8✦ &cNETHER SHOP &8✦":
+        cancel event
+        if clicked slot is 22:
+            make player execute command "/shop"
+            stop
+        if clicked slot is 10:
+            azShopBuy(player, ghast tear, 350, 1, "Ghast Tear")
+        else if clicked slot is 11:
+            azShopBuy(player, crying obsidian, 150, 1, "Crying Obsidian")
+        else if clicked slot is 12:
+            azShopBuy(player, blaze rod, 150, 1, "Blaze Rod")
+        else if clicked slot is 13:
+            azShopBuy(player, nether wart, 96, 1, "Nether Wart")
+        else if clicked slot is 14:
+            azShopBuy(player, magma cream, 96, 1, "Magma Cream")
+        else if clicked slot is 15:
+            azShopBuy(player, soul sand, 50, 1, "Soul Sand")
+        else if clicked slot is 16:
+            azShopBuy(player, magma block, 35, 1, "Magma Block")
+        else if clicked slot is 17:
+            azShopBuy(player, quartz, 30, 1, "Nether Quartz")
+        else if clicked slot is 18:
+            azShopBuy(player, glowstone dust, 15, 1, "Glowstone Dust")
+        stop
+
+on inventory click:
+    if name of event-inventory is "&8✦ &4GEAR & COMBAT &8✦":
+        cancel event
+        if clicked slot is 22:
+            make player execute command "/shop"
+            stop
+        if clicked slot is 10:
+            azShopBuy(player, totem of undying, 1500, 1, "Totem of Undying")
+        else if clicked slot is 11:
+            azShopBuy(player, respawn anchor, 1000, 1, "Respawn Anchor")
+        else if clicked slot is 12:
+            azShopBuy(player, end crystal, 350, 1, "End Crystal")
+        else if clicked slot is 13:
+            azShopBuy(player, golden apple, 250, 1, "Golden Apple")
+        else if clicked slot is 14:
+            azShopBuy(player, golden carrot, 120, 1, "Golden Carrot")
+        else if clicked slot is 15:
+            azShopBuy(player, obsidian, 100, 1, "Obsidian")
+        else if clicked slot is 16:
+            azShopBuy(player, glowstone, 100, 1, "Glowstone")
+        else if clicked slot is 17:
+            azShopBuy(player, experience bottle, 100, 1, "Bottle o' Enchanting")
+        else if clicked slot is 18:
+            azShopBuy(player, tipped arrow, 500, 1, "Tipped Arrow")
+        stop
+
+on inventory click:
+    if name of event-inventory is "&8✦ &6FOOD SHOP &8✦":
+        cancel event
+        if clicked slot is 22:
+            make player execute command "/shop"
+            stop
+        if clicked slot is 10:
+            azShopBuy(player, potato, 96, 1, "Potato")
+        else if clicked slot is 11:
+            azShopBuy(player, carrot, 96, 1, "Carrot")
+        else if clicked slot is 12:
+            azShopBuy(player, sweet berries, 50, 1, "Sweet Berries")
+        else if clicked slot is 13:
+            azShopBuy(player, cooked chicken, 48, 1, "Cooked Chicken")
+        else if clicked slot is 14:
+            azShopBuy(player, melon slice, 36, 1, "Melon Slice")
+        else if clicked slot is 15:
+            azShopBuy(player, cooked beef, 35, 1, "Steak")
+        else if clicked slot is 16:
+            azShopBuy(player, apple, 25, 1, "Apple")
+        else if clicked slot is 17:
+            azShopBuy(player, golden carrot, 120, 1, "Golden Carrot")
+        else if clicked slot is 18:
+            azShopBuy(player, golden apple, 250, 1, "Golden Apple")
+        stop
+
+on inventory click:
+    if name of event-inventory is "&8✦ &bSHARD SHOP &8✦":
+        cancel event
+        if clicked slot is 22:
+            make player execute command "/shop"
+            stop
+        if clicked slot is 10:
+            if {az.shards.%uuid of player%} < 2500:
+                send "{@prefix} &cNot enough Shards."
+                stop
+            remove 2500 from {az.shards.%uuid of player%}
+            give 1 tripwire hook named "&cCrimson Key" to player
+            send "{@prefix} &aPurchased &cCrimson Key &afor &b2,500 Shards."
+        else if clicked slot is 12:
+            if {az.shards.%uuid of player%} < 2500:
+                send "{@prefix} &cNot enough Shards."
+                stop
+            remove 2500 from {az.shards.%uuid of player%}
+            give 1 tripwire hook named "&6Prime Key" to player
+            send "{@prefix} &aPurchased &6Prime Key &afor &b2,500 Shards."
+        else if clicked slot is 14:
+            if {az.shards.%uuid of player%} < 1500:
+                send "{@prefix} &cNot enough Shards."
+                stop
+            remove 1500 from {az.shards.%uuid of player%}
+            give 1 spawner named "&5Spawner" to player
+            send "{@prefix} &aPurchased &5Spawner &afor &b1,500 Shards."
+        else if clicked slot is 16:
+            if {az.shards.%uuid of player%} < 200:
+                send "{@prefix} &cNot enough Shards."
+                stop
+            remove 200 from {az.shards.%uuid of player%}
+            give 1 tripwire hook named "&fCommon Key" to player
+            send "{@prefix} &aPurchased &fCommon Key &afor &b200 Shards."
+        stop
 
 # Legacy server fallback pricing command.
 command /setsellprice <number>:
