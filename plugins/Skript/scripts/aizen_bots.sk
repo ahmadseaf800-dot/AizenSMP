@@ -6,17 +6,26 @@ options:
     prefix: &6[&eAizenSMP&6] &r
 
 function azBotSpawn(label: text, loc: location):
-    spawn a villager at {_loc}
+    spawn an armor stand at {_loc}
     set name of last spawned entity to {_label}
     set invulnerability of last spawned entity to true
-    set AI of last spawned entity to false
-    set silent state of last spawned entity to true
+    set gravity of last spawned entity to false
+    set visible of last spawned entity to true
+    set marker state of last spawned entity to false
+    set small state of last spawned entity to false
+    set arms of last spawned entity to true
+    set base plate of last spawned entity to false
+    set helmet of last spawned entity to gold helmet
+    set chestplate of last spawned entity to black leather chestplate
+    set leggings of last spawned entity to black leather leggings
+    set boots of last spawned entity to gold boots
+    set item in main hand of last spawned entity to compass
 
 function azRemoveOldBots():
     if {az.spawn} is not set:
         stop
     loop all entities in radius 65 around {az.spawn}:
-        if loop-entity is a villager:
+        if loop-entity is an armor stand:
             if name of loop-entity is set:
                 if name of loop-entity contains "AIZEN BOT":
                     kill loop-entity
@@ -121,7 +130,7 @@ command /setupbots:
         azSetupBots()
         send "{@prefix}&aتم تجهيز كل Command Bots للـSpawn الجديد."
 
-on right click on villager:
+on right click on armor stand:
     set {_n} to name of clicked entity
     if {_n} does not contain "AIZEN BOT":
         stop
