@@ -54,12 +54,6 @@ function azSetupBots():
     azBotSpawn("&6&lAIZEN BOT &e&lSHOP", {_l})
 
     set {_l} to {_s}
-    add -18 to x-coordinate of {_l}
-    add 3 to y-coordinate of {_l}
-    add 8 to z-coordinate of {_l}
-    azBotSpawn("&6&lAIZEN BOT &d&lTPA", {_l})
-
-    set {_l} to {_s}
     add 18 to x-coordinate of {_l}
     add 3 to y-coordinate of {_l}
     add 8 to z-coordinate of {_l}
@@ -142,10 +136,6 @@ on right click on armor stand:
     if {_n} contains "SHOP":
         make player execute command "/shop"
         stop
-    if {_n} contains "TPA":
-        set {az.bot.tpa.await.%uuid of player%} to true
-        send "&6[&eAizenSMP&6] &eاكتب اسم اللاعب في الشات أو cancel."
-        stop
     if {_n} contains "AH":
         make player execute command "/ah"
         stop
@@ -175,26 +165,3 @@ on right click on armor stand:
         make player execute command "/duels"
         stop
 
-on chat:
-    if {az.bot.tpa.await.%uuid of player%} is not true:
-        stop
-    cancel event
-    delete {az.bot.tpa.await.%uuid of player%}
-    if lowercase(message) is "cancel":
-        send "&6[&eAizenSMP&6] &cتم إلغاء طلب TPA."
-        stop
-    set {_target} to none
-    loop all players:
-        if lowercase(name of loop-player) is lowercase(message):
-            set {_target} to loop-player
-            stop
-    if {_target} is not set:
-        send "&6[&eAizenSMP&6] &cاللاعب غير موجود."
-        stop
-    if {_target} is player:
-        send "&6[&eAizenSMP&6] &cلا يمكنك إرسال TPA لنفسك."
-        stop
-    make player execute command "/tpa %{_target}%"
-
-on quit:
-    delete {az.bot.tpa.await.%uuid of player%}
