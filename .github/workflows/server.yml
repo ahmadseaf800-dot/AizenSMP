@@ -77,8 +77,8 @@ jobs:
         run: |
           set -e
           MODRINTH_API="https://api.modrinth.com/v2/project"
-          SVC_URL=$(curl -fsSL "$MODRINTH_API/simple-voice-chat/version?loaders=%5B%22paper%22%5D&limit=20" | jq -r '.[0].files[] | select(.primary == true) | .url' | head -n 1)
-          WE_URL=$(curl -fsSL "$MODRINTH_API/worldedit/version?loaders=%5B%22paper%22%5D&limit=20" | jq -r '.[0].files[] | select(.primary == true) | .url' | head -n 1)
+          SVC_URL=$(curl -fsSL --retry 5 --retry-delay 2 "$MODRINTH_API/simple-voice-chat/version?loaders=%5B%22paper%22%5D&game_versions=%5B%221.21.11%22%5D&limit=20" | jq -r '.[0].files[] | select(.primary == true) | .url' | head -n 1)
+          WE_URL=$(curl -fsSL --retry 5 --retry-delay 2 "$MODRINTH_API/worldedit/version?loaders=%5B%22paper%22%5D&game_versions=%5B%221.21.11%22%5D&limit=20" | jq -r '.[0].files[] | select(.primary == true) | .url' | head -n 1)
 
           VIAVERSION_URL=$(curl -fsSL https://api.github.com/repos/ViaVersion/ViaVersion/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
           VIABACKWARDS_URL=$(curl -fsSL https://api.github.com/repos/ViaVersion/ViaBackwards/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
