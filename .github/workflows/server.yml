@@ -2,6 +2,12 @@ name: AizenSMP Network
 
 on:
   workflow_dispatch:
+    inputs:
+      manual_start:
+        description: "Start the AizenSMP network manually"
+        required: false
+        default: "true"
+        type: boolean
 
 permissions:
   contents: read
