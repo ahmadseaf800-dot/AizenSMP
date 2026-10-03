@@ -1,0 +1,298 @@
+# =========================================================
+# AizenSMP - Duel / Combat / Teleport Override
+# Loads after the base systems.
+# =========================================================
+
+options:
+    override-combat-time: 30 seconds
+    override-teleport-time: 5 seconds
+
+function azOCombat(p: player) :: boolean:
+    if {az.combat.%uuid of {_p}%} is set:
+        return true
+    return false
+
+function azOCancelTP(p: player, reason: text):
+    if {az.teleport.pending.%uuid of {_p}%} is set:
+        delete {az.teleport.pending.%uuid of {_p}%}
+        delete {az.teleport.origin.%uuid of {_p}%}
+        delete {az.teleport.target.%uuid of {_p}%}
+        send "&6[&eAizenSMP&6] &cتم إلغاء الانتقال: &7%{_reason}%" to {_p}
+
+function azOWarmup(p: player, target: location, label: text):
+    if azOCombat({_p}) is true:
+        send "&6[&eAizenSMP&6] &cلا يمكنك الانتقال وأنت في Combat." to {_p}
+        stop
+    if {az.teleport.pending.%uuid of {_p}%} is set:
+        send "&6[&eAizenSMP&6] &cلديك انتقال قيد الانتظار." to {_p}
+        stop
+    set {az.teleport.pending.%uuid of {_p}%} to true
+    set {az.teleport.origin.%uuid of {_p}%} to location of {_p}
+    set {az.teleport.target.%uuid of {_p}%} to {_target}
+    send "&6[&eAizenSMP&6] &eسيتم نقلك إلى &f%{_label}% &eبعد &c5 ثوانٍ&e. لا تتحرك ولا تتعرض للضرر." to {_p}
+    wait {@override-teleport-time}
+    if {az.teleport.pending.%uuid of {_p}%} is true:
+        if azOCombat({_p}) is false:
+            if distance between location of {_p} and {az.teleport.origin.%uuid of {_p}%} <= 0.2:
+                set {_dest} to {az.teleport.target.%uuid of {_p}%}
+                delete {az.teleport.pending.%uuid of {_p}%}
+                delete {az.teleport.origin.%uuid of {_p}%}
+                delete {az.teleport.target.%uuid of {_p}%}
+                teleport {_p} to {_dest}
+                send "&6[&eAizenSMP&6] &aتم الانتقال." to {_p}
+                stop
+    azOCancelTP({_p}, "تحركت أو تعرضت للضرر أو دخلت Combat")
+
+on player move with priority lowest:
+    if {az.teleport.pending.%uuid of player%} is set:
+        if distance between location of player and {az.teleport.origin.%uuid of player%} > 0.2:
+            azOCancelTP(player, "تحركت")
+
+on damage with priority lowest:
+    if victim is a player:
+        if {az.teleport.pending.%uuid of victim%} is set:
+            azOCancelTP(victim, "تعرضت للضرر")
+
+# PvP is the ONLY source of Combat.
+# Each player hit refreshes both players to 30 seconds.
+on damage with priority highest:
+    if victim is a player:
+        if attacker is a player:
+            if {az.duel.%uuid of attacker%} is victim:
+                if azDuelInside(attacker) is true:
+                    if azDuelInside(victim) is true:
+                        uncancel event
+                        set {az.combat.%uuid of attacker%} to true
+                        set {az.combat.%uuid of victim%} to true
+                        set {az.combat.time.%uuid of attacker%} to {@override-combat-time}
+                        set {az.combat.time.%uuid of victim%} to {@override-combat-time}
+                        stop
+            delete {az.combat.%uuid of attacker%}
+            delete {az.combat.time.%uuid of attacker%}
+            delete {az.combat.%uuid of victim%}
+            delete {az.combat.time.%uuid of victim%}
+            cancel event
+            stop
+
+# If a mob/environment damages a player, it never creates Combat.
+on damage:
+    if victim is a player:
+        if attacker is not a player:
+            delete {az.combat.%uuid of victim%}
+            delete {az.combat.time.%uuid of victim%}
+
+# Allow leaving a Duel by commands/teleports when not in Combat.
+on teleport with priority highest:
+    if {az.combat.%uuid of player%} is not set:
+        uncancel event
+    else:
+        cancel event
+
+# Commands that actually teleport use a 5-second warmup.
+# This handler runs before the base command handlers.
+on command with priority lowest:
+    if {az.combat.%uuid of player%} is set:
+        if command is "spawn" or command is "afk" or command is "duels" or command is "rtp" or command is "rtpq" or command is "tpa" or command is "tpahere" or command is "tpaccept":
+            cancel event
+            send "&6[&eAizenSMP&6] &cلا يمكنك استخدام أوامر الانتقال أثناء Combat." to player
+            stop
+
+    if command is "spawn":
+        if {az.spawn} is set:
+            cancel event
+            azOWarmup(player, {az.spawn}, "Spawn")
+        stop
+    if command is "afk":
+        if {az.afk} is set:
+            cancel event
+            azOWarmup(player, {az.afk}, "AFK")
+        stop
+    if command is "duels":
+        if {az.duel.arena} is set:
+            cancel event
+            azOWarmup(player, {az.duel.arena}, "Duels")
+        stop
+
+# RTP menu is rebuilt here so its actual teleport also has the 5-second warmup.
+on command with priority lowest:
+    if command is "rtp":
+        if azOCombat(player) is true:
+            cancel event
+            send "&6[&eAizenSMP&6] &cلا يمكنك استخدام RTP أثناء Combat." to player
+            stop
+        cancel event
+        set {_gui} to chest inventory with 3 rows named "&e&lRANDOM TELEPORT"
+        set slot 11 of {_gui} to grass block named "&aOverworld RTP" with lore "&7انقر للانتقال العشوائي"
+        set slot 13 of {_gui} to netherrack named "&cNether RTP" with lore "&7انقر للانتقال العشوائي"
+        set slot 15 of {_gui} to end stone named "&eEnd RTP" with lore "&7انقر للانتقال العشوائي"
+        set slot 22 of {_gui} to barrier named "&cإغلاق"
+        open {_gui} to player
+
+on inventory click with priority lowest:
+    if name of event-inventory is "&e&lRANDOM TELEPORT":
+        cancel event
+        if index of event-slot is 22:
+            close player's inventory
+            stop
+        if index of event-slot is 11:
+            close player's inventory
+            azOWarmupRTP(player, "world")
+        else if index of event-slot is 13:
+            close player's inventory
+            azOWarmupRTP(player, "world_nether")
+        else if index of event-slot is 15:
+            close player's inventory
+            azOWarmupRTP(player, "world_the_end")
+
+function azOWarmupRTP(p: player, worldName: text):
+    if azOCombat({_p}) is true:
+        send "&6[&eAizenSMP&6] &cلا يمكنك استخدام RTP أثناء Combat." to {_p}
+        stop
+    if {az.teleport.pending.%uuid of {_p}%} is set:
+        stop
+    set {az.teleport.pending.%uuid of {_p}%} to true
+    set {az.teleport.origin.%uuid of {_p}%} to location of {_p}
+    send "&6[&eAizenSMP&6] &eRTP بعد &c5 ثوانٍ&e. لا تتحرك ولا تتعرض للضرر." to {_p}
+    wait {@override-teleport-time}
+    if {az.teleport.pending.%uuid of {_p}%} is true:
+        if azOCombat({_p}) is false:
+            if distance between location of {_p} and {az.teleport.origin.%uuid of {_p}%} <= 0.2:
+                delete {az.teleport.pending.%uuid of {_p}%}
+                delete {az.teleport.origin.%uuid of {_p}%}
+                azSafeRTP({_p}, {_worldName})
+                stop
+    azOCancelTP({_p}, "تحركت أو تعرضت للضرر أو دخلت Combat")
+
+# TPA/TPAHERE requests are allowed, but the actual teleport after /tpaccept
+# has the same 5-second warmup.
+on command with priority lowest:
+    if command is "tpaccept":
+        cancel event
+        if {az.tpa.%uuid of player%} is set:
+            set {_p} to {az.tpa.%uuid of player%}
+            delete {az.tpa.%uuid of player%}
+            if {_p} is online:
+                azOWarmup({_p}, location of player, "TPA")
+                send "&6[&eAizenSMP&6] &aAccepted." to player
+            stop
+        if {az.tpahere.%uuid of player%} is set:
+            set {_p} to {az.tpahere.%uuid of player%}
+            delete {az.tpahere.%uuid of player%}
+            if {_p} is online:
+                azOWarmup(player, location of {_p}, "TPAHERE")
+                send "&6[&eAizenSMP&6] &aAccepted." to player
+            stop
+        send "&6[&eAizenSMP&6] &cNo pending request."
+
+# RTPQ also gets the 5-second warmup. Movement/damage by either player cancels it.
+on command with priority lowest:
+    if command is "rtpq":
+        cancel event
+        if azOCombat(player) is true:
+            send "&6[&eAizenSMP&6] &cلا يمكنك استخدام RTPQ أثناء Combat." to player
+            stop
+        set {_target} to none
+        loop all players:
+            if loop-player is not player:
+                set {_target} to loop-player
+                stop
+        if {_target} is not set:
+            send "&6[&eAizenSMP&6] &cلا يوجد لاعب آخر متصل." to player
+            stop
+        set {az.rtpq.pending.%uuid of player%} to {_target}
+        set {az.rtpq.origin.%uuid of player%} to location of player
+        set {az.rtpq.target.origin.%uuid of player%} to location of {_target}
+        send "&6[&eAizenSMP&6] &eRTPQ بعد &c5 ثوانٍ&e. لا تتحرك ولا تتعرض للضرر أنت أو خصمك." to player
+        send "&6[&eAizenSMP&6] &eRTPQ بعد &c5 ثوانٍ&e. لا تتحرك ولا تتعرض للضرر." to {_target}
+        wait {@override-teleport-time}
+        if {az.rtpq.pending.%uuid of player%} is {_target}:
+            if azOCombat(player) is false:
+                if azOCombat({_target}) is false:
+                    if distance between location of player and {az.rtpq.origin.%uuid of player%} <= 0.2:
+                        if distance between location of {_target} and {az.rtpq.target.origin.%uuid of player%} <= 0.2:
+                            set {_x} to random integer between -5000 and 5000
+                            set {_z} to random integer between -5000 and 5000
+                            set {_w} to world of player
+                            set {_loc} to location at {_x}, 0, {_z} in {_w}
+                            set {_top} to highest block at {_loc}
+                            set {_feet} to location above {_top}
+                            if block at {_feet} is air:
+                                if block above {_feet} is air:
+                                    if block at {_top} is not water:
+                                        if block at {_top} is not lava:
+                                            delete {az.rtpq.pending.%uuid of player%}
+                                            delete {az.rtpq.origin.%uuid of player%}
+                                            delete {az.rtpq.target.origin.%uuid of player%}
+                                            teleport player to {_feet}
+                                            teleport {_target} to {_feet}
+                                            send "&6[&eAizenSMP&6] &aRTPQ تم." to player
+                                            send "&6[&eAizenSMP&6] &aRTPQ تم." to {_target}
+                                            stop
+        delete {az.rtpq.pending.%uuid of player%}
+        delete {az.rtpq.origin.%uuid of player%}
+        delete {az.rtpq.target.origin.%uuid of player%}
+        send "&6[&eAizenSMP&6] &cتم إلغاء RTPQ." to player
+        if {_target} is online:
+            send "&6[&eAizenSMP&6] &cتم إلغاء RTPQ." to {_target}
+
+on player move:
+    if {az.rtpq.pending.%uuid of player%} is set:
+        azOCancelRTPQ(player)
+    loop all players:
+        if {az.rtpq.pending.%uuid of loop-player%} is player:
+            azOCancelRTPQ(loop-player)
+
+on damage:
+    if victim is a player:
+        if {az.rtpq.pending.%uuid of victim%} is set:
+            azOCancelRTPQ(victim)
+        loop all players:
+            if {az.rtpq.pending.%uuid of loop-player%} is victim:
+                azOCancelRTPQ(loop-player)
+
+function azOCancelRTPQ(p: player):
+    set {_t} to {az.rtpq.pending.%uuid of {_p}%}
+    delete {az.rtpq.pending.%uuid of {_p}%}
+    delete {az.rtpq.origin.%uuid of {_p}%}
+    delete {az.rtpq.target.origin.%uuid of {_p}%}
+    if {_p} is online:
+        send "&6[&eAizenSMP&6] &cتم إلغاء RTPQ." to {_p}
+    if {_t} is set:
+        if {_t} is online:
+            send "&6[&eAizenSMP&6] &cتم إلغاء RTPQ." to {_t}
+
+# Prevent the old 2-minute Duel timer from ending active Duels.
+# The base script's timer checks the duel opponent variable after 2 minutes.
+# Temporarily use a self-reference at the timer boundary, then restore the opponent.
+every 110 seconds:
+    loop all players:
+        if {az.duel.%uuid of loop-player%} is set:
+            set {_opp} to {az.duel.%uuid of loop-player%}
+            if {_opp} is a player:
+                if {_opp} is online:
+                    set {az.duel.keep.%uuid of loop-player%} to {_opp}
+                    set {az.duel.%uuid of loop-player%} to loop-player
+                    wait 12 seconds
+                    if {az.duel.keep.%uuid of loop-player%} is {_opp}:
+                        set {az.duel.%uuid of loop-player%} to {_opp}
+                        delete {az.duel.keep.%uuid of loop-player%}
+
+# Ensure Combat always expires after 30 seconds and never transfers.
+every 1 second:
+    loop all players:
+        if {az.combat.%uuid of loop-player%} is set:
+            if {az.combat.time.%uuid of loop-player%} is set:
+                remove 1 second from {az.combat.time.%uuid of loop-player%}
+                if {az.combat.time.%uuid of loop-player%} <= 0 seconds:
+                    delete {az.combat.%uuid of loop-player%}
+                    delete {az.combat.time.%uuid of loop-player%}
+                    send "&6[&eAizenSMP&6] &aCombat انتهى." to loop-player
+        else:
+            delete {az.combat.time.%uuid of loop-player%}
+
+on quit:
+    delete {az.combat.%uuid of player%}
+    delete {az.combat.time.%uuid of player%}
+    delete {az.teleport.pending.%uuid of player%}
+    delete {az.teleport.origin.%uuid of player%}
+    delete {az.teleport.target.%uuid of player%}
