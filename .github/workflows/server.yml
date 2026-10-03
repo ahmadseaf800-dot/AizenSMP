@@ -200,6 +200,7 @@ jobs:
           echo "ViaBackwards: $VIABACKWARDS_URL"
 
           SKRIPT_URL=$(modrinth_file "skript" "paper")
+          LUCKPERMS_URL=$(modrinth_file "luckperms" "paper")
 
           # AuthMeReloaded: cracked-mode authentication with /register and /login.
           AUTHME_URL=$(curl -fsSL --retry 5 --retry-delay 2 \
@@ -212,6 +213,7 @@ jobs:
           test -n "$AUTHME_URL" && test "$AUTHME_URL" != "null"
 
           echo "Skript: $SKRIPT_URL"
+          echo "LuckPerms: $LUCKPERMS_URL"
           echo "AuthMe: $AUTHME_URL"
 
           # Download AuthMe before compiling AizenAuthGuard: the guard depends on AuthMe's API classes.
@@ -290,6 +292,7 @@ jobs:
 
           for name in germany turkey america; do
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/Skript.jar" "$SKRIPT_URL"
+            curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/LuckPerms.jar" "$LUCKPERMS_URL"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/AuthMe.jar" "$AUTHME_URL"
             cp -f backend/build/AizenAuthGuard.jar "network/$name/plugins/AizenAuthGuard.jar"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/ViaVersion.jar" "$VIAVERSION_URL"
@@ -297,7 +300,7 @@ jobs:
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/WorldEdit.jar" "$WE_URL"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/voicechat.jar" "$SVC_URL"
             mkdir -p "network/$name/plugins/Skript/scripts"
-            cp -f plugins/Skript/scripts/*.sk "network/$name/plugins/Skript/scripts/" 2>/dev/null || true
+            find plugins/Skript/scripts -maxdepth 1 -type f -name "*.sk" ! -name "aizen_auth.sk" -exec cp -f {} "network/$name/plugins/Skript/scripts/" \;
 
             # AuthMe configuration: cracked-mode authentication with /register and /login.
             mkdir -p "network/$name/plugins/AuthMe"
@@ -346,6 +349,7 @@ jobs:
           server-ip=127.0.0.1
           query.port=$port
           enable-query=false
+          max-players=200
           EOF
           }
 
@@ -436,7 +440,7 @@ jobs:
           config-version = "2.7"
           bind = "0.0.0.0:25565"
           motd = "<gold>AizenSMP</gold>"
-          show-max-players = 100
+          show-max-players = 200
           online-mode = false
           force-key-authentication = false
           player-info-forwarding-mode = "none"
