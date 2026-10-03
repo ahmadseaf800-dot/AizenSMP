@@ -261,6 +261,20 @@ EOF
           configure_server turkey 25567
           configure_server america 25568
 
+          # One shared AuthMe SQLite database for all three regional backends.
+          # This prevents /register from being required again after /server switching.
+          if [ -f network/authme.db ]; then
+            echo "Using persistent shared AuthMe database."
+          elif [ -f network/germany/plugins/AuthMe/authme.db ]; then
+            cp -f network/germany/plugins/AuthMe/authme.db network/authme.db
+          else
+            touch network/authme.db
+          fi
+          for name in germany turkey america; do
+            rm -f "network/$name/plugins/AuthMe/authme.db"
+            ln -sf "$(realpath network/authme.db)" "network/$name/plugins/AuthMe/authme.db"
+          done
+
           # Make Aizenx an operator on every backend.
           # This is Minecraft's deterministic offline UUID for the cracked-mode username Aizenx.
           for name in germany turkey america; do
@@ -472,6 +486,7 @@ EOF
               network/turkey/world network/turkey/world_nether network/turkey/world_the_end \
               network/america/world network/america/world_nether network/america/world_the_end \
               network/germany/plugins/Skript network/turkey/plugins/Skript network/america/plugins/Skript \
+              network/authme.db \
               network/germany/plugins/AuthMe network/turkey/plugins/AuthMe network/america/plugins/AuthMe \
               2>/dev/null || true
           }
