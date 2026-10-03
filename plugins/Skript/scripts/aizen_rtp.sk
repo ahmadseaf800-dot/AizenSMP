@@ -1,0 +1,36 @@
+# AizenSMP RTP server selector
+# /rtp -> choose Natural World -> choose regional server
+
+command /rtp:
+    trigger:
+        open chest inventory with 1 row named "&8✦ &6RTP &8✦" to player
+        wait 1 tick
+        set slot 4 of player's current inventory to grass block named "&a&lالعالم الطبيعي" with lore "&7اختر عالم الـOverworld"
+
+on inventory click:
+    if name of event-inventory is "&8✦ &6RTP &8✦":
+        cancel event
+        if clicked slot is 4:
+            open chest inventory with 1 row named "&8✦ &6العالم الطبيعي &8✦" to player
+            wait 1 tick
+            set slot 2 of player's current inventory to grass block named "&e&lتركيا" with lore "&7انتقال إلى سيرفر تركيا"
+            set slot 4 of player's current inventory to grass block named "&6&lألمانيا" with lore "&7انتقال إلى سيرفر ألمانيا"
+            set slot 6 of player's current inventory to grass block named "&c&lأمريكا" with lore "&7انتقال إلى سيرفر أمريكا"
+
+    if name of event-inventory is "&8✦ &6العالم الطبيعي &8✦":
+        cancel event
+        if clicked slot is 2:
+            close player's inventory
+            make player execute command "/server Turkey"
+        if clicked slot is 4:
+            close player's inventory
+            make player execute command "/server Germany"
+        if clicked slot is 6:
+            close player's inventory
+            make player execute command "/server America"
+
+on inventory drag:
+    if name of event-inventory is "&8✦ &6RTP &8✦":
+        cancel event
+    if name of event-inventory is "&8✦ &6العالم الطبيعي &8✦":
+        cancel event
