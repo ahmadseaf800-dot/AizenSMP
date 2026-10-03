@@ -76,12 +76,17 @@ jobs:
         shell: bash
         run: |
           set -e
-          SVC_URL=$(curl -fsSL 'https://api.modrinth.com/v2/project/simple-voice-chat/version?loaders=%5B%22paper%22%5D&game_versions=%5B%221.21.11%22%5D' | jq -r '.[0].files[] | select(.primary == true) | .url' | head -n 1)
-          test -n "$SVC_URL"
+          MODRINTH_API="https://api.modrinth.com/v2/project"
+          SVC_URL=$(curl -fsSL "$MODRINTH_API/simple-voice-chat/version?loaders=%5B%22paper%22%5D&limit=20" | jq -r '.[0].files[] | select(.primary == true) | .url' | head -n 1)
+          WE_URL=$(curl -fsSL "$MODRINTH_API/worldedit/version?loaders=%5B%22paper%22%5D&limit=20" | jq -r '.[0].files[] | select(.primary == true) | .url' | head -n 1)
 
           VIAVERSION_URL=$(curl -fsSL https://api.github.com/repos/ViaVersion/ViaVersion/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
           VIABACKWARDS_URL=$(curl -fsSL https://api.github.com/repos/ViaVersion/ViaBackwards/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
-          WE_URL=$(curl -fsSL 'https://api.modrinth.com/v2/project/worldedit/version?loaders=%5B%22paper%22%5D&game_versions=%5B%221.21.11%22%5D' | jq -r '.[0].files[] | select(.primary == true) | .url' | head -n 1)
+
+          test -n "$SVC_URL" && test "$SVC_URL" != "null"
+          test -n "$WE_URL" && test "$WE_URL" != "null"
+          test -n "$VIAVERSION_URL" && test "$VIAVERSION_URL" != "null"
+          test -n "$VIABACKWARDS_URL" && test "$VIABACKWARDS_URL" != "null"
 
           for name in germany turkey america; do
             curl -L --fail -o "network/$name/plugins/Skript.jar" "https://github.com/SkriptLang/Skript/releases/latest/download/Skript.jar"
