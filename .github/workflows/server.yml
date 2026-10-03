@@ -71,11 +71,6 @@ jobs:
           test -n "$WE_URL"
           curl -L --fail -o server/plugins/WorldEdit.jar "$WE_URL"
 
-          # AuthMe Reloaded: /register and /login
-          AUTHME_URL=$(curl -fsSL 'https://api.modrinth.com/v2/project/authme-reloaded/version?loaders=%5B%22paper%22%5D&game_versions=%5B%221.21.11%22%5D' | jq -r '.[0].files[] | select(.primary == true) | .url' | head -n 1)
-          test -n "$AUTHME_URL"
-          curl -L --fail -o server/plugins/AuthMe.jar "$AUTHME_URL"
-
       - name: Copy AizenSMP custom Skript systems
         shell: bash
         run: |
