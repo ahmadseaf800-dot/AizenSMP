@@ -532,13 +532,80 @@ on inventory click:
         send "{@prefix} &aSetting updated."
 
 # ---------------- DUELS ----------------
+# Duels are the ONLY place where player-vs-player damage is allowed.
+# The arena is isolated: players cannot walk/teleport/pearl out.
+# Each duel lasts at most 2 minutes, then the arena is regenerated.
+
+options:
+    duel-duration: 2 minutes
+    duel-radius: 25
 
 command /setduel:
     permission: aizensmp.admin
     trigger:
-        set {az.duel} to location of player
-        send "{@prefix} &aDuels area set here." to player
+        set {az.duel.arena} to location of player
+        send "{@prefix} &aDuel arena center set here." to player
+        send "{@prefix} &7Radius: &e{@duel-radius} blocks &7| Time: &e2 minutes"
 
+command /duels:
+    trigger:
+        if {az.duel.arena} is not set:
+            send "{@prefix} &cDuel arena is not set."
+            stop
+        teleport player to {az.duel.arena}
+        send "{@prefix} &aTeleported to the Duel lobby."
+
+function azDuelInside(p: player) :: boolean:
+    if {az.duel.arena} is not set:
+        return false
+    if world of {_p} is not world of {az.duel.arena}:
+        return false
+    if distance between location of {_p} and {az.duel.arena} <= {@duel-radius}:
+        return true
+    return false
+
+function azDuelSaveArena():
+    if {az.duel.arena} is not set:
+        stop
+    delete {az.duel.saved::*}
+    set {_center} to {az.duel.arena}
+    set {_n} to 0
+    loop blocks within location at (x-coordinate of {_center} - {@duel-radius}), (y-coordinate of {_center} - 10), (z-coordinate of {_center} - {@duel-radius}) in world of {_center} and location at (x-coordinate of {_center} + {@duel-radius}), (y-coordinate of {_center} + 10), (z-coordinate of {_center} + {@duel-radius}) in world of {_center}:
+        add 1 to {_n}
+        set {az.duel.saved.%{_n}%.loc} to location of loop-block
+        set {az.duel.saved.%{_n}%.type} to type of loop-block
+    set {az.duel.saved.count} to {_n}
+
+function azDuelRestoreArena():
+    if {az.duel.saved.count} is not set:
+        stop
+    loop {az.duel.saved.count} times:
+        set {_loc} to {az.duel.saved.%loop-number%.loc}
+        set {_type} to {az.duel.saved.%loop-number%.type}
+        if {_loc} is set:
+            set block at {_loc} to {_type}
+    delete {az.duel.saved::*}
+
+function azDuelEnd(p1: player, p2: player):
+    if {_p1} is set:
+        delete {az.duel.%uuid of {_p1}%}
+        delete {az.duel.start.%uuid of {_p1}%}
+        delete {az.combat.%uuid of {_p1}%}
+        delete {az.combat.time.%uuid of {_p1}%}
+    if {_p2} is set:
+        delete {az.duel.%uuid of {_p2}%}
+        delete {az.duel.start.%uuid of {_p2}%}
+        delete {az.combat.%uuid of {_p2}%}
+        delete {az.combat.time.%uuid of {_p2}%}
+    if {_p1} is online:
+        if {az.spawn} is set:
+            teleport {_p1} to {az.spawn}
+        send "{@prefix} &aانتهى الدويل." to {_p1}
+    if {_p2} is online:
+        if {az.spawn} is set:
+            teleport {_p2} to {az.spawn}
+        send "{@prefix} &aانتهى الدويل." to {_p2}
+    azDuelRestoreArena()
 
 command /duel [<player>]:
     trigger:
@@ -559,6 +626,9 @@ command /duel [<player>]:
             stop
         if {az.duel.%uuid of {_target}%} is set:
             send "{@prefix} &cThat player is already dueling."
+            stop
+        if {az.combat.%uuid of player%} is set or {az.combat.%uuid of {_target}%} is set:
+            send "{@prefix} &cلا يمكن بدء Duel أثناء القتال."
             stop
         if {az.settings.duel.%uuid of {_target}%} is "none":
             send "{@prefix} &cDuel requests disabled."
@@ -584,13 +654,30 @@ command /duelaccept:
             stop
         set {_p} to {az.duel.request.%uuid of player%}
         delete {az.duel.request.%uuid of player%}
-        if {_p} is online:
-            set {az.duel.%uuid of player%} to {_p}
-            set {az.duel.%uuid of {_p}%} to player
-            teleport player to {az.duel.arena}
-            teleport {_p} to {az.duel.arena}
-            send "{@prefix} &aDuel started." to player
-            send "{@prefix} &aDuel started." to {_p}
+        if {_p} is not online:
+            send "{@prefix} &cThe player is offline."
+            stop
+
+        # Save the arena before the first duel so every changed block can be restored.
+        if {az.duel.active} is not set:
+            azDuelSaveArena()
+            set {az.duel.active} to true
+
+        set {az.duel.%uuid of player%} to {_p}
+        set {az.duel.%uuid of {_p}%} to player
+        set {az.duel.start.%uuid of player%} to now
+        set {az.duel.start.%uuid of {_p}%} to now
+
+        teleport player to {az.duel.arena}
+        teleport {_p} to {az.duel.arena}
+        send "{@prefix} &aDuel started! &7You have &e2 minutes&7." to player
+        send "{@prefix} &aDuel started! &7You have &e2 minutes&7." to {_p}
+
+        # Start a fresh 2-minute timer for this duel.
+        wait {@duel-duration}
+        if {az.duel.%uuid of player%} is {_p}:
+            azDuelEnd(player, {_p})
+            delete {az.duel.active}
 
 command /dueldeny:
     trigger:
@@ -601,13 +688,73 @@ command /dueldeny:
             if {_p} is online:
                 send "{@prefix} &cYour duel request was denied." to {_p}
 
-on death of player:
-    if {az.duel.%uuid of victim%} is set:
-        set {_opponent} to {az.duel.%uuid of victim%}
-        delete {az.duel.%uuid of victim%}
-        if {_opponent} is online:
-            delete {az.duel.%uuid of {_opponent}%}
-            send "{@prefix} &aDuel ended." to {_opponent}
+# Absolutely no PvP outside an active duel.
+on damage:
+    if attacker is a player:
+        if victim is a player:
+            if {az.duel.%uuid of attacker%} is not victim:
+                cancel event
+                stop
+            if azDuelInside(attacker) is false or azDuelInside(victim) is false:
+                cancel event
+                stop
+            set {az.combat.%uuid of attacker%} to true
+            set {az.combat.%uuid of victim%} to true
+            set {az.combat.time.%uuid of attacker%} to 15 seconds
+            set {az.combat.time.%uuid of victim%} to 15 seconds
+
+# Never allow Ender Pearls to bypass the duel boundary.
+on projectile launch:
+    if projectile is an ender pearl:
+        if {az.duel.%uuid of shooter%} is not set:
+            cancel event
+            send "{@prefix} &cEnder Pearls are disabled outside Duels." to shooter
+
+on teleport:
+    if {az.duel.%uuid of player%} is set:
+        if event-teleport is not within {@duel-radius} blocks of {az.duel.arena}:
+            cancel event
+            send "{@prefix} &cلا يمكنك الخروج من الـDuel." to player
+
+on player move:
+    if {az.duel.%uuid of player%} is set:
+        if azDuelInside(player) is false:
+            teleport player to {az.duel.arena}
+            send action bar "&cDuel Arena: &7لا يمكنك الخروج من المنطقة." to player
+
+# Block changes only inside the duel arena; outside remains normal.
+on block break:
+    if {az.duel.%uuid of player%} is set:
+        if azDuelInside(player) is true:
+            stop
+        cancel event
+
+on block place:
+    if {az.duel.%uuid of player%} is set:
+        if azDuelInside(player) is true:
+            stop
+        cancel event
+
+# Keep inventory is ALWAYS disabled.
+on death:
+    if victim is a player:
+        execute console command "gamerule keepInventory false"
+        if {az.duel.%uuid of victim%} is set:
+            set {_opponent} to {az.duel.%uuid of victim%}
+            delete {az.duel.%uuid of victim%}
+            if {_opponent} is online:
+                delete {az.duel.%uuid of {_opponent}%}
+                delete {az.combat.%uuid of {_opponent}%}
+                delete {az.combat.time.%uuid of {_opponent}%}
+                if {az.spawn} is set:
+                    teleport {_opponent} to {az.spawn}
+                send "{@prefix} &aDuel ended because your opponent died." to {_opponent}
+            azDuelRestoreArena()
+            delete {az.duel.active}
+
+# Disable keep-inventory at startup too.
+on load:
+    execute console command "gamerule keepInventory false"
 
 # ---------------- SELL / AUCTION HOUSE ----------------
 #
