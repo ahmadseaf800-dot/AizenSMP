@@ -481,6 +481,9 @@ EOF
           overwrite: true
 
       - name: Start AizenSMP network
+        env:
+          DASHBOARD_URL: ${{ secrets.DASHBOARD_URL }}
+          DASHBOARD_API_TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}
         shell: bash
         run: |
           set -u
@@ -524,7 +527,7 @@ EOF
               echo "eula=true" > "network/$name/eula.txt"
               (
                 cd "network/$name"
-                "$JAVA21_HOME/bin/java" -Xms512M -Xmx1024M -jar server.jar --nogui
+                AIZEN_SERVER_NAME="$name" DASHBOARD_URL="$DASHBOARD_URL" DASHBOARD_API_TOKEN="$DASHBOARD_API_TOKEN" "$JAVA21_HOME/bin/java" -Xms512M -Xmx1024M -jar server.jar --nogui
               ) > "$log" 2>&1 &
               pid=$!
               sleep 8
