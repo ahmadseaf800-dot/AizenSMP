@@ -16,13 +16,23 @@ jobs:
       - name: Checkout AizenSMP
         uses: actions/checkout@v4
 
-      - name: Setup Java 21 and 25
+      - name: Setup Java 21
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: |
-            21
-            25
+          java-version: '21'
+
+      - name: Save Java 21
+        run: echo "JAVA21_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+
+      - name: Setup Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Save Java 25
+        run: echo "JAVA25_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
 
       - name: Restore persistent data
         env:
@@ -386,10 +396,6 @@ jobs:
           }
           trap cleanup EXIT INT TERM
 
-          # setup-java sets JAVA_HOME to the last requested JDK (25), so never
-          # assume JAVA_HOME is Java 21. Use the explicit setup-java variables.
-          JAVA21_HOME="${JAVA_HOME_21_X64:-}"
-          JAVA25_HOME="${JAVA_HOME_25_X64:-}"
           test -x "$JAVA21_HOME/bin/java"
           test -x "$JAVA25_HOME/bin/java"
 
