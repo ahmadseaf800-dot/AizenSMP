@@ -5,7 +5,6 @@
 
 options:
     aas-prefix: &6[&eAizenSMP&6] &r
-    combat-time: 15 seconds
     trade-timeout: 60 seconds
     order-timeout: 24 hours
 
