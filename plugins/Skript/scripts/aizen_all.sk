@@ -150,9 +150,10 @@ on block break:
 on block place:
     if {az.spawn} is set:
         if distance between location of event-block and {az.spawn} <= 200:
-            cancel event
-            send "{@prefix} &cSpawn is protected." to player
-            stop
+            if {az.duel.arena} is not set or distance between location of event-block and {az.duel.arena} > {@duel-radius}:
+                cancel event
+                send "{@prefix} &cSpawn is protected." to player
+                stop
     if {az.afk} is set:
         if distance between location of event-block and {az.afk} <= 15:
             cancel event
