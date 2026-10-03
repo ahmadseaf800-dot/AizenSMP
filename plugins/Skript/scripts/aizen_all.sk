@@ -530,7 +530,9 @@ on inventory click:
 # ---------------- DUELS ----------------
 # Player-vs-player combat is allowed only inside the duel arena.
 # A duel has NO timer. Combat remains active until one player dies.
-# Leaving the arena is allowed normally, but teleporting while in combat is blocked.
+# The active duel is locked inside the arena: players cannot leave by walking.
+# Breaking/placing blocks inside the arena is intentionally allowed.
+# When the duel ends, the arena is restored to its saved state.
 
 options:
     duel-radius: 25
@@ -561,6 +563,13 @@ function azDuelInside(p: player) :: boolean:
     if distance between location of {_p} and {az.duel.arena} <= {@duel-radius}:
         return true
     return false
+
+# Keep active duel players inside the arena.
+# This does NOT protect blocks: players may mine/place normally inside.
+on player move:
+    if {az.duel.%uuid of player%} is set:
+        if azDuelInside(player) is false:
+            cancel event
 
 function azDuelSaveArena():
     if {az.duel.arena} is not set:
@@ -774,6 +783,23 @@ on death:
             delete {az.duel.active}
 
 on quit:
+    # If a player quits during a duel, end the duel and regenerate the arena.
+    if {az.duel.%uuid of player%} is set:
+        set {_opponent} to {az.duel.%uuid of player%}
+        delete {az.duel.%uuid of player%}
+        delete {az.combat.%uuid of player%}
+        delete {az.combat.time.%uuid of player%}
+        if {_opponent} is online:
+            delete {az.duel.%uuid of {_opponent}%}
+            delete {az.combat.%uuid of {_opponent}%}
+            delete {az.combat.time.%uuid of {_opponent}%}
+            if {az.spawn} is set:
+                set {az.teleport.bypass.%uuid of {_opponent}%} to true
+                teleport {_opponent} to {az.spawn}
+                delete {az.teleport.bypass.%uuid of {_opponent}%}
+            send "{@prefix} &cDuel ended because your opponent left." to {_opponent}
+        azDuelRestoreArena()
+        delete {az.duel.active}
     delete {az.teleport.pending.%uuid of player%}
     delete {az.teleport.destination.%uuid of player%}
     delete {az.teleport.bypass.%uuid of player%}
@@ -781,6 +807,14 @@ on quit:
 # Keep Inventory disabled at startup too.
 on load:
     execute console command "gamerule keepInventory false"
+    # Never leave a damaged/stale arena after a script/server reload.
+    if {az.duel.active} is set:
+        azDuelRestoreArena()
+        delete {az.duel.active}
+    loop all players:
+        delete {az.duel.%uuid of loop-player%}
+        delete {az.combat.%uuid of loop-player%}
+        delete {az.combat.time.%uuid of loop-player%}
 
 # ---------------- DUEL / COMBAT LOCK ----------------
 # There is NO Combat timer. Combat ends only when the player dies or the duel ends.
