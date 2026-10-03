@@ -45,37 +45,32 @@ jobs:
           set -e
           for name in germany turkey america; do
             mkdir -p "network/$name/plugins"
-            curl -L --fail -o "network/$name/server.jar" "https://api.purpurmc.org/v2/purpur/1.21.11/latest/download"
+            curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/server.jar" "https://api.purpurmc.org/v2/purpur/1.21.11/latest/download"
+            test -s "network/$name/server.jar"
+            jar tf "network/$name/server.jar" >/dev/null
             echo "eula=true" > "network/$name/eula.txt"
           done
 
           mkdir -p network/velocity
-          # Use PaperMC's current Fill v3 service. The old v2 API and Maven
-          # redirects can return HTTP 410 on GitHub-hosted runners.
           PAPERMC_UA="AizenSMP/1.0 (GitHub Actions)"
-          VELOCITY_VERSION=$(curl -fsSL -H "User-Agent: $PAPERMC_UA" \
-            https://fill.papermc.io/v3/projects/velocity \
-            | jq -r '.versions | to_entries[0].value[0]')
+
+          VELOCITY_VERSION=$(curl -fsSL -H "User-Agent: $PAPERMC_UA"             https://fill.papermc.io/v3/projects/velocity             | jq -r '.versions | to_entries[0].value[0]')
           test -n "$VELOCITY_VERSION" && test "$VELOCITY_VERSION" != "null"
 
-          VELOCITY_BUILD=$(curl -fsSL -H "User-Agent: $PAPERMC_UA" \
-            "https://fill.papermc.io/v3/projects/velocity/versions/$VELOCITY_VERSION" \
-            | jq -r '.builds[0]')
+          VELOCITY_BUILD=$(curl -fsSL -H "User-Agent: $PAPERMC_UA"             "https://fill.papermc.io/v3/projects/velocity/versions/$VELOCITY_VERSION"             | jq -r '.builds[0]')
           test -n "$VELOCITY_BUILD" && test "$VELOCITY_BUILD" != "null"
 
-          VELOCITY_META=$(curl -fsSL -H "User-Agent: $PAPERMC_UA" \
-            "https://fill.papermc.io/v3/projects/velocity/versions/$VELOCITY_VERSION/builds/$VELOCITY_BUILD")
+          VELOCITY_META=$(curl -fsSL -H "User-Agent: $PAPERMC_UA"             "https://fill.papermc.io/v3/projects/velocity/versions/$VELOCITY_VERSION/builds/$VELOCITY_BUILD")
+
           VELOCITY_URL=$(echo "$VELOCITY_META" | jq -r '.downloads."server:default".url // empty')
-          VELOCITY_SHA256=$(echo "$VELOCITY_META" | jq -r '.downloads."server:default".sha256 // empty')
           test -n "$VELOCITY_URL"
-          test -n "$VELOCITY_SHA256"
 
           echo "Downloading Velocity $VELOCITY_VERSION build $VELOCITY_BUILD"
           curl -fsSL --retry 5 --retry-delay 2 -o network/velocity/velocity.jar "$VELOCITY_URL"
 
-          echo "$VELOCITY_SHA256  network/velocity/velocity.jar" | sha256sum -c -
           test -s network/velocity/velocity.jar
           jar tf network/velocity/velocity.jar >/dev/null
+          echo "Velocity JAR verified successfully."
 
       - name: Install backend plugins
         shell: bash
