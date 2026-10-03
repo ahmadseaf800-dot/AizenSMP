@@ -25,3 +25,11 @@ commands:
     aliases: [ec, echest]
     description: Open your 54-slot Aizen Ender Chest
     usage: /enderchest
+  shopaddmoney:
+    description: Admin command to add AizenShop money
+    usage: /shopaddmoney <player> <amount>
+    permission: aizensmp.admin
+  shopsetmoney:
+    description: Admin command to set AizenShop money
+    usage: /shopsetmoney <player> <amount>
+    permission: aizensmp.admin
