@@ -9,42 +9,9 @@ options:
     trade-timeout: 60 seconds
     order-timeout: 24 hours
 
+# Combat is centralized in zz_aizen_duel_combat.sk.
+# Keeping a single combat owner prevents timer/event conflicts.
 # ---------------- COMBAT TAG ----------------
-
-on damage:
-    if attacker is a player:
-        if victim is a player:
-            # Combat starts only from a real player-vs-player hit.
-            # Duel combat is infinite. Normal-world combat keeps the normal 15-second timer.
-            if {az.duel.%uuid of attacker%} is victim:
-                set {az.combat.%uuid of attacker%} to true
-                set {az.combat.%uuid of victim%} to true
-                delete {az.combat.time.%uuid of attacker%}
-                delete {az.combat.time.%uuid of victim%}
-            else:
-                set {az.combat.%uuid of attacker%} to true
-                set {az.combat.%uuid of victim%} to true
-                set {az.combat.time.%uuid of attacker%} to 20 seconds
-                set {az.combat.time.%uuid of victim%} to 20 seconds
-
-on quit:
-    if {az.combat.%uuid of player%} is set:
-        set {az.combat.logout.%uuid of player%} to true
-        kill player
-
-command /combat:
-    trigger:
-        if {az.combat.%uuid of player%} is set:
-            send "{@aas-prefix}&cأنت في القتال. الوقت المتبقي: &e%{az.combat.time.%uuid of player%}%"
-        else:
-            send "{@aas-prefix}&aلست في Combat Tag."
-
-# Block unsafe teleport commands while tagged.
-on command:
-    if {az.combat.%uuid of player%} is set:
-        if command is "spawn" or command is "home" or command is "homes" or command is "rtp" or command is "tpa":
-            cancel event
-            send "{@aas-prefix}&cلا يمكنك استخدام هذا الأمر أثناء القتال." to player
 
 # ---------------- KILL STREAK + AUTOMATIC BOUNTY ----------------
 # Existing AizenSMP bounty variables are used. Bounty is server-generated.
