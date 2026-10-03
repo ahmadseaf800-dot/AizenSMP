@@ -49,7 +49,11 @@ command /setspawn:
     permission: aizensmp.admin
     trigger:
         set {az.spawn} to location of player
-        send "{@prefix} &aSpawn set." to player
+        set {az.afk} to location of player
+        set {az.donutspawn} to location of player
+        delete {az.spawn.built}
+        delete {az.bots.ready}
+        send "{@prefix} &aSpawn set. Use &e/builddonutspawn &ato build the hub here." to player
 
 command /spawn:
     trigger:
