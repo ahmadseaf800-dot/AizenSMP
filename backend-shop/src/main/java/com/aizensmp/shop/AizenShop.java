@@ -177,7 +177,7 @@ public final class AizenShop extends JavaPlugin implements Listener {
         ItemStack info=new ItemStack(Material.PAPER);
         ItemMeta im=info.getItemMeta();
         im.setDisplayName(ChatColor.YELLOW+"Sell Prices");
-        im.setLore(List.of(ChatColor.GRAY+"Every item has a fixed sell price.",ChatColor.GRAY+"Unknown items sell for $1 each."));
+        im.setLore(List.of(ChatColor.GRAY+"Every item has a fixed sell price.",ChatColor.GRAY+"Unknown items sell for $10 each."));
         info.setItemMeta(im);
         inv.setItem(45,info);
         p.openInventory(inv);
@@ -205,7 +205,7 @@ public final class AizenShop extends JavaPlugin implements Listener {
         for(int i=0;i<45;i++) {
             ItemStack item=inv.getItem(i);
             if(item==null || item.getType()==Material.AIR) continue;
-            double unit=sellPrices.getOrDefault(item.getType(),1D);
+            double unit=sellPrices.getOrDefault(item.getType(),10D);
             total += unit * item.getAmount();
             soldStacks++;
             inv.setItem(i,null);
