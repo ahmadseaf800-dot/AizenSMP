@@ -1,0 +1,64 @@
+# =========================================================
+# AIZEN SMP - READY DUEL ARENA BUILDER
+# Purpur 1.21.11 / Skript
+# =========================================================
+
+options:
+    prefix: &6[&eAizenSMP&6] &r
+    arena-radius: 25
+
+function azBuildDuelArena(p: player):
+    set {az.duel.arena} to location of {_p}
+    set {_s} to {az.duel.arena}
+    # Clear the playable arena volume.
+    execute console command "execute at %{_p}% run fill ~-25 ~-1 ~-25 ~25 ~15 ~25 air"
+    # Main floor.
+    execute console command "execute at %{_p}% run fill ~-25 ~-2 ~-25 ~25 ~-2 ~25 polished_blackstone"
+    execute console command "execute at %{_p}% run fill ~-22 ~-1 ~-22 ~22 ~-1 ~22 black_concrete"
+    # Gold cross and center.
+    execute console command "execute at %{_p}% run fill ~-2 ~0 ~-22 ~2 ~0 ~22 gold_block"
+    execute console command "execute at %{_p}% run fill ~-22 ~0 ~-2 ~22 ~0 ~2 gold_block"
+    execute console command "execute at %{_p}% run fill ~-6 ~0 ~-6 ~6 ~0 ~6 quartz_block"
+    execute console command "execute at %{_p}% run fill ~-3 ~1 ~-3 ~3 ~1 ~3 gold_block"
+    execute console command "execute at %{_p}% run fill ~-2 ~2 ~-2 ~2 ~2 ~2 beacon"
+    # Four arena towers.
+    execute console command "execute at %{_p}% run fill ~-23 ~0 ~-23 ~-19 ~10 ~-19 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~19 ~0 ~-23 ~23 ~10 ~-19 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~-23 ~0 ~19 ~-19 ~10 ~23 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~19 ~0 ~19 ~23 ~10 ~23 polished_blackstone_bricks"
+    # Boundary pillars and gold caps.
+    execute console command "execute at %{_p}% run fill ~-25 ~0 ~-25 ~-24 ~7 ~-24 blackstone"
+    execute console command "execute at %{_p}% run fill ~24 ~0 ~-25 ~25 ~7 ~-24 blackstone"
+    execute console command "execute at %{_p}% run fill ~-25 ~0 ~24 ~-24 ~7 ~25 blackstone"
+    execute console command "execute at %{_p}% run fill ~24 ~0 ~24 ~25 ~7 ~25 blackstone"
+    execute console command "execute at %{_p}% run fill ~-25 ~8 ~-25 ~-24 ~8 ~-24 gold_block"
+    execute console command "execute at %{_p}% run fill ~24 ~8 ~-25 ~25 ~8 ~-24 gold_block"
+    execute console command "execute at %{_p}% run fill ~-25 ~8 ~24 ~-24 ~8 ~25 gold_block"
+    execute console command "execute at %{_p}% run fill ~24 ~8 ~24 ~25 ~8 ~25 gold_block"
+    # Four player pads.
+    execute console command "execute at %{_p}% run fill ~-16 ~0 ~-4 ~-10 ~0 ~4 quartz_block"
+    execute console command "execute at %{_p}% run fill ~10 ~0 ~-4 ~16 ~0 ~4 quartz_block"
+    execute console command "execute at %{_p}% run fill ~-4 ~0 ~-16 ~4 ~0 ~-10 quartz_block"
+    execute console command "execute at %{_p}% run fill ~-4 ~0 ~10 ~4 ~0 ~16 quartz_block"
+    set {az.duel.arena.built} to true
+    send "{@prefix}&aتم بناء Duel Arena جاهزة هنا." to {_p}
+    send "{@prefix}&7التكسير والبناء مسموحان أثناء الفايت، والخروج من النطاق ممنوع." to {_p}
+
+command /buildduelarena:
+    permission: aizensmp.admin
+    aliases: /buildduel
+    trigger:
+        azBuildDuelArena(player)
+
+command /setduel:
+    permission: aizensmp.admin
+    trigger:
+        set {az.duel.arena} to location of player
+        delete {az.duel.arena.built}
+        send "{@prefix}&aتم تحديد مركز Duel Arena هنا."
+        send "{@prefix}&7لتجهيز البناء استخدم &e/buildduelarena"
+
+on join:
+    if {az.duel.arena} is not set:
+        if {az.spawn} is set:
+            set {az.duel.arena} to {az.spawn}
