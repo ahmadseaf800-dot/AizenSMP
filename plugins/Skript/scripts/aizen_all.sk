@@ -106,6 +106,32 @@ on join:
     if {az.rank.%uuid of player%} is not set:
         set {az.rank.%uuid of player%} to "Default"
     set {az.name.%uuid of player%} to name of player
+
+    # First-join defaults: provide a usable spawn and local RTP regions.
+    if {az.spawn} is not set:
+        set {az.spawn} to location of player
+    if {az.afk} is not set:
+        set {az.afk} to {az.spawn}
+    if {az.duel} is not set:
+        set {az.duel} to {az.spawn}
+    if {az.region.asia.center} is not set:
+        set {az.region.asia.center} to location of player
+        set {az.region.asia.radius} to 10000
+    if {az.region.europe.center} is not set:
+        set {az.region.europe.center} to location of player
+        set {az.region.europe.radius} to 10000
+    if {az.region.africa.center} is not set:
+        set {az.region.africa.center} to location of player
+        set {az.region.africa.radius} to 10000
+    if {az.region.northamerica.center} is not set:
+        set {az.region.northamerica.center} to location of player
+        set {az.region.northamerica.radius} to 10000
+    if {az.region.southamerica.center} is not set:
+        set {az.region.southamerica.center} to location of player
+        set {az.region.southamerica.radius} to 10000
+    if {az.region.oceania.center} is not set:
+        set {az.region.oceania.center} to location of player
+        set {az.region.oceania.radius} to 10000
     send "{@prefix} &fWelcome to &eAizenSMP&f!" to player
 
 on first join:
@@ -1015,15 +1041,38 @@ function azShopBuy(p: player, item: item, price: number, amount: number, label: 
     send "{@prefix} &aBought &e%{_label}% &afor &6$%{_price}%&a." to {_p}
 
 command /shop:
+    aliases: /store
     trigger:
-        open chest inventory with 3 rows named "&8✦ &6DONUT SHOP &8✦" to player
+        open chest inventory with 3 rows named "&8✦ &6&lAIZEN SHOP &8✦" to player
         wait 1 tick
-        set slot 10 of player's current inventory to ender chest named "&5&lEND SHOP" with lore "&7Old-style End category"
-        set slot 12 of player's current inventory to netherrack named "&c&lNETHER SHOP" with lore "&7Old-style Nether category"
-        set slot 14 of player's current inventory to diamond sword named "&4&lGEAR & COMBAT" with lore "&7Combat and survival gear"
-        set slot 16 of player's current inventory to cooked beef named "&6&lFOOD SHOP" with lore "&7Food and farming items"
-        set slot 22 of player's current inventory to prismarine shard named "&b&lSHARD SHOP" with lore "&7Buy keys and spawners with Shards"
-        set slot 26 of player's current inventory to barrier named "&cClose"
+        set {_glass} to black stained glass pane named " "
+        set slot 0 of player's current inventory to {_glass}
+        set slot 1 of player's current inventory to {_glass}
+        set slot 2 of player's current inventory to {_glass}
+        set slot 3 of player's current inventory to {_glass}
+        set slot 4 of player's current inventory to gold block named "&6&lAIZEN SHOP" with lore "&7Donut-style market", "&8Select a category"
+        set slot 5 of player's current inventory to {_glass}
+        set slot 6 of player's current inventory to {_glass}
+        set slot 7 of player's current inventory to {_glass}
+        set slot 8 of player's current inventory to {_glass}
+        set slot 9 of player's current inventory to {_glass}
+        set slot 10 of player's current inventory to ender chest named "&5&lEND SHOP" with lore "&7End resources", "&eClick to open"
+        set slot 11 of player's current inventory to {_glass}
+        set slot 12 of player's current inventory to netherrack named "&c&lNETHER SHOP" with lore "&7Nether resources", "&eClick to open"
+        set slot 13 of player's current inventory to {_glass}
+        set slot 14 of player's current inventory to diamond sword named "&4&lGEAR & COMBAT" with lore "&7PvP gear", "&eClick to open"
+        set slot 15 of player's current inventory to {_glass}
+        set slot 16 of player's current inventory to cooked beef named "&6&lFOOD SHOP" with lore "&7Food & farming", "&eClick to open"
+        set slot 17 of player's current inventory to {_glass}
+        set slot 18 of player's current inventory to {_glass}
+        set slot 19 of player's current inventory to {_glass}
+        set slot 20 of player's current inventory to {_glass}
+        set slot 21 of player's current inventory to {_glass}
+        set slot 22 of player's current inventory to prismarine shard named "&b&lSHARD SHOP" with lore "&7Keys & special items", "&eClick to open"
+        set slot 23 of player's current inventory to {_glass}
+        set slot 24 of player's current inventory to {_glass}
+        set slot 25 of player's current inventory to {_glass}
+        set slot 26 of player's current inventory to barrier named "&c&lCLOSE" with lore "&7Close shop"
 
 command /endshop:
     trigger:
@@ -1095,7 +1144,7 @@ command /shardshop:
         set slot 22 of player's current inventory to barrier named "&cBack"
 
 on inventory click:
-    if name of event-inventory is "&8✦ &6DONUT SHOP &8✦":
+    if name of event-inventory is "&8✦ &6&lAIZEN SHOP &8✦":
         cancel event
         if clicked slot is 10:
             close player's inventory
