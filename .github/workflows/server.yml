@@ -343,8 +343,6 @@ jobs:
           echo "AizenShop built successfully."
 
           for name in germany turkey america; do
-
-          for name in germany turkey america; do
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/Skript.jar" "$SKRIPT_URL"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/LuckPerms.jar" "$LUCKPERMS_URL"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/AuthMe.jar" "$AUTHME_URL"
@@ -509,7 +507,7 @@ jobs:
           Germany = "127.0.0.1:25566"
           Turkey = "127.0.0.1:25567"
           America = "127.0.0.1:25568"
-          try = ["Germany"]
+          try = ["Turkey"]
 
           [forced-hosts]
           EOF
