@@ -193,14 +193,17 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
                 JsonObject item = element.getAsJsonObject();
                 String id = item.has("id") ? item.get("id").getAsString() : "";
                 String command = item.has("command") ? item.get("command").getAsString() : "";
+                String target = item.has("target") ? item.get("target").getAsString() : "";
+                String reason = item.has("reason") ? item.get("reason").getAsString() : "";
+                String duration = item.has("duration") ? item.get("duration").getAsString() : "";
                 if (id.isBlank() || command.isBlank()) continue;
-                Bukkit.getScheduler().runTask(this, () -> executeQueuedCommand(id, command));
+                Bukkit.getScheduler().runTask(this, () -> executeQueuedCommand(id, command, target, reason, duration));
             }
         } catch (Exception ignored) {
         }
     }
 
-    private void executeQueuedCommand(String id, String command) {
+    private void executeQueuedCommand(String id, String command, String target, String reason, String duration) {
         boolean success = false;
         try {
             success = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
@@ -213,8 +216,11 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
         post("/api/command-result", result);
 
         post("/api/event", "{\"type\":\"command\",\"server\":\"" + json(serverName)
+                + "\",\"player\":\"" + json(target)
                 + "\",\"action\":\"" + (success ? "completed" : "failed")
-                + "\",\"reason\":\"Dashboard AI command\",\"time\":\"" + json(Instant.now().toString()) + "\"}");
+                + "\",\"reason\":\"" + json(reason.isBlank() ? "Dashboard AI command" : reason)
+                + "\",\"duration\":\"" + json(duration)
+                + "\",\"detection\":\"AIZEN AI Command\",\"time\":\"" + json(Instant.now().toString()) + "\"}");
     }
 
     private void post(String endpoint, String body) {
