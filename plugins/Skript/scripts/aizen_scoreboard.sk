@@ -1,0 +1,32 @@
+# =========================================================
+# AizenSMP - Donut Style Scoreboard
+# =========================================================
+
+on join:
+    while player is online:
+        set title of player's scoreboard to "&6&lAIZEN SMP"
+
+        set line 10 of player's scoreboard to "&7--------------------"
+        set line 9 of player's scoreboard to "&eاللاعب: &f%display name of player%"
+        set line 8 of player's scoreboard to ""
+
+        # AizenSMP uses its own economy variable.
+        set {_money} to {az.money.%uuid of player%}
+        if {_money} is not set:
+            set {_money} to 0
+        set line 7 of player's scoreboard to "&eالرصيد: &a$%{_money}%"
+        set line 6 of player's scoreboard to ""
+
+        # Homes are not currently implemented in AizenSMP.
+        set {_home_count} to 0
+        set line 5 of player's scoreboard to "&eالمنازل المحفوظة: &f%{_home_count}%"
+        set line 4 of player's scoreboard to ""
+
+        set line 3 of player's scoreboard to "&eالمتصلين: &b%number of all players%&7/&b100"
+        set line 2 of player's scoreboard to "&7--------------------"
+        set line 1 of player's scoreboard to "&6://aizensmp"
+
+        wait 1 second
+
+on quit:
+    clear player's scoreboard
