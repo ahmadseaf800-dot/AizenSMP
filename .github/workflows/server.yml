@@ -76,12 +76,24 @@ jobs:
         shell: bash
         run: |
           set -e
-          MODRINTH_API="https://api.modrinth.com/v2/project"
-          SVC_URL=$(curl -fsSL --retry 5 --retry-delay 2 "$MODRINTH_API/simple-voice-chat/version?loaders=%5B%22paper%22%5D&game_versions=%5B%221.21.11%22%5D&limit=20" | jq -r '.[0].files[] | select(.primary == true) | .url' | head -n 1)
-          WE_URL=$(curl -fsSL --retry 5 --retry-delay 2 "$MODRINTH_API/worldedit/version?loaders=%5B%22paper%22%5D&game_versions=%5B%221.21.11%22%5D&limit=20" | jq -r '.[0].files[] | select(.primary == true) | .url' | head -n 1)
+          GITHUB_API="https://api.github.com"
+          GITHUB_UA="AizenSMP/1.0 (GitHub Actions)"
 
-          VIAVERSION_URL=$(curl -fsSL https://api.github.com/repos/ViaVersion/ViaVersion/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
-          VIABACKWARDS_URL=$(curl -fsSL https://api.github.com/repos/ViaVersion/ViaBackwards/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
+          # Use official GitHub releases instead of fragile Modrinth version URLs.
+          SVC_URL=$(curl -fsSL --retry 5 --retry-delay 2 -H "User-Agent: $GITHUB_UA" \
+            "$GITHUB_API/repos/henkelmax/simple-voice-chat/releases/latest" \
+            | jq -r '.assets[] | select(.name | test("(?i)(bukkit|paper).*(\\.jar)$")) | .browser_download_url' | head -n 1)
+
+          WE_URL=$(curl -fsSL --retry 5 --retry-delay 2 -H "User-Agent: $GITHUB_UA" \
+            "$GITHUB_API/repos/EngineHub/WorldEdit/releases/latest" \
+            | jq -r '.assets[] | select(.name | test("(?i)(bukkit|paper).*(\\.jar)$")) | .browser_download_url' | head -n 1)
+
+          VIAVERSION_URL=$(curl -fsSL --retry 5 --retry-delay 2 -H "User-Agent: $GITHUB_UA" \
+            "$GITHUB_API/repos/ViaVersion/ViaVersion/releases/latest" \
+            | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
+          VIABACKWARDS_URL=$(curl -fsSL --retry 5 --retry-delay 2 -H "User-Agent: $GITHUB_UA" \
+            "$GITHUB_API/repos/ViaVersion/ViaBackwards/releases/latest" \
+            | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
 
           test -n "$SVC_URL" && test "$SVC_URL" != "null"
           test -n "$WE_URL" && test "$WE_URL" != "null"
