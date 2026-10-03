@@ -1,4 +1,4 @@
-name: AizenSMP Server
+name: AizenSMP Network
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ permissions:
   actions: read
 
 jobs:
-  server:
+  network:
     runs-on: ubuntu-latest
     timeout-minutes: 350
 
@@ -22,14 +22,7 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Download Purpur 1.21.11
-        shell: bash
-        run: |
-          mkdir -p server/plugins
-          curl -L --fail -o server/server.jar "https://api.purpurmc.org/v2/purpur/1.21.11/latest/download"
-          echo "eula=true" > server/eula.txt
-
-      - name: Restore persistent world and player data
+      - name: Restore persistent data
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -41,81 +34,94 @@ jobs:
             gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip" > restore/persistent.zip
             unzip -q restore/persistent.zip -d restore/artifact
             if [ -f restore/artifact/persistent-data.tar.zst ]; then
-              tar --zstd -xf restore/artifact/persistent-data.tar.zst -C server
-              if [ -d server/playit_gg ]; then
-                mkdir -p "$HOME/.config"
-                rm -rf "$HOME/.config/playit_gg"
-                mv server/playit_gg "$HOME/.config/playit_gg"
-              fi
+              mkdir -p network
+              tar --zstd -xf restore/artifact/persistent-data.tar.zst -C network || true
             fi
           fi
 
-      - name: Install gameplay and compatibility plugins
+      - name: Download Purpur and Velocity
         shell: bash
         run: |
           set -e
-          curl -L --fail -o server/plugins/Geyser-Spigot.jar "https://download.geysermc.org/v2/projects/geyser/versions/latest/builds/latest/downloads/spigot"
-          curl -L --fail -o server/plugins/floodgate-spigot.jar "https://download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest/downloads/spigot"
-          SKRIPT_URL=$(curl -fsSL https://api.github.com/repos/SkriptLang/Skript/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
-          curl -L --fail -o server/plugins/Skript.jar "$SKRIPT_URL"
-          VIAVERSION_URL=$(curl -fsSL https://api.github.com/repos/ViaVersion/ViaVersion/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
-          VIABACKWARDS_URL=$(curl -fsSL https://api.github.com/repos/ViaVersion/ViaBackwards/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
-          curl -L --fail -o server/plugins/ViaVersion.jar "$VIAVERSION_URL"
-          curl -L --fail -o server/plugins/ViaBackwards.jar "$VIABACKWARDS_URL"
-          SVC_URL=$(curl -fsSL 'https://api.modrinth.com/v2/project/simple-voice-chat/version?loaders=%5B%22paper%22%5D&game_versions=%5B%221.21.11%22%5D' | jq -r '.[0].files[] | select(.primary == true) | .url' | head -n 1)
-          test -n "$SVC_URL"
-          curl -L --fail -o server/plugins/voicechat.jar "$SVC_URL"
+          for name in germany turkey america; do
+            mkdir -p "network/$name/plugins"
+            curl -L --fail -o "network/$name/server.jar" "https://api.purpurmc.org/v2/purpur/1.21.11/latest/download"
+            echo "eula=true" > "network/$name/eula.txt"
+          done
 
-          # WorldEdit
-          WE_URL=$(curl -fsSL 'https://api.modrinth.com/v2/project/worldedit/version?loaders=%5B%22paper%22%5D&game_versions=%5B%221.21.11%22%5D' | jq -r '.[0].files[] | select(.primary == true) | .url' | head -n 1)
-          test -n "$WE_URL"
-          curl -L --fail -o server/plugins/WorldEdit.jar "$WE_URL"
+          mkdir -p network/velocity
+          curl -L --fail -o network/velocity/velocity.jar "https://api.papermc.io/v2/projects/velocity/versions/3.4.0-SNAPSHOT/builds/561/downloads/velocity-3.4.0-SNAPSHOT-561.jar" ||           curl -L --fail -o network/velocity/velocity.jar "https://api.papermc.io/v2/projects/velocity/versions/3.4.0-SNAPSHOT/builds/565/downloads/velocity-3.4.0-SNAPSHOT-565.jar"
 
-      - name: Copy AizenSMP custom Skript systems
+      - name: Install backend plugins
         shell: bash
         run: |
           set -e
-          mkdir -p server/plugins/Skript/scripts
-          if [ -d "plugins/Skript/scripts" ]; then cp -f plugins/Skript/scripts/*.sk server/plugins/Skript/scripts/; fi
-          ls -1 server/plugins/Skript/scripts
+          for name in germany turkey america; do
+            curl -L --fail -o "network/$name/plugins/Skript.jar" "https://github.com/SkriptLang/Skript/releases/latest/download/Skript.jar"
+            VIAVERSION_URL=$(curl -fsSL https://api.github.com/repos/ViaVersion/ViaVersion/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
+            VIABACKWARDS_URL=$(curl -fsSL https://api.github.com/repos/ViaVersion/ViaBackwards/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
+            curl -L --fail -o "network/$name/plugins/ViaVersion.jar" "$VIAVERSION_URL"
+            curl -L --fail -o "network/$name/plugins/ViaBackwards.jar" "$VIABACKWARDS_URL"
+            WE_URL=$(curl -fsSL 'https://api.modrinth.com/v2/project/worldedit/version?loaders=%5B%22paper%22%5D&game_versions=%5B%221.21.11%22%5D' | jq -r '.[0].files[] | select(.primary == true) | .url' | head -n 1)
+            curl -L --fail -o "network/$name/plugins/WorldEdit.jar" "$WE_URL"
+            mkdir -p "network/$name/plugins/Skript/scripts"
+            cp -f plugins/Skript/scripts/*.sk "network/$name/plugins/Skript/scripts/" 2>/dev/null || true
+          done
 
-      - name: Configure Geyser
+      - name: Configure backend servers
         shell: bash
         run: |
-          mkdir -p server/plugins/Geyser-Spigot
-          cat > server/plugins/Geyser-Spigot/config.yml <<'EOF'
-          bedrock:
-            address: 0.0.0.0
-            port: 19132
-            clone-remote-port: false
-          remote:
-            address: 127.0.0.1
-            port: 25565
-            auth-type: floodgate
-          command-suggestions: true
-          passthrough-motd: true
-          passthrough-player-counts: true
-          allow-third-party-capes: true
-          show-cooldown: title
-          show-coordinates: true
-          disable-bedrock-scaffolding: false
-          metrics:
-            enabled: false
-          debug-mode: false
-          EOF
+          set -e
 
-      - name: Configure server
-        shell: bash
-        run: |
-          cat > server/server.properties <<'EOF'
-          motd=AizenSMP
+          configure_server() {
+            local name="$1"
+            local port="$2"
+            mkdir -p "network/$name/plugins"
+
+            cat > "network/$name/server.properties" <<EOF
+          motd=AizenSMP - $name
           online-mode=false
-          server-port=25565
-          query.port=25565
+          server-port=$port
+          server-ip=127.0.0.1
+          query.port=$port
           enable-query=false
           EOF
+          }
 
-      - name: Start playit.gg agent (non-interactive)
+          configure_server germany 25566
+          configure_server turkey 25567
+          configure_server america 25568
+
+      - name: Configure Velocity
+        shell: bash
+        run: |
+          set -e
+          cd network/velocity
+          if [ ! -f velocity.toml ]; then
+            cat > velocity.toml <<'EOF'
+          config-version = "2.7"
+          bind = "0.0.0.0:25565"
+          motd = "<gold>AizenSMP</gold>"
+          show-max-players = 100
+          online-mode = false
+          player-info-forwarding-mode = "none"
+          announce-forge = false
+          kick-existing-players = false
+          ping-passthrough = "mods"
+          sample-players-in-ping = true
+          enable-player-address-logging = true
+
+          [servers]
+          Germany = "127.0.0.1:25566"
+          Turkey = "127.0.0.1:25567"
+          America = "127.0.0.1:25568"
+          try = ["Germany"]
+
+          [forced-hosts]
+          EOF
+          fi
+
+      - name: Start Playit agent
         shell: bash
         run: |
           set -e
@@ -123,72 +129,60 @@ jobs:
           PLAYIT_SOCKET="$HOME/.config/playit_gg/playit.sock"
           PLAYIT_SECRET="$HOME/.config/playit_gg/playit.toml"
 
-          curl -L --fail -o playitd "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
-          chmod +x playitd
-
           if [ ! -f "$PLAYIT_SECRET" ]; then
-            echo "ERROR: Playit agent secret was not restored."
-            echo "The first Playit claim/setup must be completed once and persisted in the artifact."
+            echo "ERROR: Playit config was not restored."
             exit 1
           fi
 
+          curl -L --fail -o playitd "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
+          chmod +x playitd
           rm -f "$PLAYIT_SOCKET"
           nohup ./playitd --socket-path "$PLAYIT_SOCKET" --secret-path "$PLAYIT_SECRET" > playitd.log 2>&1 &
-          PLAYITD_PID=$!
-          echo "$PLAYITD_PID" > playitd.pid
+          echo $! > playitd.pid
 
-          echo "Waiting for Playit daemon..."
           for i in {1..30}; do
-            if [ -S "$PLAYIT_SOCKET" ]; then
-              echo "Playit daemon is ready."
-              break
-            fi
-            if ! kill -0 "$PLAYITD_PID" 2>/dev/null; then
-              echo "Playit daemon exited unexpectedly."
-              cat playitd.log || true
-              exit 1
-            fi
+            [ -S "$PLAYIT_SOCKET" ] && break
             sleep 1
           done
 
-          if [ ! -S "$PLAYIT_SOCKET" ]; then
-            echo "ERROR: Playit daemon did not create its socket."
-            cat playitd.log || true
-            exit 1
-          fi
+          [ -S "$PLAYIT_SOCKET" ] || { cat playitd.log; exit 1; }
 
-          if ! kill -0 "$PLAYITD_PID" 2>/dev/null; then
-            echo "ERROR: Playit daemon stopped after startup."
-            cat playitd.log || true
-            exit 1
-          fi
-
-          echo "Playit agent is running in background."
-          echo "Java target: 127.0.0.1:25565 (TCP)"
-          echo "Bedrock target: 127.0.0.1:19132 (UDP)"
-          echo "No interactive setup command is used."
-
-      - name: Start AizenSMP and save on shutdown
+      - name: Start AizenSMP network
         shell: bash
-        working-directory: server
         run: |
           set -e
+
           cleanup() {
-            rm -f persistent-data.tar.zst
-            tar --zstd -cf persistent-data.tar.zst world world_nether world_the_end plugins/Skript plugins/AizenCore 2>/dev/null || true
+            for pid in ${GERMANY_PID:-} ${TURKEY_PID:-} ${AMERICA_PID:-} ${VELOCITY_PID:-}; do
+              [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
+            done
+
+            rm -f network/persistent-data.tar.zst
+            tar --zstd -cf network/persistent-data.tar.zst               network/germany/world network/germany/world_nether network/germany/world_the_end               network/turkey/world network/turkey/world_nether network/turkey/world_the_end               network/america/world network/america/world_nether network/america/world_the_end               network/germany/plugins/Skript network/turkey/plugins/Skript network/america/plugins/Skript               2>/dev/null || true
+
             if [ -d "$HOME/.config/playit_gg" ]; then
-              tar --zstd -rf persistent-data.tar.zst -C "$HOME/.config" playit_gg 2>/dev/null || true
+              tar --zstd -rf network/persistent-data.tar.zst -C "$HOME/.config" playit_gg 2>/dev/null || true
             fi
           }
           trap cleanup EXIT INT TERM
-          java -Xms1G -Xmx6G -jar server.jar --nogui
 
-      - name: Upload persistent world and player data
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: aizensmp-persistent-data
-          path: server/persistent-data.tar.zst
-          retention-days: 90
-          compression-level: 0
-          overwrite: true
+          java -Xms512M -Xmx1536M -jar network/velocity/velocity.jar > velocity.log 2>&1 &
+          VELOCITY_PID=$!
+
+          java -Xms512M -Xmx1536M -jar network/germany/server.jar --nogui > germany.log 2>&1 &
+          GERMANY_PID=$!
+
+          java -Xms512M -Xmx1536M -jar network/turkey/server.jar --nogui > turkey.log 2>&1 &
+          TURKEY_PID=$!
+
+          java -Xms512M -Xmx1536M -jar network/america/server.jar --nogui > america.log 2>&1 &
+          AMERICA_PID=$!
+
+          echo "AizenSMP network started."
+          echo "Velocity: 25565"
+          echo "Germany: 25566"
+          echo "Turkey: 25567"
+          echo "America: 25568"
+
+          wait $VELOCITY_PID
+          
