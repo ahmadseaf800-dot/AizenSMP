@@ -18,7 +18,9 @@ on join:
         set line 6 of player's scoreboard to ""
 
         # Homes are not currently implemented in AizenSMP.
-        set {_home_count} to 0
+        set {_home_count} to size of {az.home.%uuid of player%::*}
+        if {_home_count} is not set:
+            set {_home_count} to 0
         set line 5 of player's scoreboard to "&eالمنازل المحفوظة: &f%{_home_count}%"
         set line 4 of player's scoreboard to ""
 
