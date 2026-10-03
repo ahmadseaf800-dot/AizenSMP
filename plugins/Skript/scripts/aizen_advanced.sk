@@ -14,20 +14,11 @@ options:
 on damage:
     if attacker is a player:
         if victim is a player:
-            set {az.combat.%uuid of attacker%} to true
-            set {az.combat.%uuid of victim%} to true
-            set {az.combat.time.%uuid of attacker%} to {@combat-time}
-            set {az.combat.time.%uuid of victim%} to {@combat-time}
-
-every 1 second:
-    loop all players:
-        if {az.combat.%uuid of loop-player%} is set:
-            if {az.combat.time.%uuid of loop-player%} is set:
-                remove 1 second from {az.combat.time.%uuid of loop-player%}
-                if {az.combat.time.%uuid of loop-player%} <= 0 seconds:
-                    delete {az.combat.%uuid of loop-player%}
-                    delete {az.combat.time.%uuid of loop-player%}
-                    send "{@aas-prefix}&aCombat Tag انتهى." to loop-player
+            # Combat is created only by an actual player-vs-player hit.
+            # It is intentionally infinite and ends only when the duel ends/death clears it.
+            if {az.duel.%uuid of attacker%} is victim:
+                set {az.combat.%uuid of attacker%} to true
+                set {az.combat.%uuid of victim%} to true
 
 on quit:
     if {az.combat.%uuid of player%} is set:
