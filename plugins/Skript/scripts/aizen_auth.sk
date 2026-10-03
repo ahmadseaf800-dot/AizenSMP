@@ -91,7 +91,7 @@ command /changepassword <text> <text>:
         set {az.auth.password.%uuid of player%} to azAuthHash(arg-2)
         send "{@auth-prefix}&aPassword changed successfully."
 
-command /unregister:
+command /unregister <player>:
     permission: aizensmp.admin
     trigger:
         delete {az.auth.password.%uuid of arg-1%}
