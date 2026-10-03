@@ -4,7 +4,7 @@
 # =========================================================
 
 options:
-    override-combat-time: 30 seconds
+    override-combat-time: 20 seconds
     override-teleport-time: 5 seconds
 
 function azOCombat(p: player) :: boolean:
@@ -54,7 +54,7 @@ on damage with priority lowest:
             azOCancelTP(victim, "تعرضت للضرر")
 
 # PvP is the ONLY source of Combat.
-# Each player hit refreshes both players to 30 seconds.
+# Normal combat is 20 seconds; active duels remain combat-locked until death.
 on damage with priority highest:
     if victim is a player:
         if attacker is a player:
@@ -277,16 +277,19 @@ every 110 seconds:
                         set {az.duel.%uuid of loop-player%} to {_opp}
                         delete {az.duel.keep.%uuid of loop-player%}
 
-# Ensure Combat always expires after 30 seconds and never transfers.
+# Normal combat expires after 20 seconds. Active duels never expire from a timer.
 every 1 second:
     loop all players:
         if {az.combat.%uuid of loop-player%} is set:
-            if {az.combat.time.%uuid of loop-player%} is set:
-                remove 1 second from {az.combat.time.%uuid of loop-player%}
-                if {az.combat.time.%uuid of loop-player%} <= 0 seconds:
-                    delete {az.combat.%uuid of loop-player%}
-                    delete {az.combat.time.%uuid of loop-player%}
-                    send "&6[&eAizenSMP&6] &aCombat انتهى." to loop-player
+            if {az.duel.%uuid of loop-player%} is not set:
+                if {az.combat.time.%uuid of loop-player%} is set:
+                    remove 1 second from {az.combat.time.%uuid of loop-player%}
+                    if {az.combat.time.%uuid of loop-player%} <= 0 seconds:
+                        delete {az.combat.%uuid of loop-player%}
+                        delete {az.combat.time.%uuid of loop-player%}
+                        send "&6[&eAizenSMP&6] &aCombat انتهى." to loop-player
+            else:
+                delete {az.combat.time.%uuid of loop-player%}
         else:
             delete {az.combat.time.%uuid of loop-player%}
 
