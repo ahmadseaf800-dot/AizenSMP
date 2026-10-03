@@ -729,49 +729,12 @@ on projectile launch:
             cancel event
             send "{@prefix} &cلا يمكنك استخدام Ender Pearl أثناء الـCombat." to shooter
 
-# No teleport can carry an active Combat tag.
-# Outside combat, any teleport caused by a command gets a 5-second countdown.
+# Teleports are immediate outside combat.
 on teleport:
     if {az.combat.%uuid of player%} is set:
         cancel event
         send "{@prefix} &cلا يمكنك الانتقال وأنت في Combat." to player
         stop
-    if {az.teleport.pending.%uuid of player%} is set:
-        stop
-    if {az.teleport.bypass.%uuid of player%} is true:
-        delete {az.teleport.bypass.%uuid of player%}
-        stop
-    set {_destination} to event-location
-    set {az.teleport.pending.%uuid of player%} to true
-    set {az.teleport.destination.%uuid of player%} to {_destination}
-    send "{@prefix} &eTeleport in &c5 &eseconds. Don't move or take damage." to player
-    cancel event
-    wait 5 seconds
-    if {az.teleport.pending.%uuid of player%} is true:
-        if player is online:
-            if {az.combat.%uuid of player%} is not set:
-                set {az.teleport.bypass.%uuid of player%} to true
-                teleport player to {az.teleport.destination.%uuid of player%}
-                delete {az.teleport.pending.%uuid of player%}
-                delete {az.teleport.destination.%uuid of player%}
-            else:
-                delete {az.teleport.pending.%uuid of player%}
-                delete {az.teleport.destination.%uuid of player%}
-                send "{@prefix} &cتم إلغاء الانتقال لأنك دخلت Combat." to player
-
-on player move:
-    if {az.teleport.pending.%uuid of player%} is set:
-        delete {az.teleport.pending.%uuid of player%}
-        delete {az.teleport.destination.%uuid of player%}
-        send "{@prefix} &cتم إلغاء الانتقال لأنك تحركت." to player
-
-# Any damage cancels the 5-second teleport countdown.
-on damage:
-    if {az.teleport.pending.%uuid of victim%} is set:
-        delete {az.teleport.pending.%uuid of victim%}
-        delete {az.teleport.destination.%uuid of victim%}
-        send "{@prefix} &cتم إلغاء الانتقال لأنك تلقيت ضرراً." to victim
-
 # Keep Inventory is ALWAYS disabled.
 on death:
     if victim is a player:
