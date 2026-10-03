@@ -1,0 +1,20 @@
+name: AizenShop
+version: 1.0.0
+main: com.aizensmp.shop.AizenShop
+api-version: '1.21'
+authors: [Aizen]
+description: AizenSMP economy, item shop and shard shop.
+commands:
+  shop:
+    description: Open the AizenSMP shop
+    usage: /shop
+  balance:
+    aliases: [bal, money]
+    description: Show your money balance
+    usage: /balance
+  shards:
+    description: Show your shard balance
+    usage: /shards
+  pay:
+    description: Pay another player
+    usage: /pay <player> <amount>
