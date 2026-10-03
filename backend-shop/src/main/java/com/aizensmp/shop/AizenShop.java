@@ -59,6 +59,32 @@ public final class AizenShop extends JavaPlugin implements Listener {
         Objects.requireNonNull(getCommand("shop")).setExecutor((s,c,l,a) -> { if (s instanceof Player p) openMain(p); return true; });
         Objects.requireNonNull(getCommand("balance")).setExecutor((s,c,l,a) -> { if (s instanceof Player p) msg(p, "&eBalance: &6$" + money(balances.getOrDefault(p.getUniqueId(), 0D))); return true; });
         Objects.requireNonNull(getCommand("shards")).setExecutor((s,c,l,a) -> { if (s instanceof Player p) msg(p, "&bShards: &f" + shards.getOrDefault(p.getUniqueId(), 0)); return true; });
+        Objects.requireNonNull(getCommand("shopaddmoney")).setExecutor((s,c,l,a) -> {
+            if (!(s instanceof Player p) || a.length != 2 || !p.hasPermission("aizensmp.admin")) return true;
+            Player target=Bukkit.getPlayerExact(a[0]);
+            if(target==null){msg(p,"&cPlayer not found.");return true;}
+            try {
+                double amount=Double.parseDouble(a[1]);
+                if(amount<=0) throw new NumberFormatException();
+                balances.put(target.getUniqueId(),balances.getOrDefault(target.getUniqueId(),0D)+amount);
+                saveBalances();
+                msg(p,"&aAdded &6$"+money(amount)+" &ato &e"+target.getName()+"&a.");
+            } catch(Exception ex){msg(p,"&cInvalid amount.");}
+            return true;
+        });
+        Objects.requireNonNull(getCommand("shopsetmoney")).setExecutor((s,c,l,a) -> {
+            if (!(s instanceof Player p) || a.length != 2 || !p.hasPermission("aizensmp.admin")) return true;
+            Player target=Bukkit.getPlayerExact(a[0]);
+            if(target==null){msg(p,"&cPlayer not found.");return true;}
+            try {
+                double amount=Double.parseDouble(a[1]);
+                if(amount<0) throw new NumberFormatException();
+                balances.put(target.getUniqueId(),amount);
+                saveBalances();
+                msg(p,"&aSet &e"+target.getName()+"&a balance to &6$"+money(amount)+"&a.");
+            } catch(Exception ex){msg(p,"&cInvalid amount.");}
+            return true;
+        });
         Objects.requireNonNull(getCommand("pay")).setExecutor((s,c,l,a) -> {
             if (!(s instanceof Player p) || a.length != 2) return true;
             Player target = Bukkit.getPlayerExact(a[0]);
