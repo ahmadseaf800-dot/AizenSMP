@@ -50,14 +50,16 @@ jobs:
           done
 
           mkdir -p network/velocity
-          # Use PaperMC's current fill API for Velocity. It returns the live build URL
-          # and avoids retired v2/Maven/GitHub asset links.
+          # Download Velocity through the live Fill API endpoint itself.
+          # The JSON metadata URL can point at an expired 410 CDN URL, so use
+          # the stable download endpoint for the latest application artifact.
           VELOCITY_VERSION=$(curl -fsSL https://api.papermc.io/v2/projects/velocity | jq -r '.versions[-1]')
           test -n "$VELOCITY_VERSION" && test "$VELOCITY_VERSION" != "null"
-          VELOCITY_URL=$(curl -fsSL "https://fill.papermc.io/v3/projects/velocity/versions/$VELOCITY_VERSION/builds/latest" | jq -r '.downloads.application.url')
-          test -n "$VELOCITY_URL" && test "$VELOCITY_URL" != "null"
+          VELOCITY_URL="https://fill.papermc.io/v3/projects/velocity/versions/$VELOCITY_VERSION/builds/latest/downloads/application"
           echo "Downloading Velocity $VELOCITY_VERSION from: $VELOCITY_URL"
           curl -L --fail --retry 5 --retry-delay 2 -o network/velocity/velocity.jar "$VELOCITY_URL"
+          test -s network/velocity/velocity.jar
+          jar tf network/velocity/velocity.jar >/dev/null
 
       - name: Install backend plugins
         shell: bash
