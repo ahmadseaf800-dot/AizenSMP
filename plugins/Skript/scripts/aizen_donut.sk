@@ -106,6 +106,17 @@ function azBuildDonutSpawn():
     execute console command "execute at %player% run fill ~-6 ~4 ~32 ~6 ~6 ~34 gold_block"
     execute console command "execute at %player% run fill ~-4 ~7 ~32 ~4 ~7 ~34 beacon"
 
+    # Raised entrance towers and decorative roof rings.
+    execute console command "execute at %player% run fill ~-18 ~6 ~-18 ~-15 ~16 ~-15 polished_blackstone_bricks"
+    execute console command "execute at %player% run fill ~15 ~6 ~-18 ~18 ~16 ~-15 polished_blackstone_bricks"
+    execute console command "execute at %player% run fill ~-18 ~6 ~15 ~-15 ~16 ~18 polished_blackstone_bricks"
+    execute console command "execute at %player% run fill ~15 ~6 ~15 ~18 ~16 ~18 polished_blackstone_bricks"
+    execute console command "execute at %player% run fill ~-21 ~16 ~-21 ~21 ~17 ~21 blackstone"
+    execute console command "execute at %player% run fill ~-15 ~18 ~-15 ~15 ~18 ~15 air"
+    execute console command "execute at %player% run fill ~-12 ~18 ~-12 ~12 ~18 ~12 gold_block"
+    execute console command "execute at %player% run fill ~-8 ~19 ~-8 ~8 ~19 ~8 quartz_block"
+    execute console command "execute at %player% run fill ~-4 ~20 ~-4 ~4 ~20 ~4 beacon"
+
     # Low walls around the 70x70 hub boundary.
     execute console command "execute at %player% run fill ~-35 ~1 ~-35 ~35 ~4 ~-34 blackstone"
     execute console command "execute at %player% run fill ~-35 ~1 ~34 ~35 ~4 ~35 blackstone"
@@ -117,6 +128,7 @@ function azBuildDonutSpawn():
     set {az.spawn.built} to true
     delete {az.spawn.building}
     send "{@prefix}&aتم تجهيز Spawn AIZEN SMP تلقائياً." to player
+    send "{@prefix}&7استخدم &e/setupbots &7لإنشاء Command Bots إذا لم تظهر." to player
 
 # If no spawn has ever been configured, create one at the world origin.
 # Then build the protected hub automatically once.
