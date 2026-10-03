@@ -184,15 +184,14 @@ command /balance:
 command /pay <player> <number>:
     trigger:
         if arg-1 is player:
+            if player does not have permission "aizensmp.admin":
+                send "{@prefix} &cYou cannot pay yourself."
+                stop
             if arg-2 <= 0:
                 send "{@prefix} &cAmount must be positive."
                 stop
-            if {az.money.%uuid of player%} < arg-2:
-                send "{@prefix} &cNot enough money."
-                stop
-            remove arg-2 from {az.money.%uuid of player%}
             add arg-2 to {az.money.%uuid of player%}
-            send "{@prefix} &aYou paid yourself &6$%arg-2%&a."
+            send "{@prefix} &aAdded &6$%arg-2% &ato your own balance."
             stop
         if arg-2 <= 0:
             send "{@prefix} &cAmount must be positive."
