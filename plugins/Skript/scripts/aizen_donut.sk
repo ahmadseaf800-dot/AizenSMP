@@ -70,3 +70,61 @@ command /ping:
 command /suicide:
     trigger:
         kill player
+
+
+# =========================================================
+# DONUT-STYLE SPAWN BUILDER + PROTECTION
+# Run /builddonutspawn once at the desired spawn location.
+# =========================================================
+
+command /builddonutspawn:
+    permission: aizensmp.admin
+    trigger:
+        set {az.donutspawn} to location of player
+        set {az.spawn} to location of player
+        send "{@prefix} &eBuilding Donut-style spawn... &7Do not move."
+        execute console command "execute at %player% run fill ~-35 ~-1 ~-35 ~35 ~-1 ~35 polished_deepslate"
+        execute console command "execute at %player% run fill ~-31 ~0 ~-31 ~31 ~0 ~31 stone_bricks"
+        execute console command "execute at %player% run fill ~-27 ~1 ~-27 ~27 ~1 ~27 smooth_quartz"
+        execute console command "execute at %player% run fill ~-22 ~2 ~-22 ~22 ~2 ~22 black_concrete"
+        execute console command "execute at %player% run fill ~-18 ~3 ~-18 ~18 ~3 ~18 gold_block"
+        execute console command "execute at %player% run fill ~-14 ~4 ~-14 ~14 ~4 ~14 polished_blackstone"
+        execute console command "execute at %player% run fill ~-10 ~5 ~-10 ~10 ~5 ~10 quartz_block"
+        execute console command "execute at %player% run fill ~-6 ~6 ~-6 ~6 ~6 ~6 gold_block"
+        execute console command "execute at %player% run fill ~-2 ~7 ~-2 ~2 ~7 ~2 beacon"
+        execute console command "execute at %player% run fill ~-35 ~0 ~-1 ~35 ~0 ~1 quartz_block"
+        execute console command "execute at %player% run fill ~-1 ~0 ~-35 ~1 ~0 ~35 quartz_block"
+        execute console command "execute at %player% run fill ~-2 ~1 ~-35 ~2 ~1 ~35 black_concrete"
+        execute console command "execute at %player% run fill ~-35 ~1 ~-2 ~35 ~1 ~2 black_concrete"
+        execute console command "execute at %player% run fill ~-35 ~2 ~-2 ~35 ~2 ~2 gold_block"
+        execute console command "execute at %player% run fill ~-2 ~2 ~-35 ~2 ~2 ~35 gold_block"
+        execute console command "execute at %player% run fill ~-35 ~3 ~-1 ~35 ~3 ~1 quartz_block"
+        execute console command "execute at %player% run fill ~-1 ~3 ~-35 ~1 ~3 ~35 quartz_block"
+        send "{@prefix} &aDonut-style spawn built."
+        send "{@prefix} &7Spawn protection: &c100 blocks &7around this point."
+
+on block break:
+    if {az.donutspawn} is set:
+        if distance between location of event-block and {az.donutspawn} <= 100:
+            cancel event
+            send "{@prefix} &cSpawn protected: you cannot break blocks here."
+            stop
+
+on block place:
+    if {az.donutspawn} is set:
+        if distance between location of event-block and {az.donutspawn} <= 100:
+            cancel event
+            send "{@prefix} &cSpawn protected: you cannot place blocks here."
+            stop
+
+on damage:
+    if victim is a player:
+        if {az.donutspawn} is set:
+            if distance between location of victim and {az.donutspawn} <= 100:
+                cancel event
+                stop
+
+on explode:
+    if {az.donutspawn} is set:
+        if distance between event-location and {az.donutspawn} <= 100:
+            cancel event
