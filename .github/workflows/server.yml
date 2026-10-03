@@ -50,12 +50,14 @@ jobs:
           done
 
           mkdir -p network/velocity
-          # Download the latest stable Velocity release from the official GitHub releases.
-          # This avoids retired Paper API/Maven build URLs that can return HTTP 410.
-          VELOCITY_URL=$(curl -fsSL https://api.github.com/repos/PaperMC/Velocity/releases/latest | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
-          test -n "$VELOCITY_URL"
-          echo "Downloading Velocity from: $VELOCITY_URL"
-          curl -L --fail --retry 3 --retry-delay 2 -o network/velocity/velocity.jar "$VELOCITY_URL"
+          # Use PaperMC's current fill API for Velocity. It returns the live build URL
+          # and avoids retired v2/Maven/GitHub asset links.
+          VELOCITY_VERSION=$(curl -fsSL https://api.papermc.io/v2/projects/velocity | jq -r '.versions[-1]')
+          test -n "$VELOCITY_VERSION" && test "$VELOCITY_VERSION" != "null"
+          VELOCITY_URL=$(curl -fsSL "https://fill.papermc.io/v3/projects/velocity/versions/$VELOCITY_VERSION/builds/latest" | jq -r '.downloads.application.url')
+          test -n "$VELOCITY_URL" && test "$VELOCITY_URL" != "null"
+          echo "Downloading Velocity $VELOCITY_VERSION from: $VELOCITY_URL"
+          curl -L --fail --retry 5 --retry-delay 2 -o network/velocity/velocity.jar "$VELOCITY_URL"
 
       - name: Install backend plugins
         shell: bash
