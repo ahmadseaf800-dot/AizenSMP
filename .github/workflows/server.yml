@@ -472,6 +472,7 @@ EOF
               network/turkey/world network/turkey/world_nether network/turkey/world_the_end \
               network/america/world network/america/world_nether network/america/world_the_end \
               network/germany/plugins/Skript network/turkey/plugins/Skript network/america/plugins/Skript \
+              network/germany/plugins/AuthMe network/turkey/plugins/AuthMe network/america/plugins/AuthMe \
               2>/dev/null || true
           }
           trap cleanup EXIT INT TERM
