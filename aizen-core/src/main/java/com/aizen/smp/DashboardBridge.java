@@ -14,8 +14,6 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 
 public final class DashboardBridge implements Listener {
     private final JavaPlugin plugin;
@@ -34,7 +32,7 @@ public final class DashboardBridge implements Listener {
             return;
         }
         Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, this::sendStats, 20L, 200L);
-        plugin.getLogger().info("Dashboard bridge enabled: " + url);
+        plugin.getLogger().info("Dashboard bridge enabled.");
     }
 
     @EventHandler
@@ -68,29 +66,42 @@ public final class DashboardBridge implements Listener {
 
     public void sendStats() {
         if (url.isEmpty()) return;
-        List<String> players = new ArrayList<>();
+
+        StringBuilder players = new StringBuilder("[");
+        boolean first = true;
         for (Player p : Bukkit.getOnlinePlayers()) {
-            players.add("\"player\":\"" + escape(p.getName()) + "\",\"status\":\"Online\",\"violations\":0");
+            if (!first) players.append(",");
+            first = false;
+            players.append("{\"player\":\"")
+                    .append(escape(p.getName()))
+                    .append("\",\"status\":\"Online\",\"violations\":0}");
         }
-        String playerJson = "[" + String.join("},{", players) + "]";
-        String json = "{\"type\":\"stats\",\"online\":" + Bukkit.getOnlinePlayers().size()
-                + ",\"players\":[" + (players.isEmpty() ? "" : "{" + playerJson.substring(1, playerJson.length()-1) + "}") + "]}";
+        players.append("]");
+
+        String json = "{\"type\":\"stats\",\"online\":"
+                + Bukkit.getOnlinePlayers().size()
+                + ",\"players\":" + players + "}";
         post(json);
     }
 
     private void post(String json) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
-                HttpURLConnection connection = (HttpURLConnection) URI.create(url + "/api/event").toURL().openConnection();
+                HttpURLConnection connection =
+                        (HttpURLConnection) URI.create(url + "/api/event").toURL().openConnection();
                 connection.setRequestMethod("POST");
                 connection.setConnectTimeout(5000);
                 connection.setReadTimeout(5000);
                 connection.setDoOutput(true);
                 connection.setRequestProperty("Content-Type", "application/json");
-                if (!token.isEmpty()) connection.setRequestProperty("Authorization", "Bearer " + token);
+                if (!token.isEmpty()) {
+                    connection.setRequestProperty("Authorization", "Bearer " + token);
+                }
+
                 try (OutputStream out = connection.getOutputStream()) {
                     out.write(json.getBytes(StandardCharsets.UTF_8));
                 }
+
                 connection.getResponseCode();
                 connection.disconnect();
             } catch (Exception ignored) {
@@ -100,6 +111,8 @@ public final class DashboardBridge implements Listener {
     }
 
     private String escape(String value) {
-        return value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"");
+        return value == null ? "" : value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"");
     }
 }
