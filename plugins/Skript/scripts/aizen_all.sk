@@ -137,7 +137,7 @@ on first join:
 # Spawn/AFK protection only. No player claims.
 on block break:
     if {az.spawn} is set:
-        if distance between location of event-block and {az.spawn} <= 50:
+        if distance between location of event-block and {az.spawn} <= 60:
             cancel event
             send "{@prefix} &cSpawn is protected." to player
             stop
@@ -148,7 +148,7 @@ on block break:
 
 on block place:
     if {az.spawn} is set:
-        if distance between location of event-block and {az.spawn} <= 50:
+        if distance between location of event-block and {az.spawn} <= 60:
             cancel event
             send "{@prefix} &cSpawn is protected." to player
             stop
@@ -160,7 +160,7 @@ on block place:
 on damage:
     if victim is a player:
         if {az.spawn} is set:
-            if distance between location of victim and {az.spawn} <= 50:
+            if distance between location of victim and {az.spawn} <= 60:
                 cancel event
         if {az.afk} is set:
             if distance between location of victim and {az.afk} <= 15:
@@ -168,7 +168,7 @@ on damage:
 
 on explode:
     if {az.spawn} is set:
-        if distance between event-location and {az.spawn} <= 50:
+        if distance between event-location and {az.spawn} <= 60:
             cancel event
     if {az.afk} is set:
         if distance between event-location and {az.afk} <= 15:
