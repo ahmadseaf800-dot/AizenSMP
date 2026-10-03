@@ -133,27 +133,6 @@ command /builddonutspawn:
         send "{@prefix}&aتم تعيين وبناء الـSpawn هنا."
         send "{@prefix}&7الحماية: نصف قطر &e{@spawn-radius} &7بلوك."
 
-command /setspawn:
-    permission: aizensmp.admin
-    trigger:
-        set {az.spawn} to location of player
-        set {az.afk} to location of player
-        set {az.donutspawn} to location of player
-        delete {az.spawn.built}
-        delete {az.bots.ready}
-        send "{@prefix}&aتم حفظ Spawn الجديد. استخدم &e/builddonutspawn &aلبنائه."
-
-command /spawn:
-    trigger:
-        if {az.spawn} is not set:
-            send "{@prefix}&cSpawn غير مضبوط."
-            stop
-        if {az.combat.%uuid of player%} is set:
-            send "{@prefix}&cلا يمكنك استخدام Spawn أثناء Combat."
-            stop
-        teleport player to {az.spawn}
-        send "{@prefix}&aتم نقلك إلى Spawn."
-
 # ---------------- SPAWN PROTECTION ----------------
 
 on block break:
