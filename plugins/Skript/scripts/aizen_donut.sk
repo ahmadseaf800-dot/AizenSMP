@@ -1,20 +1,19 @@
 # =========================================================
-# AizenSMP - DONUT SMP READY LAYER
+# AizenSMP - Donut-style Spawn + Utilities
 # Purpur 1.21.11 / Skript
-# Custom systems only - no external gameplay plugins.
 # =========================================================
 
 options:
     prefix: &6[&eAizenSMP&6] &r
+    spawn-radius: 100
 
-# Donut-style quick RTP alias.
+# ---------------- QUICK COMMANDS ----------------
+
 command /wild:
     aliases: /wilderness, /random
     trigger:
-        execute player command "/rtp"
+        make player execute command "/rtp"
 
-# Donut-style sell-all: sells every item in the player's inventory
-# using the prices configured by the existing AizenSMP sell system.
 command /sellall:
     trigger:
         set {_sold} to 0
@@ -28,20 +27,14 @@ command /sellall:
                     add ({_price} * {_amount}) to {_total}
                     remove loop-item from player's inventory
         if {_sold} <= 0:
-            send "{@prefix} &cلا يوجد شيء قابل للبيع في حقيبتك."
+            send "{@prefix}&cلا يوجد شيء قابل للبيع في حقيبتك."
             stop
         add {_total} to {az.money.%uuid of player%}
-        send "{@prefix} &aبعت &e%{_sold}% &aقطعة مقابل &6$%{_total}%&a."
+        send "{@prefix}&aبعت &e%{_sold}% &aقطعة مقابل &6$%{_total}%&a."
 
-# Quick trash command.
 command /trash:
     trigger:
-        set {_trash} to chest inventory with 6 rows named "&8✦ &cTRASH &8✦"
-        open {_trash} to player
-
-on inventory click:
-    if name of event-inventory is "&8✦ &cTRASH &8✦":
-        stop
+        open chest inventory with 6 rows named "&8✦ &cTRASH &8✦" to player
 
 on inventory close:
     if name of event-inventory is "&8✦ &cTRASH &8✦":
@@ -49,7 +42,6 @@ on inventory close:
             if loop-item is not air:
                 delete loop-item
 
-# Show nearby players.
 command /near:
     trigger:
         set {_found} to false
@@ -59,93 +51,139 @@ command /near:
                     set {_found} to true
                     send "&7• &e%loop-player% &7- &f%round(distance between player and loop-player)% blocks"
         if {_found} is false:
-            send "{@prefix} &7لا يوجد لاعب قريب ضمن 100 بلوك."
+            send "{@prefix}&7لا يوجد لاعب قريب ضمن 100 بلوك."
 
-# Ping.
 command /ping:
     trigger:
-        send "{@prefix} &fPing: &e%ping of player%ms"
+        send "{@prefix}&fPing: &e%ping of player%ms"
 
-# Donut-style death/respawn convenience.
 command /suicide:
     trigger:
         kill player
 
+# ---------------- SPAWN BUILDER ----------------
 
-# =========================================================
-# SPAWN MOVEMENT LOCK
-# Players can leave the spawn only by teleport/command systems.
-# =========================================================
+function azBuildDonutSpawn():
+    if {az.spawn} is not set:
+        stop
+    if {az.spawn.built} is true:
+        stop
+    if {az.spawn.building} is true:
+        stop
+    set {az.spawn.building} to true
+    set {_s} to {az.spawn}
 
-on player move:
-    if {az.donutspawn} is set:
-        if distance between location of player and {az.donutspawn} <= 100:
-            if distance between event-location and {az.donutspawn} > 100:
-                cancel event
-                send action bar "&cالسبون مغلق &7- استخدم &e/rtp &7أو أوامر النقل للخروج." to player
+    # Flatten/build a compact central hub without destroying a huge area.
+    execute console command "execute at %player% run fill ~-35 ~-1 ~-35 ~35 ~-1 ~35 polished_blackstone"
+    execute console command "execute at %player% run fill ~-31 ~0 ~-31 ~31 ~0 ~31 blackstone"
+    execute console command "execute at %player% run fill ~-27 ~1 ~-27 ~27 ~1 ~27 smooth_quartz"
+    execute console command "execute at %player% run fill ~-22 ~2 ~-22 ~22 ~2 ~22 black_concrete"
 
-# =========================================================
-# DONUT-STYLE SPAWN BUILDER + PROTECTION
-# Run /builddonutspawn once at the desired spawn location.
-# =========================================================
+    # Central gold/white platform and four main paths.
+    execute console command "execute at %player% run fill ~-12 ~3 ~-12 ~12 ~3 ~12 quartz_block"
+    execute console command "execute at %player% run fill ~-7 ~4 ~-7 ~7 ~4 ~7 gold_block"
+    execute console command "execute at %player% run fill ~-3 ~5 ~-3 ~3 ~5 ~3 beacon"
+    execute console command "execute at %player% run fill ~-3 ~3 ~-35 ~3 ~3 ~35 quartz_block"
+    execute console command "execute at %player% run fill ~-35 ~3 ~-3 ~35 ~3 ~3 quartz_block"
 
+    # Decorative black/gold cross bands.
+    execute console command "execute at %player% run fill ~-35 ~4 ~-2 ~35 ~4 ~2 black_concrete"
+    execute console command "execute at %player% run fill ~-2 ~4 ~-35 ~2 ~4 ~35 black_concrete"
+    execute console command "execute at %player% run fill ~-35 ~5 ~-1 ~35 ~5 ~1 gold_block"
+    execute console command "execute at %player% run fill ~-1 ~5 ~-35 ~1 ~5 ~35 gold_block"
+
+    # Four corner pillars.
+    execute console command "execute at %player% run fill ~-29 ~2 ~-29 ~-25 ~12 ~-25 polished_blackstone_bricks"
+    execute console command "execute at %player% run fill ~25 ~2 ~-29 ~29 ~12 ~-25 polished_blackstone_bricks"
+    execute console command "execute at %player% run fill ~-29 ~2 ~25 ~-25 ~12 ~29 polished_blackstone_bricks"
+    execute console command "execute at %player% run fill ~25 ~2 ~25 ~29 ~12 ~29 polished_blackstone_bricks"
+
+    # Make the center visibly safe and open.
+    execute console command "execute at %player% run fill ~-10 ~6 ~-10 ~10 ~6 ~10 air"
+    set {az.spawn.built} to true
+    delete {az.spawn.building}
+    send "{@prefix}&aتم تجهيز Spawn AIZEN SMP تلقائياً." to player
+
+# On the first authenticated join after a spawn exists, build it once.
+on join:
+    if {az.spawn} is set:
+        wait 2 seconds
+        if player is online:
+            azBuildDonutSpawn()
+
+# Admin command to build/rebuild at the player's current position.
 command /builddonutspawn:
+    aliases: /buildreadyspawn
     permission: aizensmp.admin
     trigger:
-        set {_w} to world of player
-        set {_base} to location at 100000, 0, 100000 in {_w}
-        set {_top} to highest block at {_base}
-        add 2 to y-coordinate of {_top}
-        teleport player to {_top}
-        set {az.donutspawn} to {_top}
-        set {az.spawn} to {_top}
-        set {az.afk} to {_top}
-        send "{@prefix} &eتم نقل السبون إلى منطقة بعيدة جداً عند &f100000, 100000&e." to player
-        send "{@prefix} &7اللاعبون لن يستطيعوا مغادرة منطقة السبون بالمشي." to player
-        wait 2 seconds
-        execute console command "execute at %player% run fill ~-35 ~-1 ~-35 ~35 ~-1 ~35 polished_deepslate"
-        execute console command "execute at %player% run fill ~-31 ~0 ~-31 ~31 ~0 ~31 stone_bricks"
-        execute console command "execute at %player% run fill ~-27 ~1 ~-27 ~27 ~1 ~27 smooth_quartz"
-        execute console command "execute at %player% run fill ~-22 ~2 ~-22 ~22 ~2 ~22 black_concrete"
-        execute console command "execute at %player% run fill ~-18 ~3 ~-18 ~18 ~3 ~18 gold_block"
-        execute console command "execute at %player% run fill ~-14 ~4 ~-14 ~14 ~4 ~14 polished_blackstone"
-        execute console command "execute at %player% run fill ~-10 ~5 ~-10 ~10 ~5 ~10 quartz_block"
-        execute console command "execute at %player% run fill ~-6 ~6 ~-6 ~6 ~6 ~6 gold_block"
-        execute console command "execute at %player% run fill ~-2 ~7 ~-2 ~2 ~7 ~2 beacon"
-        execute console command "execute at %player% run fill ~-35 ~0 ~-1 ~35 ~0 ~1 quartz_block"
-        execute console command "execute at %player% run fill ~-1 ~0 ~-35 ~1 ~0 ~35 quartz_block"
-        execute console command "execute at %player% run fill ~-2 ~1 ~-35 ~2 ~1 ~35 black_concrete"
-        execute console command "execute at %player% run fill ~-35 ~1 ~-2 ~35 ~1 ~2 black_concrete"
-        execute console command "execute at %player% run fill ~-35 ~2 ~-2 ~35 ~2 ~2 gold_block"
-        execute console command "execute at %player% run fill ~-2 ~2 ~-35 ~2 ~2 ~35 gold_block"
-        execute console command "execute at %player% run fill ~-35 ~3 ~-1 ~35 ~3 ~1 quartz_block"
-        execute console command "execute at %player% run fill ~-1 ~3 ~-35 ~1 ~3 ~35 quartz_block"
-        send "{@prefix} &aتم بناء السبون البعيد بنجاح."
-        send "{@prefix} &cلا يمكن الخروج منه بالمشي أو الجري."
-        send "{@prefix} &eالخروج يكون عبر أوامر النقل مثل /rtp و /tpa و /home و /warp."
+        set {az.spawn} to location of player
+        set {az.afk} to location of player
+        set {az.donutspawn} to location of player
+        delete {az.spawn.built}
+        delete {az.bots.ready}
+        azBuildDonutSpawn()
+        send "{@prefix}&aتم تعيين وبناء الـSpawn هنا."
+        send "{@prefix}&7الحماية: نصف قطر &e{@spawn-radius} &7بلوك."
+
+command /setspawn:
+    permission: aizensmp.admin
+    trigger:
+        set {az.spawn} to location of player
+        set {az.afk} to location of player
+        set {az.donutspawn} to location of player
+        delete {az.spawn.built}
+        delete {az.bots.ready}
+        send "{@prefix}&aتم حفظ Spawn الجديد. استخدم &e/builddonutspawn &aلبنائه."
+
+command /spawn:
+    trigger:
+        if {az.spawn} is not set:
+            send "{@prefix}&cSpawn غير مضبوط."
+            stop
+        if {az.combat.%uuid of player%} is set:
+            send "{@prefix}&cلا يمكنك استخدام Spawn أثناء Combat."
+            stop
+        teleport player to {az.spawn}
+        send "{@prefix}&aتم نقلك إلى Spawn."
+
+# ---------------- SPAWN PROTECTION ----------------
 
 on block break:
-    if {az.donutspawn} is set:
-        if distance between location of event-block and {az.donutspawn} <= 100:
+    if {az.spawn} is set:
+        if distance between location of event-block and {az.spawn} <= {@spawn-radius}:
             cancel event
-            send "{@prefix} &cSpawn protected: you cannot break blocks here."
+            send "{@prefix}&cلا يمكنك كسر أي بلوك داخل الـSpawn."
             stop
+    if {az.afk} is set:
+        if distance between location of event-block and {az.afk} <= 15:
+            cancel event
 
 on block place:
-    if {az.donutspawn} is set:
-        if distance between location of event-block and {az.donutspawn} <= 100:
+    if {az.spawn} is set:
+        if distance between location of event-block and {az.spawn} <= {@spawn-radius}:
             cancel event
-            send "{@prefix} &cSpawn protected: you cannot place blocks here."
+            send "{@prefix}&cلا يمكنك البناء داخل الـSpawn."
             stop
+    if {az.afk} is set:
+        if distance between location of event-block and {az.afk} <= 15:
+            cancel event
 
 on damage:
     if victim is a player:
-        if {az.donutspawn} is set:
-            if distance between location of victim and {az.donutspawn} <= 100:
+        if {az.spawn} is set:
+            if distance between location of victim and {az.spawn} <= {@spawn-radius}:
+                cancel event
+                stop
+        if {az.afk} is set:
+            if distance between location of victim and {az.afk} <= 15:
                 cancel event
                 stop
 
 on explode:
-    if {az.donutspawn} is set:
-        if distance between event-location and {az.donutspawn} <= 100:
+    if {az.spawn} is set:
+        if distance between event-location and {az.spawn} <= {@spawn-radius}:
+            cancel event
+            stop
+    if {az.afk} is set:
+        if distance between event-location and {az.afk} <= 15:
             cancel event
