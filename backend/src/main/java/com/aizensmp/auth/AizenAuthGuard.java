@@ -70,7 +70,7 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
 
     private boolean isAuthenticated(Player p) {
         try {
-            return AuthMeApi.getInstance().isAuthenticated(p.getName());
+            return AuthMeApi.getInstance().isAuthenticated(p);
         } catch (Throwable ignored) {
             return false;
         }
