@@ -93,6 +93,8 @@ on join:
         set {az.bounty.%uuid of player%} to 0
     if {az.settings.chat.%uuid of player%} is not set:
         set {az.settings.chat.%uuid of player%} to true
+    if {az.settings.sidebar.%uuid of player%} is not set:
+        set {az.settings.sidebar.%uuid of player%} to true
     if {az.settings.tpa.%uuid of player%} is not set:
         set {az.settings.tpa.%uuid of player%} to "all"
     if {az.settings.tpahere.%uuid of player%} is not set:
@@ -539,6 +541,7 @@ command /settings:
         set slot 14 of player's current inventory to ender pearl named "&bTPAHERE" with lore "&7%{az.settings.tpahere.%uuid of player%}%"
         set slot 16 of player's current inventory to gold ingot named "&6Payments" with lore "&7%{az.settings.pay.%uuid of player%}%"
         set slot 22 of player's current inventory to diamond sword named "&cDuels" with lore "&7%{az.settings.duel.%uuid of player%}%"
+        set slot 24 of player's current inventory to map named "&bStatistics Sidebar" with lore "&7%{az.settings.sidebar.%uuid of player%}%"
 
 on chat:
     if {az.settings.chat.%uuid of player%} is false:
@@ -583,6 +586,13 @@ on inventory click:
                 set {az.settings.duel.%uuid of player%} to "none"
             else:
                 set {az.settings.duel.%uuid of player%} to "all"
+        else if clicked slot is 24:
+            if {az.settings.sidebar.%uuid of player%} is true:
+                set {az.settings.sidebar.%uuid of player%} to false
+                clear player's scoreboard
+            else:
+                set {az.settings.sidebar.%uuid of player%} to true
+                azUpdateSidebar(player)
         close player's inventory
         send "{@prefix} &aSetting updated."
 
