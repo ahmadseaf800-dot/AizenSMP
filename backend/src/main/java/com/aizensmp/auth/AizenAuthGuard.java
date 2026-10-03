@@ -270,8 +270,8 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
         try {
             BanList list = Bukkit.getBanList(BanList.Type.NAME);
             Map<String, BanSnapshot> current = new HashMap<>();
-            for (BanEntry entry : list.getBanEntries()) {
-                if (entry == null || entry.getTarget() == null) continue;
+            for (Object raw : list.getBanEntries()) {
+                if (!(raw instanceof BanEntry entry) || entry.getTarget() == null) continue;
                 BanSnapshot b = new BanSnapshot(entry.getTarget(), entry.getReason(), entry.getSource(),
                         entry.getCreated(), entry.getExpiration());
                 current.put(entry.getTarget().toLowerCase(), b);
