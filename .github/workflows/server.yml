@@ -349,6 +349,7 @@ jobs:
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/LuckPerms.jar" "$LUCKPERMS_URL"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/AuthMe.jar" "$AUTHME_URL"
             cp -f backend/build/AizenAuthGuard.jar "network/$name/plugins/AizenAuthGuard.jar"
+            cp -f backend-shop/build/AizenShop.jar "network/$name/plugins/AizenShop.jar"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/ViaVersion.jar" "$VIAVERSION_URL"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/ViaBackwards.jar" "$VIABACKWARDS_URL"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/WorldEdit.jar" "$WE_URL"
