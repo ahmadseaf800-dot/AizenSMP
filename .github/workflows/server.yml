@@ -50,12 +50,12 @@ jobs:
           done
 
           mkdir -p network/velocity
+          # Download Velocity from the official PaperMC Maven repository.
+          # The Paper API download endpoint can return HTTP 410 after a build is retired.
           VELOCITY_VERSION=$(curl -fsSL https://api.papermc.io/v2/projects/velocity | jq -r '.versions[-1]')
           VELOCITY_BUILD=$(curl -fsSL "https://api.papermc.io/v2/projects/velocity/versions/$VELOCITY_VERSION/builds" | jq -r '.builds | map(select(.channel == "default")) | max_by(.id) | .id')
-          VELOCITY_FILE=$(curl -fsSL "https://api.papermc.io/v2/projects/velocity/versions/$VELOCITY_VERSION/builds/$VELOCITY_BUILD" | jq -r '.downloads.application.name')
-          test -n "$VELOCITY_FILE" && test "$VELOCITY_FILE" != "null"
-          echo "Downloading Velocity $VELOCITY_VERSION build $VELOCITY_BUILD file $VELOCITY_FILE"
-          curl -L --fail -o network/velocity/velocity.jar "https://api.papermc.io/v2/projects/velocity/versions/$VELOCITY_VERSION/builds/$VELOCITY_BUILD/downloads/$VELOCITY_FILE"
+          echo "Downloading Velocity $VELOCITY_VERSION build $VELOCITY_BUILD"
+          curl -L --fail -o network/velocity/velocity.jar "https://repo.papermc.io/repository/maven-public/com/velocitypowered/velocity-proxy/$VELOCITY_VERSION-$VELOCITY_BUILD.jar"
 
       - name: Install backend plugins
         shell: bash
