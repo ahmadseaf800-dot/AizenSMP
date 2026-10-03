@@ -80,15 +80,29 @@ jobs:
             echo "Playit config restored from repository secret."
           fi
 
+      - name: Restore server JAR cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            network/germany/server.jar
+            network/turkey/server.jar
+            network/america/server.jar
+            network/velocity/velocity.jar
+          key: aizensmp-server-jars-v1
+
       - name: Download Purpur and Velocity
         shell: bash
         run: |
           set -e
           for name in germany turkey america; do
             mkdir -p "network/$name/plugins"
-            curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/server.jar" "https://api.purpurmc.org/v2/purpur/1.21.11/latest/download"
-            test -s "network/$name/server.jar"
-            jar tf "network/$name/server.jar" >/dev/null
+            if [ -s "network/$name/server.jar" ] && jar tf "network/$name/server.jar" >/dev/null 2>&1; then
+              echo "Using cached Purpur for $name; skipping 55MB download."
+            else
+              curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/server.jar" "https://api.purpurmc.org/v2/purpur/1.21.11/latest/download"
+              test -s "network/$name/server.jar"
+              jar tf "network/$name/server.jar" >/dev/null
+            fi
             echo "eula=true" > "network/$name/eula.txt"
             # Purpur/Paper can recreate or reject EULA state during bootstrap;
             # keep it explicitly enabled immediately before every launch.
@@ -108,8 +122,12 @@ jobs:
           VELOCITY_URL=$(echo "$VELOCITY_META" | jq -r '.downloads."server:default".url // empty')
           test -n "$VELOCITY_URL"
 
-          echo "Downloading Velocity $VELOCITY_VERSION build $VELOCITY_BUILD"
-          curl -fsSL --retry 5 --retry-delay 2 -o network/velocity/velocity.jar "$VELOCITY_URL"
+          if [ -s network/velocity/velocity.jar ] && jar tf network/velocity/velocity.jar >/dev/null 2>&1; then
+            echo "Using cached Velocity JAR; skipping download."
+          else
+            echo "Downloading Velocity $VELOCITY_VERSION build $VELOCITY_BUILD"
+            curl -fsSL --retry 5 --retry-delay 2 -o network/velocity/velocity.jar "$VELOCITY_URL"
+          fi
 
           test -s network/velocity/velocity.jar
           jar tf network/velocity/velocity.jar >/dev/null
