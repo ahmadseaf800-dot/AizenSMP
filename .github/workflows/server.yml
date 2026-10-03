@@ -393,21 +393,18 @@ jobs:
           configure_server() {
             local name="$1"
             local port="$2"
-            mkdir -p "network/$name/plugins"
-            cat > "network/$name/server.properties" <<EOF
-          motd=AizenSMP - $name
-          online-mode=false
-          enforce-secure-profile=false
-          server-port=$port
-          server-ip=127.0.0.1
-          query.port=$port
-          enable-query=false
-          if [ "$name" = "germany" ]; then
-            local max_players="350"
-          else
             local max_players="250"
-          fi
-          cat > "network/$name/server.properties" <<EOF
+            local display_name="America"
+            if [ "$name" = "germany" ]; then
+              max_players="350"
+              display_name="Germany"
+            elif [ "$name" = "turkey" ]; then
+              max_players="250"
+              display_name="Turkey"
+            fi
+
+            mkdir -p "network/$name/plugins/Skript/scripts"
+            cat > "network/$name/server.properties" <<EOF
           motd=AizenSMP - $name
           online-mode=false
           enforce-secure-profile=false
@@ -418,16 +415,9 @@ jobs:
           max-players=$max_players
           EOF
 
-          cp -f plugins/Skript/scripts/aizen_scoreboard.sk "network/$name/plugins/Skript/scripts/aizen_scoreboard.sk"
-          if [ "$name" = "germany" ]; then
-            sed -i "s/SERVER_NAME/Germany/g; s/MAX_PLAYERS/350/g" "network/$name/plugins/Skript/scripts/aizen_scoreboard.sk"
-          elif [ "$name" = "turkey" ]; then
-            sed -i "s/SERVER_NAME/Turkey/g; s/MAX_PLAYERS/250/g" "network/$name/plugins/Skript/scripts/aizen_scoreboard.sk"
-          else
-            sed -i "s/SERVER_NAME/America/g; s/MAX_PLAYERS/250/g" "network/$name/plugins/Skript/scripts/aizen_scoreboard.sk"
-          fi
+            cp -f plugins/Skript/scripts/aizen_scoreboard.sk "network/$name/plugins/Skript/scripts/aizen_scoreboard.sk"
+            sed -i "s/SERVER_NAME/$display_name/g; s/MAX_PLAYERS/$max_players/g" "network/$name/plugins/Skript/scripts/aizen_scoreboard.sk"
           }
-
           configure_server germany 25566
           configure_server turkey 25567
           configure_server america 25568
