@@ -1,0 +1,72 @@
+# =========================================================
+# AizenSMP - DONUT SMP READY LAYER
+# Purpur 1.21.11 / Skript
+# Custom systems only - no external gameplay plugins.
+# =========================================================
+
+options:
+    prefix: &6[&eAizenSMP&6] &r
+
+# Donut-style quick RTP alias.
+command /wild:
+    aliases: /wilderness, /random
+    trigger:
+        execute player command "/rtp"
+
+# Donut-style sell-all: sells every item in the player's inventory
+# using the prices configured by the existing AizenSMP sell system.
+command /sellall:
+    trigger:
+        set {_sold} to 0
+        set {_total} to 0
+        loop all items in player's inventory:
+            if loop-item is not air:
+                set {_price} to {az.sellprice.%type of loop-item%}
+                if {_price} is set:
+                    set {_amount} to amount of loop-item
+                    add {_amount} to {_sold}
+                    add ({_price} * {_amount}) to {_total}
+                    remove loop-item from player's inventory
+        if {_sold} <= 0:
+            send "{@prefix} &cلا يوجد شيء قابل للبيع في حقيبتك."
+            stop
+        add {_total} to {az.money.%uuid of player%}
+        send "{@prefix} &aبعت &e%{_sold}% &aقطعة مقابل &6$%{_total}%&a."
+
+# Quick trash command.
+command /trash:
+    trigger:
+        set {_trash} to chest inventory with 6 rows named "&8✦ &cTRASH &8✦"
+        open {_trash} to player
+
+on inventory click:
+    if name of event-inventory is "&8✦ &cTRASH &8✦":
+        stop
+
+on inventory close:
+    if name of event-inventory is "&8✦ &cTRASH &8✦":
+        loop all items in event-inventory:
+            if loop-item is not air:
+                delete loop-item
+
+# Show nearby players.
+command /near:
+    trigger:
+        set {_found} to false
+        loop all players:
+            if loop-player is not player:
+                if distance between player and loop-player <= 100:
+                    set {_found} to true
+                    send "&7• &e%loop-player% &7- &f%round(distance between player and loop-player)% blocks"
+        if {_found} is false:
+            send "{@prefix} &7لا يوجد لاعب قريب ضمن 100 بلوك."
+
+# Ping.
+command /ping:
+    trigger:
+        send "{@prefix} &fPing: &e%ping of player%ms"
+
+# Donut-style death/respawn convenience.
+command /suicide:
+    trigger:
+        kill player
