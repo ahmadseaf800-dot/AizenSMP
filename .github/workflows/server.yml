@@ -256,19 +256,60 @@ jobs:
           EOF
 
       - name: Start Playit agent
+        env:
+          PLAYIT_SETUP_CODE: ${{ secrets.PLAYIT_SETUP_CODE }}
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
           mkdir -p "$HOME/.config/playit_gg"
           PLAYIT_SOCKET="$HOME/.config/playit_gg/playit.sock"
           PLAYIT_SECRET="$HOME/.config/playit_gg/playit.toml"
 
+          # First-run bootstrap: a short-lived Playit setup code can provision
+          # the agent secret after browser approval.
+          if [ ! -s "$PLAYIT_SECRET" ] && [ -n "${PLAYIT_SETUP_CODE:-}" ]; then
+            echo "Playit agent secret is missing; bootstrapping from setup code."
+            API="https://api.playit.gg"
+            VERSION="AizenSMP-GitHubActions/1.0"
+
+            for i in {1..90}; do
+              SETUP=$(curl -fsSL --retry 3 --retry-delay 1 \
+                -H "Content-Type: application/json" \
+                -d "$(jq -cn --arg code "$PLAYIT_SETUP_CODE" --arg version "$VERSION" '{code:$code,agent_type:"self-managed",version:$version}')" \
+                "$API/claim/setup")
+
+              STATE=$(echo "$SETUP" | jq -r '.status // .state // empty')
+              echo "Playit setup state: $STATE"
+              echo "Approve the agent here if Playit asks for browser approval: https://playit.gg/claim/$PLAYIT_SETUP_CODE"
+
+              if [ "$STATE" = "UserRejected" ] || [ "$STATE" = "user_rejected" ]; then
+                echo "::error::Playit setup was rejected in the browser."
+                exit 1
+              fi
+
+              EXCHANGE=$(curl -sS \
+                -H "Content-Type: application/json" \
+                -d "$(jq -cn --arg code "$PLAYIT_SETUP_CODE" '{code:$code}')" \
+                "$API/claim/exchange" || true)
+
+              SECRET=$(echo "$EXCHANGE" | jq -r '.secret_key // empty')
+              if [ -n "$SECRET" ]; then
+                printf '%s' "$SECRET" > "$PLAYIT_SECRET"
+                chmod 600 "$PLAYIT_SECRET"
+                echo "Playit agent secret provisioned successfully."
+                break
+              fi
+              sleep 2
+            done
+          fi
+
           if [ ! -s "$PLAYIT_SECRET" ]; then
-            echo "::error::Playit config is missing. Add the PLAYIT_CONFIG_BASE64 Actions secret containing the base64-encoded playit.toml, then rerun this workflow."
+            echo "::error::Playit agent secret is missing."
+            echo "::error::Add PLAYIT_CONFIG_BASE64 for an existing agent secret, or PLAYIT_SETUP_CODE for a fresh Playit agent claim."
             exit 1
           fi
 
-          curl -L --fail -o playitd "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
+          curl -L --fail --retry 5 --retry-delay 2 -o playitd "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64"
           chmod +x playitd
           rm -f "$PLAYIT_SOCKET"
           nohup ./playitd --socket-path "$PLAYIT_SOCKET" --secret-path "$PLAYIT_SECRET" > playitd.log 2>&1 &
