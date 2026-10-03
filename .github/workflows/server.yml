@@ -5,7 +5,7 @@ on:
 
 permissions:
   contents: read
-  actions: read
+  actions: write
 
 jobs:
   network:
@@ -25,6 +25,7 @@ jobs:
       - name: Restore persistent data
         env:
           GH_TOKEN: ${{ github.token }}
+          PLAYIT_CONFIG_BASE64: ${{ secrets.PLAYIT_CONFIG_BASE64 }}
         shell: bash
         run: |
           set -e
@@ -37,6 +38,13 @@ jobs:
               mkdir -p network
               tar --zstd -xf restore/artifact/persistent-data.tar.zst -C network || true
             fi
+          fi
+
+          if [ ! -f "$HOME/.config/playit_gg/playit.toml" ] && [ -n "${PLAYIT_CONFIG_BASE64:-}" ]; then
+            mkdir -p "$HOME/.config/playit_gg"
+            printf '%s' "$PLAYIT_CONFIG_BASE64" | base64 --decode > "$HOME/.config/playit_gg/playit.toml"
+            chmod 600 "$HOME/.config/playit_gg/playit.toml"
+            echo "Playit config restored from repository secret."
           fi
 
       - name: Download Purpur and Velocity
@@ -260,6 +268,16 @@ jobs:
 
           [ -S "$PLAYIT_SOCKET" ] || { cat playitd.log; exit 1; }
 
+      - name: Persist Playit config
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aizensmp-playit-config
+          path: ${{ env.HOME }}/.config/playit_gg/playit.toml
+          if-no-files-found: error
+          retention-days: 30
+          overwrite: true
+
       - name: Start AizenSMP network
         shell: bash
         run: |
@@ -278,9 +296,6 @@ jobs:
               network/germany/plugins/Skript network/turkey/plugins/Skript network/america/plugins/Skript \
               2>/dev/null || true
 
-            if [ -d "$HOME/.config/playit_gg" ]; then
-              tar --zstd -rf network/persistent-data.tar.zst -C "$HOME/.config" playit_gg 2>/dev/null || true
-            fi
           }
           trap cleanup EXIT INT TERM
 
@@ -306,3 +321,13 @@ jobs:
           echo "America Voice: stamina-lightning.tun.ply.gg:12323 -> UDP 25572"
 
           wait $VELOCITY_PID
+
+      - name: Upload persistent server data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aizensmp-persistent-data
+          path: network/persistent-data.tar.zst
+          if-no-files-found: warn
+          retention-days: 30
+          overwrite: true
