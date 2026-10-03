@@ -186,6 +186,7 @@ jobs:
             cat > "network/$name/server.properties" <<EOF
           motd=AizenSMP - $name
           online-mode=false
+          enforce-secure-profile=false
           server-port=$port
           server-ip=127.0.0.1
           query.port=$port
