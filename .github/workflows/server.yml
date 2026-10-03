@@ -107,6 +107,19 @@ jobs:
           jar tf network/velocity/velocity.jar >/dev/null
           echo "Velocity JAR verified successfully."
 
+          # Build the lightweight Velocity router used by /rtp and automatic
+          # Europe/Germany entry. It is compiled against the exact Velocity
+          # JAR downloaded above, so the proxy and plugin API stay in sync.
+          rm -rf proxy/build
+          mkdir -p proxy/build/classes network/velocity/plugins
+          "$JAVA25_HOME/bin/javac" -cp network/velocity/velocity.jar -d proxy/build/classes \
+            proxy/src/main/java/com/aizensmp/proxy/AizenProxy.java
+          jar --create --file network/velocity/plugins/AizenProxy.jar \
+            -C proxy/build/classes . \
+            -C proxy/src/main/resources velocity-plugin.json
+          test -s network/velocity/plugins/AizenProxy.jar
+          echo "AizenProxy built successfully."
+
       - name: Install backend plugins
         shell: bash
         run: |
