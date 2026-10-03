@@ -236,7 +236,7 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
 
         List<String> players = new ArrayList<>();
         for (Player p : Bukkit.getOnlinePlayers()) {
-            DetectionSnapshot d = detections.get(p.getUniqueId().toString());
+            DetectionSnapshot d = detections.get(p.getName().toLowerCase());
             players.add("{\"player\":\"" + json(p.getName()) + "\",\"status\":\"Online\",\"op\":" + p.isOp()
                     + ",\"violations\":" + (d == null ? 0 : d.vl)
                     + ",\"lastDetection\":\"" + json(d == null ? "" : d.reason) + "\"}");
