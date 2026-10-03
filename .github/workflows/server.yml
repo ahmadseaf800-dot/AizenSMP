@@ -254,6 +254,7 @@ jobs:
           motd = "<gold>AizenSMP</gold>"
           show-max-players = 100
           online-mode = false
+          force-key-authentication = false
           player-info-forwarding-mode = "none"
           announce-forge = false
           kick-existing-players = false
