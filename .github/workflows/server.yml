@@ -402,8 +402,30 @@ jobs:
           server-ip=127.0.0.1
           query.port=$port
           enable-query=false
-          max-players=350
+          if [ "$name" = "germany" ]; then
+            local max_players="350"
+          else
+            local max_players="250"
+          fi
+          cat > "network/$name/server.properties" <<EOF
+          motd=AizenSMP - $name
+          online-mode=false
+          enforce-secure-profile=false
+          server-port=$port
+          server-ip=127.0.0.1
+          query.port=$port
+          enable-query=false
+          max-players=$max_players
           EOF
+
+          cp -f plugins/Skript/scripts/aizen_scoreboard.sk "network/$name/plugins/Skript/scripts/aizen_scoreboard.sk"
+          if [ "$name" = "germany" ]; then
+            sed -i "s/SERVER_NAME/Germany/g; s/MAX_PLAYERS/350/g" "network/$name/plugins/Skript/scripts/aizen_scoreboard.sk"
+          elif [ "$name" = "turkey" ]; then
+            sed -i "s/SERVER_NAME/Turkey/g; s/MAX_PLAYERS/250/g" "network/$name/plugins/Skript/scripts/aizen_scoreboard.sk"
+          else
+            sed -i "s/SERVER_NAME/America/g; s/MAX_PLAYERS/250/g" "network/$name/plugins/Skript/scripts/aizen_scoreboard.sk"
+          fi
           }
 
           configure_server germany 25566
