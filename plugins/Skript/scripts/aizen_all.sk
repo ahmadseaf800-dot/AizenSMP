@@ -107,13 +107,14 @@ on join:
         set {az.rank.%uuid of player%} to "Default"
     set {az.name.%uuid of player%} to name of player
 
-    # First-join defaults: provide a usable spawn and local RTP regions.
-    if {az.spawn} is not set:
-        set {az.spawn} to location of player
+    # Spawn is configured by the admin with /builddonutspawn or /setspawn.
+    # Do not create it at a random first-join location.
     if {az.afk} is not set:
-        set {az.afk} to {az.spawn}
+        if {az.spawn} is set:
+            set {az.afk} to {az.spawn}
     if {az.duel} is not set:
-        set {az.duel} to {az.spawn}
+        if {az.spawn} is set:
+            set {az.duel} to {az.spawn}
     if {az.region.asia.center} is not set:
         set {az.region.asia.center} to location of player
         set {az.region.asia.radius} to 10000
