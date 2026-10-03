@@ -50,7 +50,11 @@ jobs:
           done
 
           mkdir -p network/velocity
-          curl -L --fail -o network/velocity/velocity.jar "https://api.papermc.io/v2/projects/velocity/versions/3.4.0-SNAPSHOT/builds/561/downloads/velocity-3.4.0-SNAPSHOT-561.jar" ||           curl -L --fail -o network/velocity/velocity.jar "https://api.papermc.io/v2/projects/velocity/versions/3.4.0-SNAPSHOT/builds/565/downloads/velocity-3.4.0-SNAPSHOT-565.jar"
+          VELOCITY_VERSION=$(curl -fsSL https://api.papermc.io/v2/projects/velocity | jq -r '.versions[-1]')
+          VELOCITY_BUILD=$(curl -fsSL "https://api.papermc.io/v2/projects/velocity/versions/$VELOCITY_VERSION/builds" | jq -r '.builds | map(select(.channel == "default")) | max_by(.id) | .id')
+          VELOCITY_FILE="velocity-$VELOCITY_VERSION-$VELOCITY_BUILD.jar"
+          echo "Downloading Velocity $VELOCITY_VERSION build $VELOCITY_BUILD"
+          curl -L --fail -o network/velocity/velocity.jar "https://api.papermc.io/v2/projects/velocity/versions/$VELOCITY_VERSION/builds/$VELOCITY_BUILD/downloads/$VELOCITY_FILE"
 
       - name: Install backend plugins
         shell: bash
