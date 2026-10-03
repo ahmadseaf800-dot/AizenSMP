@@ -1,0 +1,132 @@
+# =========================================================
+# AIZEN SMP - CUSTOM CRATE SYSTEM
+# Purpur 1.21.11 / Skript
+# =========================================================
+
+options:
+    prefix: &6[&eAizenSMP&6] &r
+
+function azBuildCrates(p: player):
+    if {az.spawn} is not set:
+        send "{@prefix}&cSpawn is not set." to {_p}
+        stop
+    set {_s} to {az.spawn}
+    # Clear and build a compact black/gold crate hall in front of spawn.
+    execute console command "execute at %{_p}% run fill ~-16 ~0 ~-30 ~16 ~8 ~-16 air"
+    execute console command "execute at %{_p}% run fill ~-16 ~-1 ~-30 ~16 ~-1 ~-16 polished_blackstone"
+    execute console command "execute at %{_p}% run fill ~-15 ~0 ~-29 ~15 ~0 ~-17 black_concrete"
+    execute console command "execute at %{_p}% run fill ~-16 ~0 ~-30 ~16 ~8 ~-30 blackstone"
+    execute console command "execute at %{_p}% run fill ~-16 ~0 ~-16 ~16 ~8 ~-16 blackstone"
+    execute console command "execute at %{_p}% run fill ~-16 ~0 ~-30 ~-16 ~8 ~-16 blackstone"
+    execute console command "execute at %{_p}% run fill ~16 ~0 ~-30 ~16 ~8 ~-16 blackstone"
+    execute console command "execute at %{_p}% run fill ~-13 ~7 ~-29 ~13 ~7 ~-17 gold_block"
+    execute console command "execute at %{_p}% run fill ~-2 ~1 ~-30 ~2 ~5 ~-30 gold_block"
+    execute console command "execute at %{_p}% run fill ~-1 ~2 ~-31 ~1 ~4 ~-31 air"
+    # Crate pedestals.
+    execute console command "execute at %{_p}% run fill ~-12 ~0 ~-25 ~-6 ~0 ~-19 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~-3 ~0 ~-25 ~3 ~0 ~-19 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~6 ~0 ~-25 ~12 ~0 ~-19 polished_blackstone_bricks"
+    execute console command "execute at %{_p}% run fill ~-11 ~1 ~-24 ~-7 ~1 ~-20 gold_block"
+    execute console command "execute at %{_p}% run fill ~-2 ~1 ~-24 ~2 ~1 ~-20 gold_block"
+    execute console command "execute at %{_p}% run fill ~7 ~1 ~-24 ~11 ~1 ~-20 gold_block"
+    # Three crate chests.
+    execute console command "execute at %{_p}% run setblock ~-9 ~2 ~-22 chest[facing=south]"
+    execute console command "execute at %{_p}% run setblock ~0 ~2 ~-22 chest[facing=south]"
+    execute console command "execute at %{_p}% run setblock ~9 ~2 ~-22 chest[facing=south]"
+    set {az.crate.common} to location at (x-coordinate of {_s} - 9), (y-coordinate of {_s} + 2), (z-coordinate of {_s} - 22) in world of {_s}
+    set {az.crate.prime} to location at (x-coordinate of {_s}), (y-coordinate of {_s} + 2), (z-coordinate of {_s} - 22) in world of {_s}
+    set {az.crate.crimson} to location at (x-coordinate of {_s} + 9), (y-coordinate of {_s} + 2), (z-coordinate of {_s} - 22) in world of {_s}
+    set {az.crates.built} to true
+    send "{@prefix}&aتم بناء منطقة الصناديق بثلاثة Crates: Common / Prime / Crimson." to {_p}
+
+function azGiveCrateReward(p: player, crate: text):
+    set {_roll} to random integer between 1 and 100
+    if {_crate} is "Common":
+        if {_roll} <= 45:
+            give 16 diamonds to {_p}
+        else if {_roll} <= 75:
+            give 8 ender pearls to {_p}
+        else if {_roll} <= 92:
+            give 2 golden apples to {_p}
+        else:
+            give 1 netherite scrap to {_p}
+    else if {_crate} is "Prime":
+        if {_roll} <= 45:
+            give 32 diamonds to {_p}
+        else if {_roll} <= 75:
+            give 16 ender pearls to {_p}
+        else if {_roll} <= 92:
+            give 4 golden apples to {_p}
+        else:
+            give 1 netherite ingot to {_p}
+    else if {_crate} is "Crimson":
+        if {_roll} <= 40:
+            give 64 diamonds to {_p}
+        else if {_roll} <= 70:
+            give 32 ender pearls to {_p}
+        else if {_roll} <= 90:
+            give 8 golden apples to {_p}
+        else:
+            give 1 netherite block to {_p}
+    send "{@prefix}&6&lCRATE &8» &a%{_crate}% &7reward received!" to {_p}
+
+command /buildcrates:
+    permission: aizensmp.admin
+    aliases: /crates
+    trigger:
+        azBuildCrates(player)
+
+command /cratekey <player> <text> [<number>]:
+    permission: aizensmp.admin
+    trigger:
+        set {_amount} to arg-3
+        if {_amount} is not set:
+            set {_amount} to 1
+        if {_amount} < 1:
+            set {_amount} to 1
+        if arg-2 is "common":
+            give {_amount} tripwire hooks named "&a&lCommon Key" to arg-1
+        else if arg-2 is "prime":
+            give {_amount} tripwire hooks named "&6&lPrime Key" to arg-1
+        else if arg-2 is "crimson":
+            give {_amount} tripwire hooks named "&c&lCrimson Key" to arg-1
+        else:
+            send "{@prefix}&cUse: /cratekey <player> <common|prime|crimson> [amount]" to player
+            stop
+        send "{@prefix}&aتم إعطاء %arg-2% Key للاعب %arg-1%." to player
+
+on right click on chest:
+    if {az.crate.common} is set:
+        if location of clicked block is {az.crate.common}:
+            cancel event
+            if player's tool is tripwire hook named "&a&lCommon Key":
+                remove 1 tripwire hook named "&a&lCommon Key" from player
+                azGiveCrateReward(player, "Common")
+            else:
+                send "{@prefix}&eتحتاج Common Key." to player
+            stop
+    if {az.crate.prime} is set:
+        if location of clicked block is {az.crate.prime}:
+            cancel event
+            if player's tool is tripwire hook named "&6&lPrime Key":
+                remove 1 tripwire hook named "&6&lPrime Key" from player
+                azGiveCrateReward(player, "Prime")
+            else:
+                send "{@prefix}&eتحتاج Prime Key." to player
+            stop
+    if {az.crate.crimson} is set:
+        if location of clicked block is {az.crate.crimson}:
+            cancel event
+            if player's tool is tripwire hook named "&c&lCrimson Key":
+                remove 1 tripwire hook named "&c&lCrimson Key" from player
+                azGiveCrateReward(player, "Crimson")
+            else:
+                send "{@prefix}&eتحتاج Crimson Key." to player
+            stop
+
+on join:
+    if {az.spawn} is set:
+        wait 4 seconds
+        if player is online:
+            if {az.crates.built} is not true:
+                azBuildCrates(player)
