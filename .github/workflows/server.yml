@@ -50,21 +50,30 @@ jobs:
           done
 
           mkdir -p network/velocity
-          # Velocity's old v2 download endpoint is retired (HTTP 410).
-          # Resolve the latest version/build from the PaperMC API, then use
-          # Fill's JSON metadata only to obtain the current artifact URL.
+          # Do not use PaperMC's retired v2 download endpoint or Fill's
+          # short-lived CDN URLs: both can return HTTP 410 on Actions.
+          # Download the runnable Velocity proxy directly from PaperMC Maven.
           VELOCITY_VERSION=$(curl -fsSL https://api.papermc.io/v2/projects/velocity | jq -r '.versions[-1]')
           test -n "$VELOCITY_VERSION" && test "$VELOCITY_VERSION" != "null"
 
-          VELOCITY_BUILD=$(curl -fsSL "https://api.papermc.io/v2/projects/velocity/versions/$VELOCITY_VERSION/builds" | jq -r '.builds[-1].build')
-          test -n "$VELOCITY_BUILD" && test "$VELOCITY_BUILD" != "null"
-
-          VELOCITY_META=$(curl -fsSL "https://fill.papermc.io/v3/projects/velocity/versions/$VELOCITY_VERSION/builds/$VELOCITY_BUILD")
-          VELOCITY_URL=$(echo "$VELOCITY_META" | jq -r '.downloads.application.url // empty')
-          test -n "$VELOCITY_URL"
-
-          echo "Downloading Velocity $VELOCITY_VERSION build $VELOCITY_BUILD"
+          VELOCITY_FILE="velocity-proxy-$VELOCITY_VERSION.jar"
+          VELOCITY_URL="https://repo.papermc.io/repository/maven-public/com/velocitypowered/velocity-proxy/$VELOCITY_VERSION/$VELOCITY_FILE"
+          echo "Downloading Velocity $VELOCITY_VERSION from PaperMC Maven"
           curl -L --fail --retry 5 --retry-delay 2 -o network/velocity/velocity.jar "$VELOCITY_URL"
+
+          # Some Velocity versions are published with a -SNAPSHOT Maven
+          # version while the API exposes a normalized version. If the first
+          # URL is unavailable, resolve the latest proxy artifact from Maven
+          # metadata and retry.
+          if ! jar tf network/velocity/velocity.jar >/dev/null 2>&1; then
+            VELOCITY_MAVEN_VERSION=$(curl -fsSL 'https://repo.papermc.io/repository/maven-public/com/velocitypowered/velocity-proxy/maven-metadata.xml'               | sed -n 's:.*<latest>\([^<]*\)</latest>.*:\1:p' | head -n 1)
+            test -n "$VELOCITY_MAVEN_VERSION"
+            VELOCITY_FILE="velocity-proxy-$VELOCITY_MAVEN_VERSION.jar"
+            VELOCITY_URL="https://repo.papermc.io/repository/maven-public/com/velocitypowered/velocity-proxy/$VELOCITY_MAVEN_VERSION/$VELOCITY_FILE"
+            echo "Retrying Velocity from Maven metadata: $VELOCITY_MAVEN_VERSION"
+            curl -L --fail --retry 5 --retry-delay 2 -o network/velocity/velocity.jar "$VELOCITY_URL"
+          fi
+
           test -s network/velocity/velocity.jar
           jar tf network/velocity/velocity.jar >/dev/null
 
