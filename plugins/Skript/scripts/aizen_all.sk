@@ -473,62 +473,170 @@ command /friend <text> [<player>]:
 command /tpa <player>:
     trigger:
         if arg-1 is player:
+            send "{@prefix} &cلا يمكنك إرسال TPA لنفسك."
+            stop
+        if {az.combat.%uuid of player%} is set:
+            send "{@prefix} &cلا يمكنك إرسال TPA أثناء الـCombat."
+            stop
+        if {az.combat.%uuid of arg-1%} is set:
+            send "{@prefix} &cلا يمكنك إرسال TPA للاعب داخل الـCombat."
             stop
         if {az.settings.tpa.%uuid of arg-1%} is "none":
-            send "{@prefix} &cTPA disabled."
+            send "{@prefix} &cهذا اللاعب عطّل طلبات TPA."
             stop
         if {az.settings.tpa.%uuid of arg-1%} is "friends":
             if {az.friend.%uuid of arg-1%.%uuid of player%} is not true:
-                send "{@prefix} &cTPA is friends-only."
+                send "{@prefix} &cطلبات TPA لهذا اللاعب للأصدقاء فقط."
                 stop
+        if {az.tpa.%uuid of arg-1%} is set or {az.tpahere.%uuid of arg-1%} is set:
+            send "{@prefix} &cلديه طلب انتقال معلّق بالفعل."
+            stop
+        if {az.tpa.cooldown.%uuid of player%} is set:
+            send "{@prefix} &cانتظر قليلاً قبل إرسال طلب TPA آخر."
+            stop
         set {az.tpa.%uuid of arg-1%} to player
-        send "{@prefix} &aTPA request sent."
-        send "{@prefix} &e%player% &fwants to teleport to you. &a/tpaccept &7or &c/tpdeny" to arg-1
-        wait {@request-timeout}
+        set {az.tpa.created.%uuid of arg-1%} to now
+        set {az.tpa.cooldown.%uuid of player%} to true
+        send "{@prefix} &aتم إرسال طلب TPA إلى &e%arg-1%&a." to player
+        send "{@prefix} &e%player% &fيريد الانتقال إليك. &a/tpaccept &7أو &c/tpdeny" to arg-1
+        wait 5 seconds
+        delete {az.tpa.cooldown.%uuid of player%}
         if {az.tpa.%uuid of arg-1%} is player:
             delete {az.tpa.%uuid of arg-1%}
+            delete {az.tpa.created.%uuid of arg-1%}
+            if arg-1 is online:
+                send "{@prefix} &7انتهت مدة طلب TPA." to arg-1
+            if player is online:
+                send "{@prefix} &7انتهت مدة طلب TPA." to player
 
 command /tpahere <player>:
     trigger:
+        if arg-1 is player:
+            send "{@prefix} &cلا يمكنك استخدام TPAHERE على نفسك."
+            stop
+        if {az.combat.%uuid of player%} is set:
+            send "{@prefix} &cلا يمكنك إرسال TPAHERE أثناء الـCombat."
+            stop
+        if {az.combat.%uuid of arg-1%} is set:
+            send "{@prefix} &cلا يمكنك إرسال TPAHERE للاعب داخل الـCombat."
+            stop
         if {az.settings.tpahere.%uuid of arg-1%} is "none":
-            send "{@prefix} &cTPAHERE disabled."
+            send "{@prefix} &cهذا اللاعب عطّل طلبات TPAHERE."
             stop
         if {az.settings.tpahere.%uuid of arg-1%} is "friends":
             if {az.friend.%uuid of arg-1%.%uuid of player%} is not true:
-                send "{@prefix} &cTPAHERE is friends-only."
+                send "{@prefix} &cطلبات TPAHERE لهذا اللاعب للأصدقاء فقط."
                 stop
+        if {az.tpa.%uuid of arg-1%} is set or {az.tpahere.%uuid of arg-1%} is set:
+            send "{@prefix} &cلديه طلب انتقال معلّق بالفعل."
+            stop
+        if {az.tpahere.cooldown.%uuid of player%} is set:
+            send "{@prefix} &cانتظر قليلاً قبل إرسال طلب TPAHERE آخر."
+            stop
         set {az.tpahere.%uuid of arg-1%} to player
-        send "{@prefix} &aTPAHERE request sent."
-        send "{@prefix} &e%player% &fwants you to teleport to them. &a/tpaccept &7or &c/tpdeny" to arg-1
-        wait {@request-timeout}
+        set {az.tpahere.created.%uuid of arg-1%} to now
+        set {az.tpahere.cooldown.%uuid of player%} to true
+        send "{@prefix} &aتم إرسال طلب TPAHERE إلى &e%arg-1%&a." to player
+        send "{@prefix} &e%player% &fيريد نقلك إليه. &a/tpaccept &7أو &c/tpdeny" to arg-1
+        wait 5 seconds
+        delete {az.tpahere.cooldown.%uuid of player%}
         if {az.tpahere.%uuid of arg-1%} is player:
             delete {az.tpahere.%uuid of arg-1%}
+            delete {az.tpahere.created.%uuid of arg-1%}
+            if arg-1 is online:
+                send "{@prefix} &7انتهت مدة طلب TPAHERE." to arg-1
+            if player is online:
+                send "{@prefix} &7انتهت مدة طلب TPAHERE." to player
 
 command /tpaccept:
     trigger:
         if {az.tpa.%uuid of player%} is set:
             set {_p} to {az.tpa.%uuid of player%}
             delete {az.tpa.%uuid of player%}
+            delete {az.tpa.created.%uuid of player%}
+            if {_p} is not online:
+                send "{@prefix} &cاللاعب أصبح أوفلاين."
+                stop
+            if {az.combat.%uuid of player%} is set or {az.combat.%uuid of {_p}%} is set:
+                send "{@prefix} &cلا يمكن قبول TPA أثناء الـCombat."
+                stop
+            set {az.teleporting.%uuid of {_p}%} to true
+            set {az.teleport.start.%uuid of {_p}%} to location of {_p}
+            send "{@prefix} &eسيتم نقلك خلال 3 ثوانٍ. لا تتحرك ولا تدخل Combat." to {_p}
+            send "{@prefix} &aجاري تنفيذ TPA..." to player
+            wait 3 seconds
             if {_p} is online:
-                teleport {_p} to player
-                send "{@prefix} &aAccepted." to player
-                send "{@prefix} &aYour TPA was accepted." to {_p}
+                if {az.teleporting.%uuid of {_p}%} is true:
+                    if {az.combat.%uuid of player%} is not set and {az.combat.%uuid of {_p}%} is not set:
+                        teleport {_p} to player
+                        send "{@prefix} &aتم قبول TPA." to player
+                        send "{@prefix} &aتم نقلك بنجاح." to {_p}
+                    else:
+                        send "{@prefix} &cتم إلغاء TPA بسبب الـCombat." to {_p}
+            delete {az.teleporting.%uuid of {_p}%}
+            delete {az.teleport.start.%uuid of {_p}%}
             stop
         if {az.tpahere.%uuid of player%} is set:
             set {_p} to {az.tpahere.%uuid of player%}
             delete {az.tpahere.%uuid of player%}
-            if {_p} is online:
-                teleport player to {_p}
-                send "{@prefix} &aAccepted." to player
-                send "{@prefix} &aYour TPAHERE was accepted." to {_p}
+            delete {az.tpahere.created.%uuid of player%}
+            if {_p} is not online:
+                send "{@prefix} &cاللاعب أصبح أوفلاين."
+                stop
+            if {az.combat.%uuid of player%} is set or {az.combat.%uuid of {_p}%} is set:
+                send "{@prefix} &cلا يمكن قبول TPAHERE أثناء الـCombat."
+                stop
+            set {az.teleporting.%uuid of player%} to true
+            set {az.teleport.start.%uuid of player%} to location of player
+            send "{@prefix} &eسيتم نقلك خلال 3 ثوانٍ. لا تتحرك ولا تدخل Combat."
+            send "{@prefix} &aجاري تنفيذ TPAHERE..." to {_p}
+            wait 3 seconds
+            if player is online:
+                if {az.teleporting.%uuid of player%} is true:
+                    if {az.combat.%uuid of player%} is not set and {az.combat.%uuid of {_p}%} is not set:
+                        teleport player to {_p}
+                        send "{@prefix} &aتم قبول TPAHERE." to player
+                        send "{@prefix} &aتم نقل اللاعب إليك." to {_p}
+                    else:
+                        send "{@prefix} &cتم إلغاء TPAHERE بسبب الـCombat."
+            delete {az.teleporting.%uuid of player%}
+            delete {az.teleport.start.%uuid of player%}
             stop
-        send "{@prefix} &cNo pending request."
+        send "{@prefix} &cلا يوجد طلب انتقال معلّق."
 
 command /tpdeny:
     trigger:
-        delete {az.tpa.%uuid of player%}
-        delete {az.tpahere.%uuid of player%}
-        send "{@prefix} &cPending teleport request denied."
+        if {az.tpa.%uuid of player%} is set:
+            set {_p} to {az.tpa.%uuid of player%}
+            delete {az.tpa.%uuid of player%}
+            delete {az.tpa.created.%uuid of player%}
+            if {_p} is online:
+                send "{@prefix} &cتم رفض طلب TPA." to player
+                send "{@prefix} &cتم رفض طلب TPA الخاص بك." to {_p}
+            stop
+        if {az.tpahere.%uuid of player%} is set:
+            set {_p} to {az.tpahere.%uuid of player%}
+            delete {az.tpahere.%uuid of player%}
+            delete {az.tpahere.created.%uuid of player%}
+            if {_p} is online:
+                send "{@prefix} &cتم رفض طلب TPAHERE." to player
+                send "{@prefix} &cتم رفض طلب TPAHERE الخاص بك." to {_p}
+            stop
+        send "{@prefix} &cلا يوجد طلب انتقال معلّق."
+
+on move:
+    if {az.teleporting.%uuid of player%} is true:
+        if {az.teleport.start.%uuid of player%} is set:
+            if distance between location of player and {az.teleport.start.%uuid of player%} > 0.5:
+                delete {az.teleporting.%uuid of player%}
+                delete {az.teleport.start.%uuid of player%}
+                send "{@prefix} &cتم إلغاء الانتقال لأنك تحركت." to player
+
+on damage:
+    if {az.teleporting.%uuid of victim%} is true:
+        delete {az.teleporting.%uuid of victim%}
+        delete {az.teleport.start.%uuid of victim%}
+        send "{@prefix} &cتم إلغاء الانتقال لأنك تعرضت للضرر." to victim
 
 # ---------------- SETTINGS ----------------
 
