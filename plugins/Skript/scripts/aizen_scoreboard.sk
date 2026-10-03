@@ -33,9 +33,9 @@ function azUpdateSidebar(p: player):
     set line 6 of {_p}'s scoreboard to "&c⚔ &f%{_kills}% Kills"
     set line 5 of {_p}'s scoreboard to "&7☠ &f%{_deaths}% Deaths"
     set line 4 of {_p}'s scoreboard to "&e⚡ &f%{_streak}% Streak"
-    set line 3 of {_p}'s scoreboard to "&8&m-----------------"\n    set line 2 of {_p}'s scoreboard to "&7IP: &fstamina-oriental.tun.ply.gg"\n    set line 1 of {_p}'s scoreboard to "&6&lAIZEN SMP"
-    set line 2 of {_p}'s scoreboard to "&aPlayers: &f%number of all players%&7/MAX_PLAYERS"
-    set line 1 of {_p}'s scoreboard to "&6&lAIZEN SMP"
+    set line 3 of {_p}'s scoreboard to "&8&m------------------"
+    set line 2 of {_p}'s scoreboard to "&7IP: &fstamina-oriental.tun.ply.gg"
+    set line 1 of {_p}'s scoreboard to "&aPlayers: &f%number of all players%"
 
 every 1 second:
     loop all players:
