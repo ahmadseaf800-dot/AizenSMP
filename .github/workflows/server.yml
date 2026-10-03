@@ -68,6 +68,10 @@ jobs:
             cp -f plugins/Skript/scripts/*.sk "network/$name/plugins/Skript/scripts/" 2>/dev/null || true
           done
 
+          SVC_URL=$(curl -fsSL 'https://api.modrinth.com/v2/project/simple-voice-chat/version?loaders=%5B%22paper%22%5D&game_versions=%5B%221.21.11%22%5D' | jq -r '.[0].files[] | select(.primary == true) | .url' | head -n 1)
+          test -n "$SVC_URL"
+          curl -L --fail -o network/germany/plugins/voicechat.jar "$SVC_URL"
+
       - name: Configure backend servers
         shell: bash
         run: |
@@ -91,6 +95,21 @@ jobs:
           configure_server germany 25566
           configure_server turkey 25567
           configure_server america 25568
+
+          mkdir -p network/germany/plugins/voicechat
+          cat > network/germany/plugins/voicechat/voicechat-server.properties <<'EOF'
+          port=25570
+          bind_address=0.0.0.0
+          voice_host=stamina-trailside.tun.ply.gg:12304
+          enable_groups=true
+          max_voice_distance=48
+          crouch_distance=24
+          whisper_distance=24
+          spectator_interaction=true
+          hide_icons=false
+          enable_recording=false
+          allow_pings=true
+          EOF
 
       - name: Configure Velocity
         shell: bash
@@ -183,6 +202,7 @@ jobs:
           echo "Germany: 25566"
           echo "Turkey: 25567"
           echo "America: 25568"
+          echo "Voice Chat: stamina-trailside.tun.ply.gg:12304 -> Germany UDP 25570"
 
           wait $VELOCITY_PID
           
