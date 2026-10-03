@@ -723,12 +723,6 @@ on damage:
 # Mobs/environment never create Combat.
 # Ender Pearls are usable in normal gameplay; during combat they are blocked.
 
-on projectile launch:
-    if projectile is an ender pearl:
-        if {az.combat.%uuid of shooter%} is set:
-            cancel event
-            send "{@prefix} &cلا يمكنك استخدام Ender Pearl أثناء الـCombat." to shooter
-
 # Teleports are immediate outside combat.
 on teleport:
     if {az.combat.%uuid of player%} is set:
