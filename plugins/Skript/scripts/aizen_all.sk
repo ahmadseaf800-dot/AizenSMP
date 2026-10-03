@@ -247,217 +247,103 @@ every 1 minute:
         set line 3 of block at {az.richsign} to "&7Top players"
         set line 4 of block at {az.richsign} to "&6AizenSMP"
 
-# ---------------- REGIONAL RTP / RTPQ COMBAT ----------------
+# ---------------- RANDOM RTP / RTPQ ----------------
 
-function azRegionCenter(name: text) :: location:
-    set {_n} to lowercase {_name}
-    if {_n} is "asia":
-        return {az.region.asia.center}
-    if {_n} is "europe":
-        return {az.region.europe.center}
-    if {_n} is "africa":
-        return {az.region.africa.center}
-    if {_n} is "northamerica":
-        return {az.region.northamerica.center}
-    if {_n} is "southamerica":
-        return {az.region.southamerica.center}
-    if {_n} is "oceania":
-        return {az.region.oceania.center}
-    return none
-
-function azRegionRadius(name: text) :: number:
-    set {_n} to lowercase {_name}
-    if {_n} is "asia":
-        return {az.region.asia.radius}
-    if {_n} is "europe":
-        return {az.region.europe.radius}
-    if {_n} is "africa":
-        return {az.region.africa.radius}
-    if {_n} is "northamerica":
-        return {az.region.northamerica.radius}
-    if {_n} is "southamerica":
-        return {az.region.southamerica.radius}
-    if {_n} is "oceania":
-        return {az.region.oceania.radius}
-    return 0
-
-function azRegionLabel(name: text) :: text:
-    set {_n} to lowercase {_name}
-    if {_n} is "asia":
-        return "Asia"
-    if {_n} is "europe":
-        return "Europe"
-    if {_n} is "africa":
-        return "Africa"
-    if {_n} is "northamerica":
-        return "North America"
-    if {_n} is "southamerica":
-        return "South America"
-    if {_n} is "oceania":
-        return "Oceania"
-    return {_name}
-
-function azRegionRTP(p: player, region: text):
-    set {_center} to azRegionCenter({_region})
-    if {_center} is not set:
-        send "{@prefix} &cThis combat region has not been configured yet." to {_p}
+function azSafeRTP(p: player, worldName: text):
+    set {_w} to world({_worldName})
+    if {_w} is not set:
+        send "{@prefix} &cالعالم غير موجود: &e%{_worldName}%" to {_p}
         stop
-    set {_radius} to azRegionRadius({_region})
-    if {_radius} <= 0:
-        send "{@prefix} &cThis combat region has no valid size." to {_p}
-        stop
-    set {_w} to world of {_center}
     set {_found} to false
-    loop 80 times:
+    loop 60 times:
         if {_found} is false:
-            set {_cx} to x-coordinate of {_center}
-            set {_cz} to z-coordinate of {_center}
-            set {_x} to random integer between ({_cx} - {_radius}) and ({_cx} + {_radius})
-            set {_z} to random integer between ({_cz} - {_radius}) and ({_cz} + {_radius})
+            set {_x} to random integer between -5000 and 5000
+            set {_z} to random integer between -5000 and 5000
             set {_loc} to location at {_x}, 0, {_z} in {_w}
             set {_top} to highest block at {_loc}
-            set {_feet} to location of {_top}
-            if block below {_feet} is not water:
-                if block below {_feet} is not lava:
-                    if block at {_feet} is air:
-                        if block above {_feet} is air:
-                            if y-coordinate of {_feet} > 5:
+            set {_feet} to location above {_top}
+            if y-coordinate of {_feet} > 5:
+                if block at {_feet} is air:
+                    if block above {_feet} is air:
+                        if block at {_top} is not water:
+                            if block at {_top} is not lava:
                                 teleport {_p} to {_feet}
                                 set {_found} to true
-    if {_found} is false:
-        send "{@prefix} &cNo safe combat location was found in &e%azRegionLabel({_region})&c." to {_p}
+    if {_found} is true:
+        send "{@prefix} &aتم نقلك عشوائياً إلى &e%{_worldName}% &7(&f%round(x-coordinate of {_p})%, %round(z-coordinate of {_p})%&7)." to {_p}
     else:
-        set {az.region.%uuid of {_p}%} to lowercase {_region}
-        send "{@prefix} &aTeleported to the real &e%azRegionLabel({_region}) &acombat region." to {_p}
-        send "{@prefix} &7PvP is active here. Find players and fight." to {_p}
-
-command /setregion <text> [<number>]:
-    permission: aizensmp.admin
-    trigger:
-        set {_region} to lowercase arg-1
-        if {_region} is not "asia":
-            if {_region} is not "europe":
-                if {_region} is not "africa":
-                    if {_region} is not "northamerica":
-                        if {_region} is not "southamerica":
-                            if {_region} is not "oceania":
-                                send "{@prefix} &cRegions: asia, europe, africa, northamerica, southamerica, oceania."
-                                stop
-        set {_radius} to arg-2
-        if {_radius} is not set:
-            set {_radius} to 3000
-        if {_radius} < 250:
-            send "{@prefix} &cRadius must be at least 250 blocks."
-            stop
-        set {az.region.%{_region}%.center} to location of player
-        set {az.region.%{_region}%.radius} to {_radius}
-        send "{@prefix} &a%azRegionLabel({_region})% combat region set here with a &e%{_radius}% &ablock radius."
-        send "{@prefix} &7Players using /rtp can now be teleported here to fight."
-
-command /region:
-    trigger:
-        open chest inventory with 3 rows named "&8✦ &cAizen Combat Regions &8✦" to player
-        wait 1 tick
-        set slot 10 of player's current inventory to compass named "&b&lASIA" with lore "&7Real PvP combat region", "&eClick to enter"
-        set slot 11 of player's current inventory to map named "&a&lEUROPE" with lore "&7Real PvP combat region", "&eClick to enter"
-        set slot 12 of player's current inventory to savanna sapling named "&6&lAFRICA" with lore "&7Real PvP combat region", "&eClick to enter"
-        set slot 14 of player's current inventory to blue wool named "&9&lNORTH AMERICA" with lore "&7Real PvP combat region", "&eClick to enter"
-        set slot 15 of player's current inventory to red wool named "&c&lSOUTH AMERICA" with lore "&7Real PvP combat region", "&eClick to enter"
-        set slot 16 of player's current inventory to mangrove propagule named "&d&lOCEANIA" with lore "&7Real PvP combat region", "&eClick to enter"
-        set slot 22 of player's current inventory to barrier named "&cClose"
+        send "{@prefix} &cلم يتم العثور على مكان آمن. حاول مرة ثانية." to {_p}
 
 command /rtp:
     trigger:
-        make player execute command "/region"
+        set {_rtpgui} to chest inventory with 3 rows named "&e&lRANDOM TELEPORT"
+        set slot 11 of {_rtpgui} to grass block named "&aOverworld RTP" with lore "&7انقر للانتقال العشوائي في العالم العادي"
+        set slot 13 of {_rtpgui} to netherrack named "&cNether RTP" with lore "&7انقر للانتقال العشوائي في النذر"
+        set slot 15 of {_rtpgui} to end stone named "&eEnd RTP" with lore "&7انقر للانتقال العشوائي في الإند"
+        set slot 22 of {_rtpgui} to barrier named "&cإغلاق"
+        open {_rtpgui} to player
 
-command /rtpq:
+command /rtpq [<player>]:
     trigger:
-        set {_target} to none
-        loop all players:
-            if loop-player is not player:
-                if {_target} is not set:
+        if arg-1 is set:
+            set {_target} to arg-1
+        else:
+            set {_target} to none
+            loop all players:
+                if loop-player is not player:
                     set {_target} to loop-player
                     stop
         if {_target} is not set:
-            send "{@prefix} &cNo other player is online."
+            send "{@prefix} &cلا يوجد لاعب آخر متصل." to player
             stop
-        set {_region} to {az.region.%uuid of player%}
-        if {_region} is not set:
-            set {_region} to "asia"
-            set {az.region.%uuid of player%} to "asia"
-            send "{@prefix} &eNo region preference was set, so &bAsia &ewas selected." to player
-        set {_center} to azRegionCenter({_region})
-        if {_center} is not set:
-            send "{@prefix} &cYour selected combat region is not configured by the admin."
+        if {_target} is player:
+            send "{@prefix} &cلا يمكنك اختيار نفسك." to player
             stop
-        set {_radius} to azRegionRadius({_region})
-        set {_w} to world of {_center}
+
+        set {_x} to random integer between -5000 and 5000
+        set {_z} to random integer between -5000 and 5000
+        set {_w} to world of player
         set {_found} to false
-        loop 80 times:
+        loop 60 times:
             if {_found} is false:
-                set {_cx} to x-coordinate of {_center}
-                set {_cz} to z-coordinate of {_center}
-                set {_x} to random integer between ({_cx} - {_radius}) and ({_cx} + {_radius})
-                set {_z} to random integer between ({_cz} - {_radius}) and ({_cz} + {_radius})
                 set {_loc} to location at {_x}, 0, {_z} in {_w}
                 set {_top} to highest block at {_loc}
-                set {_feet} to location of {_top}
-                if block below {_feet} is not water:
-                    if block below {_feet} is not lava:
-                        if block at {_feet} is air:
-                            if block above {_feet} is air:
-                                if y-coordinate of {_feet} > 5:
-                                    teleport player to {_feet}
-                                    teleport {_target} to {_feet}
-                                    set {az.region.%uuid of player%} to {_region}
-                                    set {az.region.%uuid of {_target}%} to {_region}
-                                    set {_found} to true
+                set {_feet} to location above {_top}
+                if block at {_feet} is air:
+                    if block above {_feet} is air:
+                        if block at {_top} is not water:
+                            if block at {_top} is not lava:
+                                teleport player to {_feet}
+                                teleport {_target} to {_feet}
+                                set {_found} to true
+                if {_found} is false:
+                    set {_x} to random integer between -5000 and 5000
+                    set {_z} to random integer between -5000 and 5000
         if {_found} is false:
-            send "{@prefix} &cNo safe fight location found in &e%azRegionLabel({_region})&c."
+            send "{@prefix} &cلم يتم العثور على مكان آمن للقتال." to player
             stop
-        send "{@prefix} &c&lCOMBAT! &fYou and &e%{_target}% &fare now fighting in &6%azRegionLabel({_region})&f." to player
-        send "{@prefix} &c&lCOMBAT! &fYou and &e%player% &fare now fighting in &6%azRegionLabel({_region})&f." to {_target}
+        send "{@prefix} &c&lRTPQ &fتم نقلك أنت و &e%{_target}% &fإلى مكان عشوائي للقتال!" to player
+        send "{@prefix} &c&lRTPQ &fتم نقلك مع &e%player% &fإلى مكان عشوائي للقتال!" to {_target}
 
 on inventory click:
-    if name of event-inventory is "&8✦ &cAizen Combat Regions &8✦":
+    if name of event-inventory is "&e&lRANDOM TELEPORT":
         cancel event
-        if clicked slot is 22:
+        if index of event-slot is 22:
             close player's inventory
-        else if clicked slot is 10:
+            stop
+        if index of event-slot is 11:
             close player's inventory
-            set {az.region.%uuid of player%} to "asia"
-            azRegionRTP(player, "asia")
-        else if clicked slot is 11:
+            send "{@prefix} &eجاري البحث عن مكان آمن..." to player
+            azSafeRTP(player, "world")
+        else if index of event-slot is 13:
             close player's inventory
-            set {az.region.%uuid of player%} to "europe"
-            azRegionRTP(player, "europe")
-        else if clicked slot is 12:
+            send "{@prefix} &eجاري البحث عن مكان آمن في النذر..." to player
+            azSafeRTP(player, "world_nether")
+        else if index of event-slot is 15:
             close player's inventory
-            set {az.region.%uuid of player%} to "africa"
-            azRegionRTP(player, "africa")
-        else if clicked slot is 14:
-            close player's inventory
-            set {az.region.%uuid of player%} to "northamerica"
-            azRegionRTP(player, "northamerica")
-        else if clicked slot is 15:
-            close player's inventory
-            set {az.region.%uuid of player%} to "southamerica"
-            azRegionRTP(player, "southamerica")
-        else if clicked slot is 16:
-            close player's inventory
-            set {az.region.%uuid of player%} to "oceania"
-            azRegionRTP(player, "oceania")
-
-# PvP is allowed inside these configured combat areas.
-# Spawn and AFK protection remain the only protected zones.
-on damage:
-    if victim is a player:
-        if attacker is a player:
-            set {_rv} to {az.region.%uuid of victim%}
-            set {_ra} to {az.region.%uuid of attacker%}
-            if {_rv} is set and {_ra} is set:
-                if {_rv} is {_ra}:
-                    stop
+            send "{@prefix} &eجاري البحث عن مكان آمن في الإند..." to player
+            azSafeRTP(player, "world_the_end")
+        stop
 
 # ---------------- BOUNTY / KILL STREAK ----------------
 
