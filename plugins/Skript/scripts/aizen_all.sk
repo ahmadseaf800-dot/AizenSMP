@@ -532,12 +532,11 @@ on inventory click:
         send "{@prefix} &aSetting updated."
 
 # ---------------- DUELS ----------------
-# Duels are the ONLY place where player-vs-player damage is allowed.
-# The arena is isolated: players cannot walk/teleport/pearl out.
-# Each duel lasts at most 2 minutes, then the arena is regenerated.
+# Player-vs-player combat is allowed only inside the duel arena.
+# A duel has NO timer. Combat remains active until one player dies.
+# Leaving the arena is allowed normally, but teleporting while in combat is blocked.
 
 options:
-    duel-duration: 2 minutes
     duel-radius: 25
 
 command /setduel:
@@ -545,12 +544,15 @@ command /setduel:
     trigger:
         set {az.duel.arena} to location of player
         send "{@prefix} &aDuel arena center set here." to player
-        send "{@prefix} &7Radius: &e{@duel-radius} blocks &7| Time: &e2 minutes"
+        send "{@prefix} &7Radius: &e{@duel-radius} blocks &7| &7No time limit."
 
 command /duels:
     trigger:
         if {az.duel.arena} is not set:
             send "{@prefix} &cDuel arena is not set."
+            stop
+        if {az.combat.%uuid of player%} is set:
+            send "{@prefix} &cلا يمكنك الانتقال أثناء الـCombat."
             stop
         teleport player to {az.duel.arena}
         send "{@prefix} &aTeleported to the Duel lobby."
@@ -585,6 +587,7 @@ function azDuelRestoreArena():
         if {_loc} is set:
             set block at {_loc} to {_type}
     delete {az.duel.saved::*}
+    delete {az.duel.saved.count}
 
 function azDuelEnd(p1: player, p2: player):
     if {_p1} is set:
@@ -605,6 +608,7 @@ function azDuelEnd(p1: player, p2: player):
         if {az.spawn} is set:
             teleport {_p2} to {az.spawn}
         send "{@prefix} &aانتهى الدويل." to {_p2}
+    delete {az.duel.active}
     azDuelRestoreArena()
 
 command /duel [<player>]:
@@ -628,7 +632,7 @@ command /duel [<player>]:
             send "{@prefix} &cThat player is already dueling."
             stop
         if {az.combat.%uuid of player%} is set or {az.combat.%uuid of {_target}%} is set:
-            send "{@prefix} &cلا يمكن بدء Duel أثناء القتال."
+            send "{@prefix} &cلا يمكن بدء Duel أثناء الـCombat."
             stop
         if {az.settings.duel.%uuid of {_target}%} is "none":
             send "{@prefix} &cDuel requests disabled."
@@ -657,12 +661,15 @@ command /duelaccept:
         if {_p} is not online:
             send "{@prefix} &cThe player is offline."
             stop
+        if {az.duel.active} is set:
+            send "{@prefix} &cهناك Duel آخر جارٍ حالياً."
+            stop
+        if {az.combat.%uuid of player%} is set or {az.combat.%uuid of {_p}%} is set:
+            send "{@prefix} &cلا يمكن بدء Duel أثناء الـCombat."
+            stop
 
-        # Save the arena before the first duel so every changed block can be restored.
-        if {az.duel.active} is not set:
-            azDuelSaveArena()
-            set {az.duel.active} to true
-
+        azDuelSaveArena()
+        set {az.duel.active} to true
         set {az.duel.%uuid of player%} to {_p}
         set {az.duel.%uuid of {_p}%} to player
         set {az.duel.start.%uuid of player%} to now
@@ -670,14 +677,8 @@ command /duelaccept:
 
         teleport player to {az.duel.arena}
         teleport {_p} to {az.duel.arena}
-        send "{@prefix} &aDuel started! &7You have &e2 minutes&7." to player
-        send "{@prefix} &aDuel started! &7You have &e2 minutes&7." to {_p}
-
-        # Start a fresh 2-minute timer for this duel.
-        wait {@duel-duration}
-        if {az.duel.%uuid of player%} is {_p}:
-            azDuelEnd(player, {_p})
-            delete {az.duel.active}
+        send "{@prefix} &aDuel started! &7No time limit — fight until one player dies." to player
+        send "{@prefix} &aDuel started! &7No time limit — fight until one player dies." to {_p}
 
 command /dueldeny:
     trigger:
@@ -688,7 +689,7 @@ command /dueldeny:
             if {_p} is online:
                 send "{@prefix} &cYour duel request was denied." to {_p}
 
-# Absolutely no PvP outside an active duel.
+# PvP is allowed only when two players are actively dueling and both are inside the arena.
 on damage:
     if attacker is a player:
         if victim is a player:
@@ -698,85 +699,101 @@ on damage:
             if azDuelInside(attacker) is false or azDuelInside(victim) is false:
                 cancel event
                 stop
+            # Combat starts ONLY from a player hitting a player.
             set {az.combat.%uuid of attacker%} to true
             set {az.combat.%uuid of victim%} to true
-            set {az.combat.time.%uuid of attacker%} to 15 seconds
-            set {az.combat.time.%uuid of victim%} to 15 seconds
 
-# Never allow Ender Pearls to bypass the duel boundary.
+# Mobs/environment never create Combat.
+# Ender Pearls are usable in normal gameplay; during combat they are blocked.
+
 on projectile launch:
     if projectile is an ender pearl:
-        if {az.duel.%uuid of shooter%} is not set:
+        if {az.combat.%uuid of shooter%} is set:
             cancel event
-            send "{@prefix} &cEnder Pearls are disabled outside Duels." to shooter
+            send "{@prefix} &cلا يمكنك استخدام Ender Pearl أثناء الـCombat." to shooter
 
+# No teleport can carry an active Combat tag.
+# Outside combat, any teleport caused by a command gets a 5-second countdown.
 on teleport:
-    if {az.duel.%uuid of player%} is set:
-        if event-teleport is not within {@duel-radius} blocks of {az.duel.arena}:
-            cancel event
-            send "{@prefix} &cلا يمكنك الخروج من الـDuel." to player
+    if {az.combat.%uuid of player%} is set:
+        cancel event
+        send "{@prefix} &cلا يمكنك الانتقال وأنت في Combat." to player
+        stop
+    if {az.teleport.pending.%uuid of player%} is set:
+        stop
+    if {az.teleport.bypass.%uuid of player%} is true:
+        delete {az.teleport.bypass.%uuid of player%}
+        stop
+    set {_destination} to event-location
+    set {az.teleport.pending.%uuid of player%} to true
+    set {az.teleport.destination.%uuid of player%} to {_destination}
+    send "{@prefix} &eTeleport in &c5 &eseconds. Don't move or take damage." to player
+    cancel event
+    wait 5 seconds
+    if {az.teleport.pending.%uuid of player%} is true:
+        if player is online:
+            if {az.combat.%uuid of player%} is not set:
+                set {az.teleport.bypass.%uuid of player%} to true
+                teleport player to {az.teleport.destination.%uuid of player%}
+                delete {az.teleport.pending.%uuid of player%}
+                delete {az.teleport.destination.%uuid of player%}
+            else:
+                delete {az.teleport.pending.%uuid of player%}
+                delete {az.teleport.destination.%uuid of player%}
+                send "{@prefix} &cتم إلغاء الانتقال لأنك دخلت Combat." to player
 
 on player move:
-    if {az.duel.%uuid of player%} is set:
-        if azDuelInside(player) is false:
-            teleport player to {az.duel.arena}
-            send action bar "&cDuel Arena: &7لا يمكنك الخروج من المنطقة." to player
+    if {az.teleport.pending.%uuid of player%} is set:
+        delete {az.teleport.pending.%uuid of player%}
+        delete {az.teleport.destination.%uuid of player%}
+        send "{@prefix} &cتم إلغاء الانتقال لأنك تحركت." to player
 
-# Block changes only inside the duel arena; outside remains normal.
-on block break:
-    if {az.duel.%uuid of player%} is set:
-        if azDuelInside(player) is true:
-            stop
-        cancel event
+# Any damage cancels the 5-second teleport countdown.
+on damage:
+    if {az.teleport.pending.%uuid of victim%} is set:
+        delete {az.teleport.pending.%uuid of victim%}
+        delete {az.teleport.destination.%uuid of victim%}
+        send "{@prefix} &cتم إلغاء الانتقال لأنك تلقيت ضرراً." to victim
 
-on block place:
-    if {az.duel.%uuid of player%} is set:
-        if azDuelInside(player) is true:
-            stop
-        cancel event
-
-# Keep inventory is ALWAYS disabled.
+# Keep Inventory is ALWAYS disabled.
 on death:
     if victim is a player:
         execute console command "gamerule keepInventory false"
+        delete {az.teleport.pending.%uuid of victim%}
+        delete {az.teleport.destination.%uuid of victim%}
+        delete {az.teleport.bypass.%uuid of victim%}
         if {az.duel.%uuid of victim%} is set:
             set {_opponent} to {az.duel.%uuid of victim%}
             delete {az.duel.%uuid of victim%}
+            delete {az.combat.%uuid of victim%}
             if {_opponent} is online:
                 delete {az.duel.%uuid of {_opponent}%}
                 delete {az.combat.%uuid of {_opponent}%}
-                delete {az.combat.time.%uuid of {_opponent}%}
                 if {az.spawn} is set:
+                    set {az.teleport.bypass.%uuid of {_opponent}%} to true
                     teleport {_opponent} to {az.spawn}
+                    delete {az.teleport.bypass.%uuid of {_opponent}%}
                 send "{@prefix} &aDuel ended because your opponent died." to {_opponent}
             azDuelRestoreArena()
             delete {az.duel.active}
 
-# Disable keep-inventory at startup too.
+on quit:
+    delete {az.teleport.pending.%uuid of player%}
+    delete {az.teleport.destination.%uuid of player%}
+    delete {az.teleport.bypass.%uuid of player%}
+
+# Keep Inventory disabled at startup too.
 on load:
     execute console command "gamerule keepInventory false"
 
-# ---------------- DUEL HARD LOCK / GLOBAL INVENTORY ----------------
-# Clear any stale combat tag outside a Duel.
-every 1 second:
-    loop all players:
-        if {az.duel.%uuid of loop-player%} is not set:
-            delete {az.combat.%uuid of loop-player%}
-            delete {az.combat.time.%uuid of loop-player%}
-
-# No teleport/escape commands can bypass an active Duel.
+# ---------------- DUEL / COMBAT LOCK ----------------
+# There is NO Combat timer. Combat ends only when the player dies or the duel ends.
+# No transfer command can be used while Combat is active.
 on command:
-    if {az.duel.%uuid of player%} is set:
+    if {az.combat.%uuid of player%} is set:
         if command is "spawn" or command is "home" or command is "homes" or command is "rtp" or command is "rtpq" or command is "tpa" or command is "tpahere" or command is "tpaccept" or command is "tpdeny" or command is "warp" or command is "warps" or command is "wild" or command is "wilderness" or command is "random" or command is "afk" or command is "duels":
             cancel event
-            send "{@prefix} &cلا يمكنك استخدام أوامر النقل أثناء الـDuel." to player
-
-# Never allow Ender Pearls outside Duels.
-on projectile launch:
-    if projectile is an ender pearl:
-        if {az.duel.%uuid of shooter%} is not set:
-            cancel event
-            send "{@prefix} &cEnder Pearls مسموحة فقط داخل الـDuel." to shooter
+            send "{@prefix} &cلا يمكنك استخدام أوامر النقل أثناء الـCombat." to player
 
 # ---------------- SELL / AUCTION HOUSE ----------------
 #
