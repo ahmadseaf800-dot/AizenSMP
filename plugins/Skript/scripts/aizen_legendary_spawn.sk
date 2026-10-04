@@ -7,9 +7,12 @@ options:
     prefix: &6[&eAizenSMP&6] &r
 
 function azBuildLegendarySpawn(p: player):
-    set {az.spawn} to location of {_p}
-    set {az.afk} to location of {_p}
-    set {az.duel} to location of {_p}
+    # Always build on the surface at the player's X/Z, never at an underground Y.
+    set {_safe} to highest block at location of {_p}
+    add 1 to y-coordinate of {_safe}
+    set {az.spawn} to {_safe}
+    set {az.afk} to {_safe}
+    set {az.duel} to {_safe}
     delete {az.spawn.built}
     delete {az.bots.ready}
 
