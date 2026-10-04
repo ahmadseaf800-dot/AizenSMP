@@ -431,13 +431,30 @@ jobs:
           configure_server america 25568
 
           # One shared AuthMe SQLite database for all three regional backends.
-          # This prevents /register from being required again after /server switching.
-          if [ -f network/authme.db ]; then
-            echo "Using persistent shared AuthMe database."
-          elif [ -f network/germany/plugins/AuthMe/authme.db ]; then
+          # NEVER replace a non-empty database with an empty one.
+          # On migration, prefer the first existing non-empty regional database.
+          if [ -s network/authme.db ]; then
+            echo "Using persistent shared AuthMe database: $(stat -c%s network/authme.db) bytes."
+          elif [ -s network/germany/plugins/AuthMe/authme.db ]; then
+            echo "Migrating existing Germany AuthMe database."
             cp -f network/germany/plugins/AuthMe/authme.db network/authme.db
+          elif [ -s network/turkey/plugins/AuthMe/authme.db ]; then
+            echo "Migrating existing Turkey AuthMe database."
+            cp -f network/turkey/plugins/AuthMe/authme.db network/authme.db
+          elif [ -s network/america/plugins/AuthMe/authme.db ]; then
+            echo "Migrating existing America AuthMe database."
+            cp -f network/america/plugins/AuthMe/authme.db network/authme.db
           else
+            echo "No existing AuthMe database found; creating a new one."
+            mkdir -p network
             touch network/authme.db
+          fi
+
+          # Verify SQLite is readable before sharing it with all three servers.
+          if command -v sqlite3 >/dev/null 2>&1 && [ -s network/authme.db ]; then
+            sqlite3 network/authme.db "PRAGMA quick_check;" | grep -qx "ok" || {
+              echo "::warning::Shared AuthMe database failed SQLite quick_check; keeping the file for recovery and not replacing it."
+            }
           fi
           for name in germany turkey america; do
             rm -f "network/$name/plugins/AuthMe/authme.db"
