@@ -124,12 +124,24 @@ command /builddonutspawn:
     trigger:
         azBuildLegendarySpawn(player)
 
+# IMPORTANT: Never build the spawn at a joining player's location.
+# If the persistent Skript variable is missing, fall back to the world's own spawn.
+# This prevents a restart/persistence glitch from turning an underground player location
+# into the permanent server spawn.
+on load:
+    if {az.spawn} is not set:
+        set {_w} to world "world"
+        if {_w} is set:
+            set {az.spawn} to spawn location of {_w}
+            set {az.afk} to {az.spawn}
+            set {az.duel} to {az.spawn}
+
 on join:
     if {az.spawn} is not set:
-        set {az.spawn} to location of player
-        set {az.afk} to location of player
-        set {az.duel} to location of player
-    if {az.spawn.built} is not true:
-        wait 2 seconds
-        if player is online:
-            azBuildLegendarySpawn(player)
+        set {_w} to world "world"
+        if {_w} is set:
+            set {az.spawn} to spawn location of {_w}
+            set {az.afk} to {az.spawn}
+            set {az.duel} to {az.spawn}
+    # Do not auto-build a 1001x1001 spawn because a player joined.
+    # Spawn construction is manual via /builddonutspawn.
