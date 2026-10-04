@@ -436,24 +436,40 @@ jobs:
           configure_server turkey 25567
           configure_server america 25568
 
-          # One shared AuthMe SQLite database for all three regional backends.
-          # NEVER replace a non-empty database with an empty one.
-          # On migration, prefer the first existing non-empty regional database.
-          if [ -s network/authme.db ]; then
-            echo "Using persistent shared AuthMe database: $(stat -c%s network/authme.db) bytes."
-          elif [ -s network/germany/plugins/AuthMe/authme.db ]; then
-            echo "Migrating existing Germany AuthMe database."
-            cp -f network/germany/plugins/AuthMe/authme.db network/authme.db
-          elif [ -s network/turkey/plugins/AuthMe/authme.db ]; then
-            echo "Migrating existing Turkey AuthMe database."
-            cp -f network/turkey/plugins/AuthMe/authme.db network/authme.db
-          elif [ -s network/america/plugins/AuthMe/authme.db ]; then
-            echo "Migrating existing America AuthMe database."
-            cp -f network/america/plugins/AuthMe/authme.db network/authme.db
+          # Shared AuthMe SQLite database for all three regional backends.
+          # A zero-account SQLite file is NOT considered valid: if an older
+          # regional database still contains registrations, migrate that one
+          # instead of silently forcing every player to /register again.
+          authme_accounts() {
+            local db="$1"
+            [ -s "$db" ] || { echo 0; return; }
+            sqlite3 "$db" "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='authme';" 2>/dev/null | grep -qx '1' || { echo 0; return; }
+            sqlite3 "$db" "SELECT COUNT(*) FROM authme;" 2>/dev/null || echo 0
+          }
+          SHARED_COUNT=$(authme_accounts network/authme.db)
+          if [ "$SHARED_COUNT" -gt 0 ]; then
+            echo "Using shared AuthMe database with $SHARED_COUNT registrations."
           else
-            echo "No existing AuthMe database found; creating a new one."
-            mkdir -p network
-            touch network/authme.db
+            MIGRATED_DB=""
+            for candidate in               network/germany/plugins/AuthMe/authme.db               network/turkey/plugins/AuthMe/authme.db               network/america/plugins/AuthMe/authme.db; do
+              COUNT=$(authme_accounts "$candidate")
+              if [ "$COUNT" -gt 0 ]; then
+                MIGRATED_DB="$candidate"
+                echo "Migrating $candidate with $COUNT registrations to shared AuthMe database."
+                break
+              fi
+            done
+            if [ -n "$MIGRATED_DB" ]; then
+              cp -f "$MIGRATED_DB" network/authme.db
+            else
+              echo "No existing AuthMe registrations found; creating a new database."
+              mkdir -p network
+              [ -f network/authme.db ] || touch network/authme.db
+            fi
+          fi
+          # Keep a recovery copy whenever a real registration database exists.
+          if [ -s network/authme.db ]; then
+            cp -f network/authme.db network/authme.db.backup
           fi
 
           # Verify SQLite is readable before sharing it with all three servers.
@@ -697,11 +713,9 @@ jobs:
               network/germany/world network/germany/world_nether network/germany/world_the_end \
               network/turkey/world network/turkey/world_nether network/turkey/world_the_end \
               network/america/world network/america/world_nether network/america/world_the_end \
-              # Persist all plugin data, player/world data and permission databases.
-              # Installation steps can replace JARs, but plugin data/configuration survives.
               network/germany/plugins network/turkey/plugins network/america/plugins \
               network/germany/ops.json network/turkey/ops.json network/america/ops.json \
-              network/authme.db network/authme.db-wal network/authme.db-shm \
+              network/authme.db network/authme.db.backup network/authme.db-wal network/authme.db-shm \
               2>/dev/null || true
           }
           trap cleanup EXIT INT TERM
