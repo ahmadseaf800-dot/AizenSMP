@@ -441,22 +441,32 @@ jobs:
           fi
           for name in germany turkey america; do
             rm -f "network/$name/plugins/AuthMe/authme.db"
-            ln -sf "$(realpath network/authme.db)" "network/$name/plugins/AuthMe/authme.db"
+            # Relative symlink survives GitHub runner workspace/path changes.
+            ln -sf "../../../authme.db" "network/$name/plugins/AuthMe/authme.db"
           done
 
-          # Make Aizenx an operator on every backend.
-          # This is Minecraft's deterministic offline UUID for the cracked-mode username Aizenx.
+          # Preserve every existing OP across restarts and always enforce Aizenx as OWNER/OP.
+          # Never overwrite ops.json with a one-player file: doing that used to erase other admins on restart.
+          ensure_owner_op() {
+            local file="$1"
+            if [ ! -s "$file" ]; then
+              printf '[]\n' > "$file"
+            fi
+            local tmp
+            tmp=$(mktemp)
+            if jq -e . "$file" >/dev/null 2>&1; then
+              jq --arg uuid "fb0d4a3b-54a0-360f-afc3-649c15b979ff" --arg name "Aizenx" '
+                [ .[] | select((.uuid // "") != $uuid and ((.name // "") | ascii_downcase) != ($name | ascii_downcase)) ]
+                + [{uuid:$uuid,name:$name,level:4,bypassesPlayerLimit:true}]
+              ' "$file" > "$tmp"
+            else
+              printf '[{"uuid":"fb0d4a3b-54a0-360f-afc3-649c15b979ff","name":"Aizenx","level":4,"bypassesPlayerLimit":true}]\n' > "$tmp"
+            fi
+            mv "$tmp" "$file"
+          }
+
           for name in germany turkey america; do
-            cat > "network/$name/ops.json" <<'EOF'
-          [
-            {
-              "uuid": "fb0d4a3b-54a0-360f-afc3-649c15b979ff",
-              "name": "Aizenx",
-              "level": 4,
-              "bypassesPlayerLimit": true
-            }
-          ]
-          EOF
+            ensure_owner_op "network/$name/ops.json"
           done
 
           mkdir -p network/germany/plugins/voicechat
@@ -658,7 +668,9 @@ jobs:
               network/turkey/world network/turkey/world_nether network/turkey/world_the_end \
               network/america/world network/america/world_nether network/america/world_the_end \
               network/germany/plugins/Skript network/turkey/plugins/Skript network/america/plugins/Skript \
-              network/authme.db \
+              network/germany/plugins/LuckPerms network/turkey/plugins/LuckPerms network/america/plugins/LuckPerms \
+              network/germany/ops.json network/turkey/ops.json network/america/ops.json \
+              network/authme.db network/authme.db-wal network/authme.db-shm \
               network/germany/plugins/AuthMe network/turkey/plugins/AuthMe network/america/plugins/AuthMe \
               2>/dev/null || true
           }
