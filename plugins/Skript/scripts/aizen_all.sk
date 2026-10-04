@@ -42,9 +42,12 @@ command /buildzones:
 command /setspawn:
     permission: aizensmp.admin
     trigger:
-        set {az.spawn} to location of player
-        set {az.afk} to location of player
-        set {az.donutspawn} to location of player
+        # Store a safe surface spawn instead of an underground/admin position.
+        set {_safe} to highest block at location of player
+        add 1 to y-coordinate of {_safe}
+        set {az.spawn} to {_safe}
+        set {az.afk} to {_safe}
+        set {az.donutspawn} to {_safe}
         delete {az.spawn.built}
         delete {az.bots.ready}
         send "{@prefix} &aSpawn set. Use &e/builddonutspawn &ato build the hub here." to player
