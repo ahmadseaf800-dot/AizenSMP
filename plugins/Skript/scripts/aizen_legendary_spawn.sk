@@ -129,6 +129,20 @@ command /builddonutspawn:
 # This prevents a restart/persistence glitch from turning an underground player location
 # into the permanent server spawn.
 on load:
+    # One-time migration from the old random/underground spawn behavior.
+    # Use the world's actual spawn and move to the highest safe block.
+    if {az.spawn.migration.v2} is not true:
+        set {_w} to world "world"
+        if {_w} is set:
+            set {_base} to spawn location of {_w}
+            set {_safe} to highest block at {_base}
+            add 1 to y-coordinate of {_safe}
+            set {az.spawn} to {_safe}
+            set {az.afk} to {_safe}
+            set {az.duel} to {_safe}
+            delete {az.spawn.built}
+            set {az.spawn.migration.v2} to true
+
     if {az.spawn} is not set:
         set {_w} to world "world"
         if {_w} is set:
@@ -140,8 +154,21 @@ on join:
     if {az.spawn} is not set:
         set {_w} to world "world"
         if {_w} is set:
-            set {az.spawn} to spawn location of {_w}
-            set {az.afk} to {az.spawn}
-            set {az.duel} to {az.spawn}
+            set {_base} to spawn location of {_w}
+            set {_safe} to highest block at {_base}
+            add 1 to y-coordinate of {_safe}
+            set {az.spawn} to {_safe}
+            set {az.afk} to {_safe}
+            set {az.duel} to {_safe}
+    # If an old persisted spawn is underground, repair it instead of teleporting players there.
+    if y-coordinate of {az.spawn} < -60:
+        set {_w} to world "world"
+        if {_w} is set:
+            set {_base} to spawn location of {_w}
+            set {_safe} to highest block at {_base}
+            add 1 to y-coordinate of {_safe}
+            set {az.spawn} to {_safe}
+            set {az.afk} to {_safe}
+            set {az.duel} to {_safe}
     # Do not auto-build a 1001x1001 spawn because a player joined.
     # Spawn construction is manual via /builddonutspawn.
