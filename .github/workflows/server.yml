@@ -17,6 +17,12 @@ permissions:
   contents: read
   actions: write
 
+# Only one live AizenSMP network may run at a time.
+# Multiple simultaneous workflows can restore/overwrite the same persistent artifact.
+concurrency:
+  group: aizensmp-network
+  cancel-in-progress: true
+
 jobs:
   network:
     runs-on: ubuntu-latest
@@ -679,6 +685,13 @@ jobs:
             for pid in ${GERMANY_PID:-} ${TURKEY_PID:-} ${AMERICA_PID:-} ${VELOCITY_PID:-}; do
               [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
             done
+            # Give Purpur/AuthMe/Skript time to flush player data, SQLite and variables
+            # before the persistent archive is created.
+            sleep 5
+            for pid in ${GERMANY_PID:-} ${TURKEY_PID:-} ${AMERICA_PID:-} ${VELOCITY_PID:-}; do
+              [ -n "$pid" ] && wait "$pid" 2>/dev/null || true
+            done
+            sync
             rm -f network/persistent-data.tar.zst
             tar --zstd -cf network/persistent-data.tar.zst \
               network/germany/world network/germany/world_nether network/germany/world_the_end \
