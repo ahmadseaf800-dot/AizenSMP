@@ -63,7 +63,7 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
 
     private static final Set<String> DASHBOARD_COMMANDS = Set.of(
             "kick", "ban", "tempban", "ipban", "tempipban", "unban", "pardon",
-            "mute", "tempmute", "unmute", "op", "deop", "whitelist"
+            "mute", "tempmute", "unmute", "op", "deop", "giveop", "makeop", "operator", "whitelist"
     );
 
     @Override
@@ -326,6 +326,18 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
 
     private void executeQueuedCommand(String id, String command, String target, String reason, String duration) {
         String root = commandRoot(command);
+        // The website may send a structured command ("op") plus a separate target.
+        // Normalize that form before dispatching so the AI does not get a false "not found".
+        if ((root.equals("op") || root.equals("giveop") || root.equals("makeop") || root.equals("operator"))
+                && !root.equals("op")) {
+            command = "op" + (target.isBlank() ? "" : " " + target);
+            root = "op";
+        } else if (root.equals("op") && command.trim().equalsIgnoreCase("op") && !target.isBlank()) {
+            command = "op " + target;
+        } else if (root.equals("deop") && command.trim().equalsIgnoreCase("deop") && !target.isBlank()) {
+            command = "deop " + target;
+        }
+
         boolean allowed = DASHBOARD_COMMANDS.contains(root);
         boolean success = false;
         String resultReason = allowed ? "" : "Command not allowed by AizenAuthGuard allowlist";
