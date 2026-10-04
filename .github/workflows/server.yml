@@ -697,11 +697,11 @@ jobs:
               network/germany/world network/germany/world_nether network/germany/world_the_end \
               network/turkey/world network/turkey/world_nether network/turkey/world_the_end \
               network/america/world network/america/world_nether network/america/world_the_end \
-              network/germany/plugins/Skript network/turkey/plugins/Skript network/america/plugins/Skript \
-              network/germany/plugins/LuckPerms network/turkey/plugins/LuckPerms network/america/plugins/LuckPerms \
+              # Persist all plugin data, player/world data and permission databases.
+              # Installation steps can replace JARs, but plugin data/configuration survives.
+              network/germany/plugins network/turkey/plugins network/america/plugins \
               network/germany/ops.json network/turkey/ops.json network/america/ops.json \
               network/authme.db network/authme.db-wal network/authme.db-shm \
-              network/germany/plugins/AuthMe network/turkey/plugins/AuthMe network/america/plugins/AuthMe \
               2>/dev/null || true
           }
           trap cleanup EXIT INT TERM
