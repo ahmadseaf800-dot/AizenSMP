@@ -359,6 +359,10 @@ jobs:
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/ViaVersion.jar" "$VIAVERSION_URL"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/ViaBackwards.jar" "$VIABACKWARDS_URL"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/WorldEdit.jar" "$WE_URL"
+            # Install the selected DonutSMP spawn schematic for WorldEdit on every backend.
+            mkdir -p "network/$name/plugins/WorldEdit/schematics"
+            cp -f "DonutSMP_spawn_by-eliterorr.litematic" "network/$name/plugins/WorldEdit/schematics/DonutSMP_spawn_by-eliterorr.litematic"
+            test -s "network/$name/plugins/WorldEdit/schematics/DonutSMP_spawn_by-eliterorr.litematic"
             curl -L --fail --retry 5 --retry-delay 2 -o "network/$name/plugins/voicechat.jar" "$SVC_URL"
             mkdir -p "network/$name/plugins/Skript/scripts"
             find plugins/Skript/scripts -maxdepth 1 -type f -name "*.sk" ! -name "aizen_auth.sk" -exec cp -f {} "network/$name/plugins/Skript/scripts/" \;
