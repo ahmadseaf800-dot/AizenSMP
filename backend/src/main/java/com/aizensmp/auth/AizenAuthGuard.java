@@ -63,7 +63,8 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
 
     private static final Set<String> DASHBOARD_COMMANDS = Set.of(
             "kick", "ban", "tempban", "ipban", "tempipban", "unban", "pardon",
-            "mute", "tempmute", "unmute", "op", "deop", "giveop", "makeop", "operator", "whitelist"
+            "mute", "tempmute", "unmute", "op", "deop", "giveop", "makeop", "operator", "whitelist",
+            "fill", "setblock", "clone"
     );
 
     @Override
@@ -195,7 +196,12 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPlayerCommand(PlayerCommandPreprocessEvent e) {
-        if (!isAuthenticated(e.getPlayer())) e.setCancelled(true);
+        if (!isAuthenticated(e.getPlayer())) {
+            e.setCancelled(true);
+            return;
+        }
+        String normalized = normalizeRelativeCoordinates(e.getMessage());
+        if (!normalized.equals(e.getMessage())) e.setMessage(normalized);
     }
 
     @EventHandler
@@ -213,6 +219,11 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
     @EventHandler
     public void onServerCommand(ServerCommandEvent e) {
         String raw = e.getCommand() == null ? "" : e.getCommand().trim();
+        String normalized = normalizeRelativeCoordinates(raw);
+        if (!normalized.equals(raw)) {
+            e.setCommand(normalized);
+            raw = normalized;
+        }
         String root = commandRoot(raw);
         if (Set.of("ban","tempban","ipban","tempipban","unban","pardon","kick","op","deop","mute","tempmute","unmute").contains(root)) {
             post("/api/event", eventJson(root, extractTarget(raw), "ServerCommand",
@@ -325,6 +336,7 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
     }
 
     private void executeQueuedCommand(String id, String command, String target, String reason, String duration) {
+        command = normalizeRelativeCoordinates(command);
         String root = commandRoot(command);
         // The website may send a structured command ("op") plus a separate target.
         // Normalize that form before dispatching so the AI does not get a false "not found".
@@ -365,6 +377,16 @@ public final class AizenAuthGuard extends JavaPlugin implements Listener {
 
         post("/api/event", eventJson(allowed ? root : "blocked-command",
                 target, "AIZEN Dashboard", reason.isBlank() ? resultReason : reason, duration, "AIZEN AI"));
+    }
+
+    /** Fix malformed relative coordinate syntax without changing block names or other text. */
+    private String normalizeRelativeCoordinates(String command) {
+        if (command == null || command.isBlank()) return command == null ? "" : command;
+        String normalized = command.replaceAll("~~-(\\d+)", "~-$1");
+        normalized = normalized.replaceAll("~~(\\d+)-(?=\\s|$)", "~-$1");
+        normalized = normalized.replaceAll("~(\\d+)-(?=\\s|$)", "~-$1");
+        normalized = normalized.replace("~~", "~");
+        return normalized;
     }
 
     private String commandRoot(String command) {
