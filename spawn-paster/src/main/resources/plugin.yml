@@ -1,0 +1,5 @@
+name: AizenSpawnPaster
+version: 1.0.0
+main: com.aizensmp.spawnpaster.AizenSpawnPaster
+api-version: '1.21'
+depend: [WorldEdit]
